@@ -1,12 +1,7 @@
 import Link from "next/link";
 import LiveBook from "../components/LiveBook";
-import { TEMPLATE_LIST } from "../templates";
-
-const FEATURED = ["love-story", "birthday", "anniversary", "best-friends", "just-because"];
 
 export default function Home() {
-  const templates = FEATURED.map((id) => TEMPLATE_LIST.find((t) => t.id === id)).filter(Boolean);
-
   return (
     <main className="min-h-[100svh] overflow-hidden">
       <header className="relative z-10 mx-auto flex h-[72px] max-w-7xl items-center justify-between px-5 sm:px-8">
@@ -19,9 +14,9 @@ export default function Home() {
           <a href="#how" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-stone-600 transition hover:bg-white hover:text-stone-900 sm:inline-flex">
             How it works
           </a>
-          <a href="#templates" className="rounded-full bg-stone-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <Link href="/create" className="rounded-full bg-stone-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             Create a Gift
-          </a>
+          </Link>
         </nav>
       </header>
 
@@ -46,10 +41,10 @@ export default function Home() {
             </p>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <a href="#templates" className="group inline-flex items-center gap-3 rounded-full bg-rose-700 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-900/10 transition hover:-translate-y-0.5 hover:bg-rose-800">
+              <Link href="/create" className="group inline-flex items-center gap-3 rounded-full bg-rose-700 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-900/10 transition hover:-translate-y-0.5 hover:bg-rose-800">
                 Create a Gift
                 <span className="transition-transform group-hover:translate-x-0.5">→</span>
-              </a>
+              </Link>
               <span className="text-sm font-medium text-stone-500">No sign-up needed</span>
             </div>
 
@@ -72,26 +67,6 @@ export default function Home() {
                 Open · turn · treasure
               </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="templates" className="mx-auto max-w-7xl px-5 pb-8 sm:px-8">
-        <div className="flex flex-col gap-3 rounded-[1.5rem] border border-stone-200/80 bg-white/75 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Start with a feeling</p>
-            <p className="mt-1 text-sm font-semibold text-stone-800">Pick a ready-made gift and make it yours.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {templates.map((t) => t && (
-              <Link
-                key={t.id}
-                href={`/create?t=${t.id}`}
-                className="rounded-full border border-stone-200 bg-white px-3.5 py-2 text-xs font-bold text-stone-700 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
-              >
-                {t.name}
-              </Link>
-            ))}
           </div>
         </div>
       </section>

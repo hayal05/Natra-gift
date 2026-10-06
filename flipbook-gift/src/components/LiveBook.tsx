@@ -34,15 +34,6 @@ export default function LiveBook({ initial = "love-story" }: { initial?: string 
       <p className="mt-4 text-center text-sm text-stone-500">
         {failed ? "Sample book unavailable." : "Drag a page corner to turn the page."}
       </p>
-      <div className="mt-3 flex flex-wrap justify-center gap-2" role="group" aria-label="Try another template">
-        {TEMPLATE_LIST.map((t) => (
-          <button key={t.id} type="button" onClick={() => setId(t.id)} aria-pressed={t.id === id}
-            className={"rounded-full border px-3 py-1 text-xs font-semibold transition " +
-              (t.id === id ? "border-stone-900 bg-stone-900 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500")}>
-            {t.name}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

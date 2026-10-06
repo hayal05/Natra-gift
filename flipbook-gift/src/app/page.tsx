@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import LiveBook from "../components/LiveBook";
 import TemplateCover from "../components/TemplateCover";
 import { TEMPLATE_LIST } from "../templates";
@@ -83,7 +84,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-white py-14 sm:py-16 lg:py-18">
+      <section className="bg-white py-14 sm:py-16 lg:py-16">
         <div className="mx-auto max-w-[1040px] px-5 sm:px-8">
           <SectionHeading title="Choose a gift" />
           <div className="mt-9 grid grid-cols-2 gap-5 sm:grid-cols-3 sm:gap-6 lg:grid-cols-5">
@@ -109,7 +110,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="how" className="border-y border-[#f4eee7] bg-[#fffaf5] py-14 sm:py-16 lg:py-18">
+      <section id="how" className="border-y border-[#f4eee7] bg-[#fffaf5] py-14 sm:py-16 lg:py-16">
         <div className="mx-auto max-w-[900px] px-5 sm:px-8">
           <SectionHeading title="How it works" />
           <div className="mx-auto mt-12 grid max-w-[760px] items-start gap-9 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
@@ -183,7 +184,7 @@ function HowStep({
 }: {
   number: string;
   title: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <div className="relative flex flex-col items-center text-center">

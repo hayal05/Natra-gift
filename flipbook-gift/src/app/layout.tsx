@@ -3,8 +3,8 @@ import "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Digital Gift Flipbook",
-  description: "Turn your photos and words into a gift book that opens from an envelope.",
+  title: "NatraGift — Make someone's day",
+  description: "Create a beautiful digital gift that opens like a letter.",
 };
 
 export const viewport: Viewport = {

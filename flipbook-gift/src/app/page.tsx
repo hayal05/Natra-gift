@@ -15,7 +15,7 @@ const featured = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fffdfa] text-[#1d2b3d]">
+    <main className="natra-landing min-h-screen overflow-hidden bg-[#fffdfa] text-[#1d2b3d]">
       <header className="relative z-40 mx-auto flex h-[82px] max-w-[1180px] items-center justify-between px-5 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5" aria-label="NatraGift home">
           <GiftIcon className="h-9 w-9 text-[#ff6900]" />

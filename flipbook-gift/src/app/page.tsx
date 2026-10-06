@@ -6,10 +6,15 @@ import LiveBook from "../components/LiveBook";
 import { TEMPLATE_LIST } from "../templates";
 
 const featured = [
-  { id: "birthday", label: "Birthday", kind: "birthday" },
-  { id: "love-story", label: "Love", kind: "love" },
-  { id: "appreciation", label: "Thank You", kind: "thanks" },
-  { id: "wedding", label: "Congratulations", kind: "graduation" },
+  { id: "love-story", label: "Love Story", kind: "love" },
+  { id: "anniversary", label: "Anniversary", kind: "anniversary" },
+  { id: "wedding", label: "Wedding", kind: "graduation" },
+  { id: "best-friends", label: "Best Friends", kind: "friends" },
+  { id: "birthday", label: "Birthday Surprise", kind: "birthday" },
+  { id: "sorry", label: "I'm Sorry", kind: "sorry" },
+  { id: "memories", label: "Our Memories", kind: "memories" },
+  { id: "appreciation", label: "Appreciation", kind: "thanks" },
+  { id: "long-distance", label: "Long Distance", kind: "distance" },
   { id: "just-because", label: "Just Because", kind: "because" },
 ];
 
@@ -60,16 +65,16 @@ export default function Home() {
       <section className="bg-white py-[52px] sm:py-[62px]">
         <div className="mx-auto max-w-[1040px] px-5 sm:px-8">
           <SectionHeading title="Choose a gift" />
-          <div className="mt-9 grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-3 sm:gap-6 lg:grid-cols-5">
+          <div className="mt-9 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 sm:gap-5 lg:grid-cols-5">
             {featured.map(({ id, label, kind }) => {
               const template = TEMPLATE_LIST.find((t) => t.id === id);
               if (!template) return null;
               return (
                 <Link key={id} href={`/create?t=${id}`} className="group text-center">
-                  <div className="mx-auto aspect-square w-full max-w-[176px] overflow-hidden rounded-[18px] bg-[#fff4e8] shadow-[0_4px_15px_rgba(33,42,53,.035)] ring-1 ring-black/[.025] transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_14px_30px_rgba(45,35,25,.10)]">
+                  <div className="mx-auto aspect-square w-full max-w-[122px] overflow-hidden rounded-[15px] bg-[#fff4e8] shadow-[0_4px_15px_rgba(33,42,53,.035)] ring-1 ring-black/[.025] transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_14px_30px_rgba(45,35,25,.10)]">
                     <PackageIllustration kind={kind} />
                   </div>
-                  <h3 className="mt-[14px] text-[16px] font-bold text-[#1d2b3d]">{label}</h3>
+                  <h3 className="mt-3 text-[14px] font-bold text-[#1d2b3d]">{label}</h3>
                 </Link>
               );
             })}
@@ -186,6 +191,11 @@ function PackageIllustration({ kind }: { kind: string }) {
       {kind === "thanks" && <ThanksPackage />}
       {kind === "graduation" && <GraduationPackage />}
       {kind === "because" && <BecausePackage />}
+      {kind === "anniversary" && <AnniversaryPackage />}
+      {kind === "friends" && <FriendsPackage />}
+      {kind === "sorry" && <SorryPackage />}
+      {kind === "memories" && <MemoriesPackage />}
+      {kind === "distance" && <DistancePackage />}
     </div>
   );
 }
@@ -275,6 +285,34 @@ function BecausePackage() {
         <text x="122" y="151" textAnchor="middle" fontSize="9" fill="#ff6900">♥</text>
       </g>
     </svg>
+  );
+}
+
+function AnniversaryPackage() {
+  return <MiniTemplateIcon bg="#efe3cf" accent="#7b1e2e" title="ALWAYS US" symbol="♥" />;
+}
+function FriendsPackage() {
+  return <MiniTemplateIcon bg="#ffe7a3" accent="#b93723" title="BFF" symbol="★" />;
+}
+function SorryPackage() {
+  return <MiniTemplateIcon bg="#e3ebf2" accent="#3f6b8f" title="I'm Sorry" symbol="…" />;
+}
+function MemoriesPackage() {
+  return <MiniTemplateIcon bg="#e8dcc4" accent="#934f26" title="MEMORIES" symbol="✦" />;
+}
+function DistancePackage() {
+  return <MiniTemplateIcon bg="#dfe8f7" accent="#2b59c3" title="CLOSER" symbol="☾" />;
+}
+function MiniTemplateIcon({ bg, accent, title, symbol }: { bg: string; accent: string; title: string; symbol: string }) {
+  return (
+    <div className="relative flex h-full w-full items-center justify-center" style={{ background: bg }}>
+      <div className="relative h-[68%] w-[67%] rotate-[-3deg] rounded-[7px] bg-[#fffdf9] shadow-[0_7px_12px_rgba(60,40,25,.14)]">
+        <div className="absolute inset-x-2 top-2 h-[43%] rounded-[4px]" style={{ background: accent, opacity: .88 }}>
+          <span className="absolute inset-0 grid place-items-center text-[20px] font-serif text-white">{symbol}</span>
+        </div>
+        <div className="absolute inset-x-3 bottom-3 text-center text-[6px] font-bold uppercase tracking-[.14em]" style={{ color: accent }}>{title}</div>
+      </div>
+    </div>
   );
 }
 

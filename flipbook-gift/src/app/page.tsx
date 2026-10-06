@@ -146,47 +146,34 @@ function Connector() {
 
 function GiftScene() {
   return (
-    <div className="relative h-[390px] w-full max-w-[570px]">
-      <div className="absolute right-[5%] top-[8%] h-[300px] w-[300px] rounded-full bg-[#ffe7d1] blur-2xl sm:h-[350px] sm:w-[350px]" />
-      <div className="absolute bottom-[3%] left-[8%] h-[120px] w-[150px] rounded-full bg-[#fff1df] blur-xl" />
+    <div className="relative h-[430px] w-full max-w-[610px]">
+      <div className="absolute right-[3%] top-[7%] h-[350px] w-[350px] rounded-full bg-[#ffe6cf] blur-2xl" />
+      <div className="absolute bottom-[4%] left-[4%] h-[125px] w-[180px] rounded-full bg-[#fff0dd] blur-xl" />
 
-      <div className="absolute bottom-[19%] left-[3%] z-10 hidden sm:block">
+      <div className="absolute bottom-[17%] left-[1%] z-10 hidden sm:block">
         <FlowerSprig />
       </div>
 
-      <div className="absolute right-[3%] top-[12%] h-[215px] w-[185px] rotate-[10deg] rounded-[10px] bg-gradient-to-br from-[#ffb777] via-[#ff9950] to-[#ff7b22] shadow-[0_22px_35px_rgba(183,92,30,.18)]">
-        <div className="absolute inset-x-0 top-0 h-[66px] -skew-y-[8deg] rounded-t-[10px] bg-[#ffad6a]" />
-        <div className="absolute -bottom-1 right-[-17px] h-[145px] w-[22px] rotate-[17deg] rounded-full border-l-[8px] border-[#ff7a1d]" />
+      {/* Real envelope behind the live flipbook */}
+      <div className="absolute right-[3%] top-[10%] h-[270px] w-[225px] rotate-[9deg] rounded-[12px] bg-gradient-to-br from-[#ffb878] via-[#ff9850] to-[#ff7820] shadow-[0_24px_42px_rgba(183,92,30,.20)]">
+        <div className="absolute inset-x-0 top-0 h-[82px] overflow-hidden rounded-t-[12px]">
+          <div className="absolute -left-[25px] -top-[38px] h-[150px] w-[275px] rotate-[-1deg] rounded-[45%] bg-[#ffad69]" />
+        </div>
+        <div className="absolute bottom-[-10px] right-[-18px] h-[165px] w-[26px] rotate-[17deg] rounded-full border-l-[9px] border-[#ff781e]" />
       </div>
 
-      <div className="absolute bottom-[8%] right-[14%] z-20 h-[365px] w-[280px] rotate-[6deg] rounded-[22px] border-[7px] border-white bg-[#fffaf6] p-[10px] shadow-[0_28px_55px_rgba(72,46,28,.19)] sm:h-[375px] sm:w-[295px]">
-        <div className="h-full overflow-hidden rounded-[13px] bg-white">
-          <div className="h-[57%] bg-gradient-to-b from-[#fff6ef] via-[#fff0e7] to-[#f4c9a8]">
-            <div className="pt-9 text-center">
-              <div className="font-serif text-[23px] italic leading-tight text-[#5a2b1d]">Happy</div>
-              <div className="font-serif text-[24px] italic leading-tight text-[#5a2b1d]">Birthday</div>
-              <div className="mt-1 text-[13px] text-[#ff6900]">♥</div>
-            </div>
-            <div className="relative mt-4 h-[116px]">
-              <div className="absolute bottom-0 left-[8%] h-[72px] w-[84%] rounded-t-[45%] bg-[#f8dfc9]" />
-              <MiniBouquet />
-            </div>
-          </div>
-          <div className="flex h-[43%] items-center justify-center bg-[#fffdf9]">
-            <div className="text-center font-serif text-[9px] italic leading-4 text-[#805746]">May your dreams be bigger<br />than your worries.</div>
-          </div>
+      {/* The landing-page example is the actual flipbook engine, not a static mockup. */}
+      <div className="absolute bottom-[3%] right-[12%] z-30 w-[300px] rotate-[5deg] sm:w-[325px]">
+        <div className="rounded-[22px] border-[7px] border-white bg-white p-[3px] shadow-[0_30px_58px_rgba(72,46,28,.22)]">
+          <LiveBook initial="love-story" />
         </div>
-        <div className="absolute bottom-[-2px] left-[18px] right-[18px] flex items-center justify-between text-[#ff6900]">
-          <span className="text-[15px]">←</span>
-          <span className="h-[2px] w-[112px] bg-[#eadfd5]"><span className="block -mt-[3px] ml-[39%] h-2 w-2 rounded-full bg-[#ff6900]" /></span>
-          <span className="text-[15px]">→</span>
-        </div>
+        <div className="pointer-events-none absolute inset-x-7 -bottom-2 h-8 rounded-full bg-[#9b613b]/20 blur-xl" />
       </div>
 
-      <div className="absolute left-[10%] top-[11%] z-30 text-[29px] text-[#ff6900]">✦</div>
-      <div className="absolute left-[4%] top-[21%] z-30 text-[24px] text-[#ff6900]">✦</div>
-      <div className="absolute left-[12%] top-[2%] z-30 h-7 w-[2px] rotate-[-38deg] bg-[#ff6900]" />
-      <div className="absolute left-[19%] top-[1%] z-30 h-7 w-[2px] rotate-[-6deg] bg-[#ff6900]" />
+      <div className="absolute left-[9%] top-[10%] z-40 text-[29px] text-[#ff6900]">✦</div>
+      <div className="absolute left-[3%] top-[20%] z-40 text-[24px] text-[#ff6900]">✦</div>
+      <div className="absolute left-[11%] top-[1%] z-40 h-7 w-[2px] rotate-[-38deg] bg-[#ff6900]" />
+      <div className="absolute left-[18%] top-[0%] z-40 h-7 w-[2px] rotate-[-6deg] bg-[#ff6900]" />
     </div>
   );
 }

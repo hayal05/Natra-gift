@@ -5,7 +5,7 @@ import GiftView from "../../../components/GiftView";
 export const dynamic = "force-dynamic";
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://natratech.pro.et").replace(/\/$/, "");
-const previewImage = `${siteUrl}/natragift-share.png?v=4`;
+const previewImage = `${siteUrl}/natragift-share.png?v=5`;
 
 export async function generateMetadata({
   params,

@@ -5,7 +5,7 @@ import GiftView from "../../../components/GiftView";
 export const dynamic = "force-dynamic";
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://natratech.pro.et").replace(/\/$/, "");
-const shareImage = "/natragift-share.png?v=3";
+const shareImage = "/natragift-share.png";
 
 export async function generateMetadata({
   params,
@@ -21,8 +21,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    robots: { index: false, follow: false, nocache: true },
-    referrer: "no-referrer",
+    robots: { index: false, follow: false, nocache: false },
     openGraph: {
       title,
       description,

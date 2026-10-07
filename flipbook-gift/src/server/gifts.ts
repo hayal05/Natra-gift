@@ -42,7 +42,7 @@ const CONTROL = /[\u0000-\u0008\u000B-\u001F\u007F]/g; // control characters (a 
 const clean = (s: string) => s.replace(CONTROL, "");
 const PALETTE_KEYS = ["paper", "ink", "accent", "accent2", "soft", "dark"];
 const oneOf = (v: unknown, list: string[]) => typeof v === "string" && list.includes(v);
-const inRange = (v: unknown, lo: number, hi: number) => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi;
+const inRange = (v: unknown, lo: number, hi: number): v is number => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi;
 
 export interface CheckOptions { /** Cloudinary cloud name: when set, `https://` photos must come from that account. */ cloud?: string }
 type Checked = { ok: true; draft: Draft } | { ok: false; message: string };

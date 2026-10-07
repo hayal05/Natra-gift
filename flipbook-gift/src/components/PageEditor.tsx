@@ -3,7 +3,7 @@
 // Task 3.3 adds the layout picker and 3.4 the text controls (text box in the selection card, style controls in the collapsed Customize panel).
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, editableSlots, isAdjusted, movePage, panBy, photoBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
+import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, editableSlots, isAdjusted, movePage, panBy, photoBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
 import { isSample, loadFonts, loadImages, renderPage, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
@@ -112,6 +112,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const setText = (v: string) => textSlot && editPage(setSlotText(pages[at], textSlot, v));
   const setPhotoProps = (patch: Partial<PhotoContent>) => photoSlot && editPage(setPhoto(pages[at], photoSlot.id, patch));
   const setStyle = (patch: Partial<TextStyle>) => textSlot && editPage(setTextStyle(pages[at], textSlot.id, patch));
+  const setTextPositionFromStart = (start: TextStyle, dx: number, dy: number) =>
+    textSlot && editPage(setTextPosition(pages[at], textSlot.id, (start.x ?? 0) + dx, (start.y ?? 0) + dy));
   // Picking the layout's own value clears the override, so "reset" is just choosing the default again.
   const cur = {
     font: style.font ?? textSlot?.font, size: style.size ?? "M", align: style.align ?? textSlot?.align ?? "left", color: style.color ?? textSlot?.color,
@@ -285,6 +287,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   // Drag-to-pan (3.5f). Only a selected photo that sticks out past its box can move; then the page canvas stops scrolling under the finger.
   // Panning is always computed from where the drag began, so fast moves between renders never lose distance.
   const drag = useRef<{ x: number; y: number; start: PhotoContent; moved: boolean } | null>(null);
+  const textDrag = useRef<{ x: number; y: number; start: TextStyle; moved: boolean } | null>(null);
   const decoded = photoSlot && photo.src && !isSample(photo.src) ? images.get(photo.src) : undefined;
   const imgSize = decoded ? { w: (decoded as HTMLImageElement).naturalWidth || decoded.width || 0, h: (decoded as HTMLImageElement).naturalHeight || decoded.height || 0 } : null;
   const canPan = (() => {
@@ -295,53 +298,76 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   })();
   const down = (e: React.PointerEvent<HTMLDivElement>) => {
     drag.current = null;
-    if (!photoSlot || !canPan || (e.button !== undefined && e.button !== 0)) return;
-    const r = e.currentTarget.getBoundingClientRect(), pr = slotRect(photoSlot, W, H);
+    textDrag.current = null;
+    if (e.button !== undefined && e.button !== 0) return;
+    const r = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - r.left) / r.width) * W, py = ((e.clientY - r.top) / r.height) * H;
-    if (px < pr.x || px > pr.x + pr.w || py < pr.y || py > pr.y + pr.h) return; // only a drag that starts on the photo moves it
+    const hit = editableAt(layout, W, H, px, py, pages[at]?.styles);
+    if (hit?.kind === "text") {
+      const start = pages[at]?.styles?.[hit.id] ?? {};
+      textDrag.current = { x: e.clientX, y: e.clientY, start, moved: false };
+      setSlotId(hit.id);
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (!photoSlot || !canPan) return;
+    const pr = slotRect(photoSlot, W, H);
+    if (px < pr.x || px > pr.x + pr.w || py < pr.y || py > pr.y + pr.h) return;
     drag.current = { x: e.clientX, y: e.clientY, start: photo, moved: false };
+    setSlotId(photoSlot.id);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    const td = textDrag.current;
+    if (td && textSlot) {
+      const cx = e.clientX - td.x, cy = e.clientY - td.y;
+      if (!td.moved && Math.hypot(cx, cy) < 6) return;
+      td.moved = true;
+      const rect = e.currentTarget.getBoundingClientRect();
+      setTextPositionFromStart(td.start, cx / rect.width, cy / rect.height);
+      return;
+    }
     const d = drag.current;
     if (!d || !photoSlot) return;
     const cx = e.clientX - d.x, cy = e.clientY - d.y;
-    if (!d.moved && Math.hypot(cx, cy) < 6) return; // a small wobble is still a tap
+    if (!d.moved && Math.hypot(cx, cy) < 6) return;
     d.moved = true;
-    const k = W / e.currentTarget.getBoundingClientRect().width; // screen pixels to page units
+    const k = W / e.currentTarget.getBoundingClientRect().width;
     setPhotoProps(panBy(d.start, cx * k, cy * k, photoBox(photoSlot, d.start.frame, W, H), imgSize));
   };
   const tap = (e: React.PointerEvent<HTMLDivElement>) => {
-    const wasDrag = drag.current?.moved;
+    const wasTextDrag = textDrag.current?.moved;
+    const wasPhotoDrag = drag.current?.moved;
+    textDrag.current = null;
     drag.current = null;
-    if (wasDrag) return; // the finger moved the photo; that is not a tap
+    if (wasTextDrag || wasPhotoDrag) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const hit = editableAt(layout, W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H);
+    const hit = editableAt(layout, W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles);
     setSlotId(hit && hit.id !== slotId ? hit.id : null);
   };
 
   return (
     <div>
       <div className="mx-auto w-full max-w-[360px]">
-        <div className="relative select-none overflow-hidden rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={() => { drag.current = null; }}
-          style={{ touchAction: canPan ? "none" : "manipulation", cursor: canPan ? "grab" : undefined }}>
-          <canvas ref={main} width={W * DPR} height={H * DPR} className="block aspect-[3/4] w-full" role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
+        <div className="relative select-none overflow-hidden rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={() => { drag.current = null; textDrag.current = null; }}
+          style={{ touchAction: canPan || !!textSlot ? "none" : "manipulation", cursor: canPan || !!textSlot ? "grab" : undefined }}>
+          <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full" style={{ maxHeight: "min(480px, calc(70dvh - 70px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
           {slot && (
             <div aria-hidden className="pointer-events-none absolute rounded-sm border-2 border-rose-600 bg-rose-600/10"
               style={{
-                left: `${slot.x * 100}%`, top: `${slot.y * 100}%`, width: `${slot.w * 100}%`, height: `${slot.h * 100}%`,
+                left: `${(slot.x + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.x ?? 0) : 0)) * 100}%`, top: `${(slot.y + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.y ?? 0) : 0)) * 100}%`, width: `${slot.w * 100}%`, height: `${slot.h * 100}%`,
                 ...(slot.rot ? { transform: `rotate(${slot.rot.deg}deg)`, transformOrigin: `${((slot.rot.cx - slot.x) / slot.w) * 100}% ${((slot.rot.cy - slot.y) / slot.h) * 100}%` } : {}),
               }} />
           )}
         </div>
         {activeTool && (
           <section className="fixed inset-x-0 bottom-[76px] z-20 mx-auto w-full max-w-2xl px-3" aria-label={`${activeTool} tools`}>
-            <div className="max-h-[42vh] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]">
+            <div className="max-h-[30vh] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]">
               <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
                 <div><p className="text-sm font-bold text-stone-900">{activeTool === "Record" ? "Voice record" : activeTool === "Style" ? "Book style" : activeTool}</p><p className="text-[11px] text-stone-400">Focused tool workspace</p></div>
               </div>
-              <div className="max-h-[34vh] overflow-y-auto px-4 py-3">
+              <div className="max-h-[22vh] overflow-y-auto px-4 py-3">
                 {activeTool === "Pages" && (
                   <div className="space-y-4">
                     <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Primary page actions"><button type="button" onClick={addNewPage} disabled={!roomForPage} className={chip(false)+" shrink-0 disabled:opacity-40"}>＋ Add page</button><button type="button" onClick={copyPage} disabled={!roomForPage} className={chip(false)+" shrink-0 disabled:opacity-40"}>Duplicate</button></div><details className="rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Page actions</summary><div className="flex flex-wrap gap-2 border-t border-stone-200 px-3 py-2"><button type="button" onClick={() => shiftPage(-1)} disabled={!canEarlier} className={chip(false)+" disabled:opacity-40"}>← Earlier</button><button type="button" onClick={() => shiftPage(1)} disabled={!canLater} className={chip(false)+" disabled:opacity-40"}>Later →</button>{!confirmDelete && <button type="button" onClick={() => setConfirmDelete(true)} disabled={!canDelete} className={chip(false)+" disabled:opacity-40"}>Delete</button>}</div></details>

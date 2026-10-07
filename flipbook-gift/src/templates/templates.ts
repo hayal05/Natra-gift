@@ -23,7 +23,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "love-story", name: "Love Story", blurb: "A romantic magazine all about the two of you.",
     masthead: "OUR STORY",
-    palette: { paper: "#fff7f3", ink: "#2b1418", accent: "#b42c55", accent2: "#f48aa5", soft: "#fbdde0", dark: "#2d1020" },
+    palette: { paper: "#fff8f6", ink: "#24171b", accent: "#9f3150", accent2: "#ef9bb0", soft: "#f9e1e4", dark: "#28121b" },
     fontPairs: [fp("Playfair Display", "Lato"), ALT.classic],
     invitation: "{from} made something just for you, {to}. Open it when you have a quiet moment.",
     pages: [
@@ -39,7 +39,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "anniversary", name: "Anniversary", blurb: "Celebrate the years, the places, the little rituals.",
     masthead: "ALWAYS US",
-    palette: { paper: "#fbf6ee", ink: "#2a1a1a", accent: "#7b1e2e", accent2: "#d9b26a", soft: "#efe3cf", dark: "#2a0f17" },
+    palette: { paper: "#faf6ef", ink: "#241b1b", accent: "#7a2433", accent2: "#c9a45b", soft: "#eee2cf", dark: "#241015" },
     fontPairs: [fp("Cormorant Garamond", "Montserrat", 700), ALT.modern],
     invitation: "Happy anniversary, {to}. {from} has been saving this one for you.",
     pages: [
@@ -56,7 +56,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "wedding", name: "Wedding", blurb: "An elegant keepsake for the happy couple.",
     masthead: "THE WEDDING",
-    palette: { paper: "#fdfbf6", ink: "#3a3a34", accent: "#607052", accent2: "#d8c3a0", soft: "#eef0e6", dark: "#2f3a2f" },
+    palette: { paper: "#fdfcf8", ink: "#34362f", accent: "#5f705b", accent2: "#cbb894", soft: "#edf0e7", dark: "#2d352d" },
     fontPairs: [fp("Italiana", "Jost", 400), ALT.classic],
     invitation: "{from} has a gift for you on your wedding day, {to}. Open it and smile.",
     pages: [
@@ -73,7 +73,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "best-friends", name: "Best Friends", blurb: "Loud, funny and full of inside jokes.",
     masthead: "BFF WEEKLY",
-    palette: { paper: "#fffdf5", ink: "#17171a", accent: "#b93723", accent2: "#ffc933", soft: "#ffe7a3", dark: "#1b1b2f" },
+    palette: { paper: "#fffdf7", ink: "#17181b", accent: "#c7432f", accent2: "#f3c447", soft: "#fff0bd", dark: "#1b1b24" },
     fontPairs: [fp("Archivo Black", "DM Sans", 400), ALT.modern],
     invitation: "{from} has something for you, {to}. Warning: feelings ahead.",
     pages: [
@@ -90,7 +90,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "birthday", name: "Birthday Surprise", blurb: "Confetti colors and a big happy birthday.",
     masthead: "THIS YEAR",
-    palette: { paper: "#fffaf0", ink: "#2a1b4a", accent: "#7b3fe4", accent2: "#ff9f43", soft: "#efe3ff", dark: "#2a1b4a" },
+    palette: { paper: "#fffaf2", ink: "#261d3d", accent: "#7040c7", accent2: "#ff9b57", soft: "#eee5ff", dark: "#251a42" },
     fontPairs: [fp("Fredoka", "Nunito", 700), ALT.modern],
     invitation: "Surprise, {to}! {from} wrapped something up for your birthday.",
     pages: [
@@ -106,7 +106,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "sorry", name: "I'm Sorry", blurb: "A calm, sincere way to say it properly.",
     masthead: "A FEW WORDS",
-    palette: { paper: "#f7f8f9", ink: "#1f2a37", accent: "#3f6b8f", accent2: "#a9c3d6", soft: "#e3ebf2", dark: "#1c2a38" },
+    palette: { paper: "#fafafa", ink: "#202833", accent: "#426c8d", accent2: "#a7c1d4", soft: "#e4edf3", dark: "#1d2935" },
     fontPairs: [fp("Lora", "Source Sans 3", 700), ALT.modern],
     invitation: "{from} has something to say to you, {to}. Take your time.",
     pages: [
@@ -122,7 +122,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "memories", name: "Our Memories", blurb: "A warm, film-photo scrapbook of favorite days.",
     masthead: "OUR MEMORIES",
-    palette: { paper: "#f6efe2", ink: "#3a2c20", accent: "#934f26", accent2: "#d9a46a", soft: "#e8dcc4", dark: "#2b2019" },
+    palette: { paper: "#f4eee4", ink: "#342920", accent: "#91502b", accent2: "#d2a06c", soft: "#e8dcc9", dark: "#2a1f18" },
     fontPairs: [fp("DM Serif Display", "Work Sans", 400), ALT.classic],
     invitation: "{from} collected some of your best days for you, {to}.",
     pages: [
@@ -139,7 +139,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "appreciation", name: "Appreciation", blurb: "A heartfelt thank-you for someone who matters.",
     masthead: "WITH GRATITUDE",
-    palette: { paper: "#fbfaf3", ink: "#1f2d24", accent: "#2f6b4a", accent2: "#d6b04c", soft: "#e6efe3", dark: "#14281d" },
+    palette: { paper: "#fbfaf4", ink: "#1f2d24", accent: "#2f6b4a", accent2: "#d1ad4c", soft: "#e6efe2", dark: "#14271c" },
     fontPairs: [fp("Libre Baskerville", "Open Sans", 700), ALT.modern],
     invitation: "{from} wants to say something to you, {to}. It's been a long time coming.",
     pages: [
@@ -155,7 +155,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "long-distance", name: "Long Distance", blurb: "Same moon, different time zones.",
     masthead: "CLOSER",
-    palette: { paper: "#f4f7fb", ink: "#14213d", accent: "#2b59c3", accent2: "#8fb4ff", soft: "#dfe8f7", dark: "#0e1a33" },
+    palette: { paper: "#f5f8fc", ink: "#14223d", accent: "#315fc2", accent2: "#8caef0", soft: "#e0e9f8", dark: "#0f1c35" },
     fontPairs: [fp("Space Grotesk", "Inter", 700), ALT.classic],
     invitation: "{from} sent this across the miles, {to}. Open it and feel a little closer.",
     pages: [
@@ -171,7 +171,7 @@ export const TEMPLATE_LIST: Template[] = [
   {
     id: "just-because", name: "Just Because", blurb: "No occasion needed. A bright little surprise.",
     masthead: "JUST BECAUSE",
-    palette: { paper: "#fff8f1", ink: "#2d2230", accent: "#a94139", accent2: "#4cc9b0", soft: "#ffe1d6", dark: "#20303a" },
+    palette: { paper: "#fff8f2", ink: "#2c2230", accent: "#a9473f", accent2: "#45bfa9", soft: "#ffe1d5", dark: "#20313a" },
     fontPairs: [fp("Abril Fatface", "Poppins", 400), ALT.classic],
     invitation: "No reason at all, {to}. {from} just wanted to make you smile.",
     pages: [

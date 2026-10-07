@@ -4,7 +4,7 @@
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, editableSlots, isAdjusted, movePage, panBy, photoBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
-import { isSample, loadFonts, loadImages, renderPage, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
+import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
 import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS, audioFileProblem, readAudioDuration, recordingSupported, uploadAudio } from "../lib/audio";
@@ -287,6 +287,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   // Drag-to-pan (3.5f). Only a selected photo that sticks out past its box can move; then the page canvas stops scrolling under the finger.
   // Panning is always computed from where the drag began, so fast moves between renders never lose distance.
   const drag = useRef<{ x: number; y: number; start: PhotoContent; moved: boolean } | null>(null);
+  const resize = useRef<{ x: number; y: number; start: PhotoContent; moved: boolean } | null>(null);
   const textDrag = useRef<{ x: number; y: number; start: TextStyle; moved: boolean } | null>(null);
   const decoded = photoSlot && photo.src && !isSample(photo.src) ? images.get(photo.src) : undefined;
   const imgSize = decoded ? { w: (decoded as HTMLImageElement).naturalWidth || decoded.width || 0, h: (decoded as HTMLImageElement).naturalHeight || decoded.height || 0 } : null;
@@ -298,11 +299,16 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   })();
   const down = (e: React.PointerEvent<HTMLDivElement>) => {
     drag.current = null;
+    resize.current = null;
     textDrag.current = null;
     if (e.button !== undefined && e.button !== 0) return;
     const r = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - r.left) / r.width) * W, py = ((e.clientY - r.top) / r.height) * H;
     const hit = editableAt(layout, W, H, px, py, pages[at]?.styles);
+    if (photoSlot) {
+      const pr = photoSlotRect(photoSlot, photo, W, H), hs = Math.max(16, Math.min(28, Math.min(pr.w, pr.h) * 0.12));
+      if (px >= pr.x + pr.w - hs && py >= pr.y + pr.h - hs) { resize.current = { x: e.clientX, y: e.clientY, start: photo, moved: false }; setSlotId(photoSlot.id); e.currentTarget.setPointerCapture(e.pointerId); return; }
+    }
     if (hit?.kind === "text") {
       const start = pages[at]?.styles?.[hit.id] ?? {};
       textDrag.current = { x: e.clientX, y: e.clientY, start, moved: false };
@@ -310,14 +316,23 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       e.currentTarget.setPointerCapture(e.pointerId);
       return;
     }
-    if (!photoSlot || !canPan) return;
-    const pr = slotRect(photoSlot, W, H);
+    if (!photoSlot) return;
+    const pr = photoSlotRect(photoSlot, photo, W, H);
     if (px < pr.x || px > pr.x + pr.w || py < pr.y || py > pr.y + pr.h) return;
     drag.current = { x: e.clientX, y: e.clientY, start: photo, moved: false };
     setSlotId(photoSlot.id);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rr = resize.current;
+    if (rr && photoSlot) {
+      const rect = e.currentTarget.getBoundingClientRect(), dx = (e.clientX - rr.x) / rect.width, dy = (e.clientY - rr.y) / rect.height;
+      if (!rr.moved && Math.hypot(e.clientX - rr.x, e.clientY - rr.y) < 6) return;
+      rr.moved = true;
+      const sx = rr.start.x ?? photoSlot.x, sy = rr.start.y ?? photoSlot.y, sw = rr.start.w ?? photoSlot.w, sh = rr.start.h ?? photoSlot.h;
+      setPhotoProps({ x: sx, y: sy, w: Math.max(0.12, Math.min(1 - sx, sw + dx)), h: Math.max(0.12, Math.min(1 - sy, sh + dy)) });
+      return;
+    }
     const td = textDrag.current;
     if (td && textSlot) {
       const cx = e.clientX - td.x, cy = e.clientY - td.y;
@@ -332,15 +347,18 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     const cx = e.clientX - d.x, cy = e.clientY - d.y;
     if (!d.moved && Math.hypot(cx, cy) < 6) return;
     d.moved = true;
-    const k = W / e.currentTarget.getBoundingClientRect().width;
-    setPhotoProps(panBy(d.start, cx * k, cy * k, photoBox(photoSlot, d.start.frame, W, H), imgSize));
+    const rect = e.currentTarget.getBoundingClientRect(), dx = cx / rect.width, dy = cy / rect.height;
+    const sx = d.start.x ?? photoSlot.x, sy = d.start.y ?? photoSlot.y, sw = d.start.w ?? photoSlot.w, sh = d.start.h ?? photoSlot.h;
+    setPhotoProps({ x: Math.max(0, Math.min(1 - sw, sx + dx)), y: Math.max(0, Math.min(1 - sh, sy + dy)) });
   };
   const tap = (e: React.PointerEvent<HTMLDivElement>) => {
     const wasTextDrag = textDrag.current?.moved;
     const wasPhotoDrag = drag.current?.moved;
+    const wasResize = resize.current?.moved;
     textDrag.current = null;
     drag.current = null;
-    if (wasTextDrag || wasPhotoDrag) return;
+    resize.current = null;
+    if (wasTextDrag || wasPhotoDrag || wasResize) return;
     const r = e.currentTarget.getBoundingClientRect();
     const hit = editableAt(layout, W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles);
     setSlotId(hit && hit.id !== slotId ? hit.id : null);
@@ -349,8 +367,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   return (
     <div>
       <div className="mx-auto w-full max-w-[360px]">
-        <div className="relative select-none overflow-hidden rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={() => { drag.current = null; textDrag.current = null; }}
-          style={{ touchAction: canPan || !!textSlot ? "none" : "manipulation", cursor: canPan || !!textSlot ? "grab" : undefined }}>
+        <div className="relative select-none overflow-hidden rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={() => { drag.current = null; resize.current = null; textDrag.current = null; }}
+          style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
           <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full" style={{ maxHeight: "min(480px, calc(70dvh - 70px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
           {slot && (

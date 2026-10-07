@@ -62,11 +62,11 @@ export default async function OpenGraphImage({
               position: "absolute",
               top: 0,
               left: 0,
-              width: "100%",
-              height: 170,
-              background: "#ff8a38",
-              clipPath: "polygon(0 0, 100% 0, 50% 72%)",
-              borderRadius: "26px 26px 0 0",
+              width: 0,
+              height: 0,
+              borderLeft: "235px solid transparent",
+              borderRight: "235px solid transparent",
+              borderTop: "170px solid #ff8a38",
             }}
           />
 

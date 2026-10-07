@@ -5,7 +5,7 @@ import GiftView from "../../../components/GiftView";
 export const dynamic = "force-dynamic";
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://natratech.pro.et").replace(/\/$/, "");
-const shareImage = "/natragift-share.png?v=2";
+const shareImage = "/natragift-share.png?v=3";
 
 export async function generateMetadata({
   params,
@@ -34,7 +34,7 @@ export async function generateMetadata({
         width: 600,
         height: 315,
         type: "image/png",
-        alt: "A wrapped digital gift from NatraGift",
+        alt: "A standard wrapped gift box from NatraGift",
       }],
     },
     twitter: {

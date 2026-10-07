@@ -123,6 +123,9 @@ export interface TextStyle {
   size?: SizeStep;
   align?: Align;
   color?: ColorRef;
+  /** Position offset from the layout slot, in page fractions. */
+  x?: number;
+  y?: number;
 }
 
 export interface AudioContent {

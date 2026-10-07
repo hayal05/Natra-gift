@@ -27,7 +27,7 @@ export const TEMPLATE_LIST: Template[] = [
     fontPairs: [fp("Playfair Display", "Lato"), ALT.classic],
     invitation: "{from} made something just for you, {to}. Open it when you have a quiet moment.",
     pages: [
-      pg("cover-full", { p1: ph(1), title: "Our Story", kicker: "The Love Issue · No. 1", body: "10 reasons I love you\nThe day everything changed", byline: "For {to}" }),
+      pg("love-editorial", { p1: ph(1), title: "Our Story", kicker: "The Love Issue · No. 1", body: "10 reasons I love you · The day everything changed", byline: "For {to}" }),
       pg("letter", { p1: ph(2), kicker: "Editor's letter", title: "Dear {to},", body: "I never planned for you. Then you laughed at my worst joke, and my whole year rearranged itself around that sound. This little magazine is my way of saying thank you for every ordinary Tuesday that felt like a holiday.", sign: "{from}" }),
       pg("photo-full", { p1: ph(3), kicker: "Moment", caption: "The afternoon we stopped pretending it was just coffee." }),
       pg("polaroid-two", { p1: ph(1), caption: "First date", p2: ph(4), caption2: "Still laughing" }),
@@ -77,7 +77,7 @@ export const TEMPLATE_LIST: Template[] = [
     fontPairs: [fp("Archivo Black", "DM Sans", 400), ALT.modern],
     invitation: "{from} has something for you, {to}. Warning: feelings ahead.",
     pages: [
-      pg("cover-bold", { kicker: "The Friendship Edition", title: "Best Friends", p1: ph(1), body: "Inside jokes, decoded\nThe snacks we've shared", byline: "For {to}" }),
+      pg("friends-grid", { kicker: "The Friendship Edition", title: "BEST\nFRIENDS", p1: ph(1), p2: ph(2), p3: ph(3), p4: ph(4), p5: ph(5), byline: "FOR {to}" }),
       pg("collage-3-strip", { p1: ph(2), caption: "Road trip, wrong exit, best day", p2: ph(3), caption2: "Snacks at midnight", p3: ph(4), caption3: "The photo we both hate" }),
       pg("split-bottom", { kicker: "Breaking news", title: "You are my person", body: "Official report: no one else laughs at my jokes the way you do, and no one else gets the reference. Case closed.", p1: ph(5) }),
       pg("polaroid-two", { p1: ph(6), caption: "Day one", p2: ph(1), caption2: "Day one thousand" }),
@@ -175,7 +175,7 @@ export const TEMPLATE_LIST: Template[] = [
     fontPairs: [fp("Abril Fatface", "Poppins", 400), ALT.classic],
     invitation: "No reason at all, {to}. {from} just wanted to make you smile.",
     pages: [
-      pg("cover-bold", { kicker: "No occasion needed", title: "Just Because", p1: ph(1), body: "A little something\nto brighten your day", byline: "For {to}" }),
+      pg("just-because", { kicker: "No occasion needed", title: "Just Because", p1: ph(1), body: "A little something to brighten your day", byline: "For {to}" }),
       pg("photo-rounded", { title: "Surprise!", p1: ph(2), caption: "No reason, no occasion. You just came to mind." }),
       pg("polaroid-two", { p1: ph(3), caption: "Good vibes", p2: ph(4), caption2: "More good vibes" }),
       pg("letter-corner", { p1: ph(5), kicker: "A small note", title: "Thinking of you", body: "I saw something today that made me think of you, so I made this. You don't need a special day to be celebrated. I'm just glad you exist, and I hope this makes you smile.", sign: "{from}" }),

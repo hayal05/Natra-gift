@@ -36,6 +36,7 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
 export const isToken = (t: unknown): t is string => typeof t === "string" && TOKEN_RE.test(t);
 
 const PHOTO_SRC = /^(sample:[1-9]\d{0,2}|https:\/\/[^\s"'<>]{1,500}|data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$/;
+const AUDIO_SRC = /^https:\/\/res\.cloudinary\.com\/[^\s"'<>]{1,500}$/;
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const CONTROL = /[\u0000-\u0008\u000B-\u001F\u007F]/g; // control characters (a newline is kept)
 const clean = (s: string) => s.replace(CONTROL, "");
@@ -73,6 +74,11 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
   }
   const page: PageData = { layout: p.layout, slots };
   if (p.bg !== undefined) { if (!oneOf(p.bg, PALETTE_KEYS)) return bad("A page colour is not valid."); page.bg = p.bg as PageData["bg"]; }
+  if (p.audio !== undefined) {
+    if (!isObj(p.audio) || typeof p.audio.src !== "string" || !AUDIO_SRC.test(p.audio.src)) return bad("An audio note is not valid.");
+    if (!inRange(p.audio.duration, 1, 180)) return bad("An audio note duration is not valid.");
+    page.audio = { src: p.audio.src, duration: Math.round(p.audio.duration) };
+  }
   if (p.styles !== undefined) {
     if (!isObj(p.styles)) return bad("A text style is not valid.");
     const styles: Record<string, TextStyle> = {};

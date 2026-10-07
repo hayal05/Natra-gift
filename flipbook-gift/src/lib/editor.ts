@@ -1,6 +1,6 @@
 // Pure helpers for the page editor (task 3.2): which slots a creator can select, their names, and tap hit-testing.
 // No React here, so it can be checked from the command line (scripts/test-editor.ts).
-import { slotRect, textSlotRect } from "./pages/render";
+import { photoSlotRect, slotRect, textSlotRect } from "./pages/render";
 import { SAMPLE_COUNT, isSample } from "./pages/sample";
 import type { ColorRef, Layout, PageData, Palette, PhotoContent, PhotoFrame, PhotoSlotDef, SlotDef, TextSlotDef, TextStyle } from "./pages/types";
 
@@ -38,7 +38,8 @@ export function editableAt(l: Layout, w: number, h: number, px: number, py: numb
   const list = editableSlots(l);
   for (let i = list.length - 1; i >= 0; i--) {
     const s = list[i];
-    const r = s.kind === "text" ? textSlotRect(s, styles?.[s.id], w, h) : slotRect(s, w, h);
+    const raw = page.slots[s.id];
+    const r = s.kind === "text" ? textSlotRect(s, styles?.[s.id], w, h) : photoSlotRect(s, typeof raw === "object" && raw ? raw : undefined, w, h);
     if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return s;
   }
   return null;
@@ -126,6 +127,9 @@ export function setPhoto(page: PageData, slotId: string, patch: Partial<PhotoCon
   const num = (v: number | undefined, lo: number, hi: number, dflt: number) =>
     typeof v === "number" && Number.isFinite(v) && clamp(v, lo, hi) !== dflt ? clamp(v, lo, hi) : undefined;
   const out: PhotoContent = { src: typeof m.src === "string" ? m.src : "" };
+  const pos = (v: number | undefined, lo: number, hi: number) => typeof v === "number" && Number.isFinite(v) ? clamp(v, lo, hi) : undefined;
+  const x = pos(m.x, 0, 0.9), y = pos(m.y, 0, 0.9), w = pos(m.w, 0.1, 1), h = pos(m.h, 0.1, 1);
+  if (x !== undefined) out.x = x; if (y !== undefined) out.y = y; if (w !== undefined) out.w = w; if (h !== undefined) out.h = h;
   const zoom = num(m.zoom, 1, 3, 1), panX = num(m.panX, -1, 1, 0), panY = num(m.panY, -1, 1, 0);
   if (zoom !== undefined) out.zoom = zoom;
   if (panX !== undefined) out.panX = panX;

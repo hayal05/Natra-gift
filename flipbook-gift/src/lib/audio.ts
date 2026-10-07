@@ -11,8 +11,11 @@ export interface AudioUploadTicket {
   fields: Record<string, string>;
 }
 
-export function audioFileProblem(file: { type: string; size: number }): string | null {
-  if (!AUDIO_TYPES.includes(file.type as (typeof AUDIO_TYPES)[number])) return "Please choose a supported audio file (MP3, M4A, WAV, OGG, AAC or FLAC).";
+const AUDIO_EXTENSIONS = [".mp3", ".m4a", ".wav", ".ogg", ".webm", ".aac", ".flac"] as const;
+
+export function audioFileProblem(file: { type: string; size: number; name?: string }): string | null {
+  const ext = file.name ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
+  if (!AUDIO_TYPES.includes(file.type as (typeof AUDIO_TYPES)[number]) && !AUDIO_EXTENSIONS.includes(ext as (typeof AUDIO_EXTENSIONS)[number])) return "Please choose a supported audio file (MP3, M4A, WAV, OGG, AAC or FLAC).";
   if (file.size <= 0) return "That audio file is empty.";
   if (file.size > AUDIO_MAX_BYTES) return "That audio file is too large. The limit is 5 MB.";
   if (!UPLOADS_ENABLED) return "Audio uploads are not enabled yet.";
@@ -44,7 +47,7 @@ export function uploadAudio(blob: Blob, onProgress: (fraction: number) => void, 
     fetch("/api/upload-sign", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ kind: "audio", type: blob.type, size: blob.size }),
+      body: JSON.stringify({ kind: "audio", type: blob.type, size: blob.size, name: fileName }),
     })
       .then((r) => { if (!r.ok) throw new Error("sign"); return r.json() as Promise<AudioUploadTicket>; })
       .then((t) => {

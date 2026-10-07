@@ -47,34 +47,98 @@ export default function CreateScreen() {
   const suggested = fill(t.invitation, names);
   const set = (p: Partial<Draft>) => setDraft({ ...draft, ...p });
 
+  const activateEditorTool = (tool: "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style") => {
+    const root = document.querySelector("[data-natragift-editor]") as HTMLElement | null;
+    if (!root) return;
+
+    const scrollTo = (el: Element | null) => {
+      if (!(el instanceof HTMLElement)) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    const clickFirst = (buttons: NodeListOf<HTMLButtonElement>, predicate: (text: string) => boolean) => {
+      const button = Array.from(buttons).find((b) => predicate((b.textContent || "").trim()));
+      button?.click();
+      return button;
+    };
+
+    if (tool === "Pages") {
+      scrollTo(root.querySelector('[aria-label="Page actions"]'));
+      return;
+    }
+
+    if (tool === "Text" || tool === "Media") {
+      const parts = root.querySelectorAll('[aria-label="Parts of this page"] button');
+      const wanted = tool === "Text"
+        ? clickFirst(parts, (text) => !/photo|image|picture/i.test(text))
+        : clickFirst(parts, (text) => /photo|image|picture/i.test(text));
+      if (!wanted) scrollTo(root.querySelector("canvas"));
+      return;
+    }
+
+    if (tool === "Audio" || tool === "Record") {
+      const audio = Array.from(root.querySelectorAll("p")).find((p) => p.textContent?.trim() === "Audio note");
+      const audioSection = audio?.parentElement;
+      scrollTo(audioSection || root.querySelector("audio"));
+      if (tool === "Record") {
+        const buttons = root.querySelectorAll("button");
+        setTimeout(() => clickFirst(buttons, (text) => /^Record$|^Record a new note$/i.test(text)), 120);
+      }
+      return;
+    }
+
+    if (tool === "Style") {
+      const summaries = root.querySelectorAll("summary");
+      const summary = Array.from(summaries).find((s) => /Book style/i.test(s.textContent || ""));
+      if (summary instanceof HTMLElement) {
+        const details = summary.parentElement;
+        if (details instanceof HTMLDetailsElement) details.open = true;
+        scrollTo(summary);
+      }
+    }
+  };
+
   if (step === "pages") {
     return (
-      <Shell wide>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-widest text-rose-700">{t.name}</p>
-            <h1 className="mt-1 font-display text-2xl font-bold">Your pages</h1>
+      <main className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#f7f5f2] text-stone-900">
+        <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-stone-200 bg-white/95 px-3 backdrop-blur">
+          <button type="button" onClick={() => setStep("names")} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full text-xl text-stone-700 hover:bg-stone-100">←</button>
+          <div className="min-w-0 text-center"><p className="truncate text-sm font-bold">{t.name}</p><p className="text-[11px] text-stone-400">Auto-saved</p></div>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => setView(view === "edit" ? "preview" : "edit")} className="rounded-full px-3 py-2 text-xs font-bold text-stone-600 hover:bg-stone-100">{view === "edit" ? "Preview" : "Edit"}</button>
+            <button type="button" onClick={() => setSending(true)} className="rounded-full bg-rose-700 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-rose-800">Send</button>
           </div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setStep("names")} className="rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-700 hover:border-stone-500">← Names</button>
-            <button type="button" onClick={() => setSending(true)} className="rounded-full bg-rose-700 px-5 py-2 text-sm font-bold text-white hover:bg-rose-800">Send</button>
-          </div>
-        </div>
-        <div role="group" aria-label="Edit or preview" className="mt-5 inline-flex rounded-full border border-stone-300 bg-white p-1">
-          {(["edit", "preview"] as const).map((v) => (
-            <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
-              className={"rounded-full px-5 py-1.5 text-sm font-bold " + (view === v ? "bg-stone-900 text-white" : "text-stone-700 hover:text-stone-900")}>{v === "edit" ? "Edit" : "Preview"}</button>
-          ))}
-        </div>
-        <div className="mt-6" hidden={view !== "edit"}>
-          <PageEditor active={view === "edit"} template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })} onChange={(pages) => set({ pages })} />
-        </div>
-        {view === "preview" && <div className="mt-6"><PreviewBook template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} /></div>}
+        </header>
+        <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {view === "edit" ? (
+            <div className="mx-auto w-full max-w-2xl px-3 pb-28 pt-3">
+              <div className="mb-3 flex items-center justify-between px-1">
+                <div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">Editing</p><p className="text-sm font-semibold text-stone-700">{names.to} · {draft.pages.length} pages</p></div>
+                <button type="button" onClick={() => setStep("names")} className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-600">Gift details</button>
+              </div>
+              <div data-natragift-editor className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId}
+                  onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
+                  onChange={(pages) => set({ pages })} />
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto max-w-2xl px-3 py-5"><PreviewBook template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} /></div>
+          )}
+        </section>
+        {view === "edit" && (
+          <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/98 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-1 overflow-x-auto">
+              {[["Pages","▦","Manage pages, duplicate, reorder and change layouts."],["Text","T","Select a text element and open its editing controls."],["Media","▧","Select a photo and open its editing controls."],["Audio","♫","Open the audio controls for this page."],["Record","●","Start recording a voice note for this page."],["Style","✦","Open book colours and font controls."]].map(([label,icon,hint]) => (
+                <button key={label} type="button" title={hint} aria-label={label} onClick={() => activateEditorTool(label as "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style")} className="flex min-w-[62px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-900 active:scale-95">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-stone-100 text-xs font-black">{icon}</span><span className="text-[10px] font-semibold">{label}</span>
+                </button>
+              ))}          </div>
+          </nav>
+        )}
         {sending && <PublishDialog draft={draft} publish={publishGift} onClose={() => setSending(false)} />}
-        <p className="mt-6 text-center text-sm text-stone-500" role="status">
-          {saveFailed ? "Your browser would not save this draft, so it will be lost if you close the page." : "Draft saved on this device."}
-        </p>
-      </Shell>
+        <p className="sr-only" role="status">{saveFailed ? "Your browser would not save this draft." : "Draft saved on this device."}</p>
+      </main>
     );
   }
 

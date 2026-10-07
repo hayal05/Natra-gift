@@ -378,8 +378,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               style={{
                 left: `${((slot.kind === "photo" ? selectedPhotoRect?.x ?? slot.x * W : slot.x * W) / W + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.x ?? 0) : 0)) * 100}%`, top: `${((slot.kind === "photo" ? selectedPhotoRect?.y ?? slot.y * H : slot.y * H) / H + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.y ?? 0) : 0)) * 100}%`, width: `${(slot.kind === "photo" ? (selectedPhotoRect?.w ?? slot.w * W) / W : slot.w) * 100}%`, height: `${(slot.kind === "photo" ? (selectedPhotoRect?.h ?? slot.h * H) / H : slot.h) * 100}%`,
                 ...(slot.rot ? { transform: `rotate(${slot.rot.deg}deg)`, transformOrigin: `${((slot.rot.cx - slot.x) / slot.w) * 100}% ${((slot.rot.cy - slot.y) / slot.h) * 100}%` } : {}),
-              }} />
-            {slot.kind === "photo" && <div aria-hidden className="pointer-events-none absolute h-4 w-4 rounded-sm border-2 border-white bg-rose-600 shadow" style={{ left: "calc(100% - 8px)", top: "calc(100% - 8px)" }} />}
+              }}></div>
+            {slot.kind === "photo" && <div aria-hidden className="pointer-events-none absolute h-4 w-4 rounded-sm border-2 border-white bg-rose-600 shadow" style={{ left: "calc(100% - 8px)", top: "calc(100% - 8px)" }}></div>}
           )}
         </div>
         {activeTool && (

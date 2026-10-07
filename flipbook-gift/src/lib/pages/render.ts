@@ -14,6 +14,7 @@ export const color = (book: BookStyle, ref: ColorRef): string =>
 
 /** Slot rectangle in CSS px (before rotation). Also used by the editor for hit-testing. */
 export const slotRect = (s: SlotDef, w: number, h: number) => ({ x: s.x * w, y: s.y * h, w: s.w * w, h: s.h * h });
+export const photoSlotRect = (s: PhotoSlotDef, p: PhotoContent | undefined, w: number, h: number) => ({ x: (p?.x ?? s.x) * w, y: (p?.y ?? s.y) * h, w: (p?.w ?? s.w) * w, h: (p?.h ?? s.h) * h });
 export const textSlotRect = (s: TextSlotDef, st: TextStyle | undefined, w: number, h: number) => ({
   x: (s.x + (st?.x ?? 0)) * w, y: (s.y + (st?.y ?? 0)) * h, w: s.w * w, h: s.h * h,
 });
@@ -23,7 +24,7 @@ export function slotAt(layout: Layout, w: number, h: number, px: number, py: num
   for (let i = layout.slots.length - 1; i >= 0; i--) {
     const s = layout.slots[i];
     if (s.kind === "shape") continue;
-    const r = textSlotRect(s, st, w, h);
+    const r = s.kind === "text" ? textSlotRect(s, undefined, w, h) : slotRect(s, w, h);
     if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return s;
   }
   return null;
@@ -159,7 +160,7 @@ function drawImageIn(c: CanvasRenderingContext2D, img: CanvasImageSource & { wid
 
 function drawPhoto(c: CanvasRenderingContext2D, s: PhotoSlotDef, raw: string | PhotoContent | undefined, book: BookStyle, images: ImageMap, w: number, h: number) {
   const p: PhotoContent = typeof raw === "object" && raw ? raw : { src: "" };
-  const r = slotRect(s, w, h);
+  const r = photoSlotRect(s, p, w, h);
   const frame = p.frame ?? s.frame ?? "none";
   const pad = frame === "border" ? Math.min(r.w, r.h) * 0.045 : 0;
   const bottom = frame === "border" ? (s.matBottom ?? 0) * r.h : 0;

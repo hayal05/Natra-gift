@@ -47,6 +47,57 @@ export default function CreateScreen() {
   const suggested = fill(t.invitation, names);
   const set = (p: Partial<Draft>) => setDraft({ ...draft, ...p });
 
+  const activateEditorTool = (tool: "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style") => {
+    const root = document.querySelector("[data-natragift-editor]") as HTMLElement | null;
+    if (!root) return;
+
+    const scrollTo = (el: Element | null) => {
+      if (!(el instanceof HTMLElement)) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    const clickFirst = (buttons: NodeListOf<HTMLButtonElement>, predicate: (text: string) => boolean) => {
+      const button = Array.from(buttons).find((b) => predicate((b.textContent || "").trim()));
+      button?.click();
+      return button;
+    };
+
+    if (tool === "Pages") {
+      scrollTo(root.querySelector('[aria-label="Page actions"]'));
+      return;
+    }
+
+    if (tool === "Text" || tool === "Media") {
+      const parts = root.querySelectorAll('[aria-label="Parts of this page"] button');
+      const wanted = tool === "Text"
+        ? clickFirst(parts, (text) => !/photo|image|picture/i.test(text))
+        : clickFirst(parts, (text) => /photo|image|picture/i.test(text));
+      if (!wanted) scrollTo(root.querySelector("canvas"));
+      return;
+    }
+
+    if (tool === "Audio" || tool === "Record") {
+      const audio = Array.from(root.querySelectorAll("p")).find((p) => p.textContent?.trim() === "Audio note");
+      const audioSection = audio?.parentElement;
+      scrollTo(audioSection || root.querySelector("audio"));
+      if (tool === "Record") {
+        const buttons = root.querySelectorAll("button");
+        setTimeout(() => clickFirst(buttons, (text) => /^Record$|^Record a new note$/i.test(text)), 120);
+      }
+      return;
+    }
+
+    if (tool === "Style") {
+      const summaries = root.querySelectorAll("summary");
+      const summary = Array.from(summaries).find((s) => /Book style/i.test(s.textContent || ""));
+      if (summary instanceof HTMLElement) {
+        const details = summary.parentElement;
+        if (details instanceof HTMLDetailsElement) details.open = true;
+        scrollTo(summary);
+      }
+    }
+  };
+
   if (step === "pages") {
     return (
       <main className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#f7f5f2] text-stone-900">
@@ -65,7 +116,7 @@ export default function CreateScreen() {
                 <div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">Editing</p><p className="text-sm font-semibold text-stone-700">{names.to} · {draft.pages.length} pages</p></div>
                 <button type="button" onClick={() => setStep("names")} className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-600">Gift details</button>
               </div>
-              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+              <div data-natragift-editor className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
                 <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
                   onChange={(pages) => set({ pages })} />
@@ -78,12 +129,11 @@ export default function CreateScreen() {
         {view === "edit" && (
           <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/98 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
             <div className="mx-auto flex max-w-2xl items-center justify-between gap-1 overflow-x-auto">
-              {[["Pages","▦","Manage pages, duplicate, reorder and change layouts."],["Text","T","Tap text on the page to edit it."],["Media","▧","Tap a photo on the page to replace, crop, zoom or filter it."],["Audio","♫","Add an audio note to the current page."],["Record","●","Record a voice note for the current page."],["Style","✦","Change colours and fonts for the whole book."]].map(([label,icon,hint]) => (
-                <button key={label} type="button" title={hint} onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })} className="flex min-w-[62px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-900">
+              {[["Pages","▦","Manage pages, duplicate, reorder and change layouts."],["Text","T","Select a text element and open its editing controls."],["Media","▧","Select a photo and open its editing controls."],["Audio","♫","Open the audio controls for this page."],["Record","●","Start recording a voice note for this page."],["Style","✦","Open book colours and font controls."]].map(([label,icon,hint]) => (
+                <button key={label} type="button" title={hint} aria-label={label} onClick={() => activateEditorTool(label as "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style")} className="flex min-w-[62px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-900 active:scale-95">
                   <span className="grid h-7 w-7 place-items-center rounded-lg bg-stone-100 text-xs font-black">{icon}</span><span className="text-[10px] font-semibold">{label}</span>
                 </button>
-              ))}
-            </div>
+              ))}          </div>
           </nav>
         )}
         {sending && <PublishDialog draft={draft} publish={publishGift} onClose={() => setSending(false)} />}

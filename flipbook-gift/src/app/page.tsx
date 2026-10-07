@@ -1,401 +1,158 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState } from "react";
 import LiveBook from "../components/LiveBook";
 import { TEMPLATE_LIST } from "../templates";
 
-const featured = [
-  { id: "love-story", label: "Love Story", kind: "love" },
-  { id: "anniversary", label: "Anniversary", kind: "anniversary" },
-  { id: "wedding", label: "Wedding", kind: "graduation" },
-  { id: "best-friends", label: "Best Friends", kind: "friends" },
-  { id: "birthday", label: "Birthday Surprise", kind: "birthday" },
-  { id: "sorry", label: "I'm Sorry", kind: "sorry" },
-  { id: "memories", label: "Our Memories", kind: "memories" },
-  { id: "appreciation", label: "Appreciation", kind: "thanks" },
-  { id: "long-distance", label: "Long Distance", kind: "distance" },
-  { id: "just-because", label: "Just Because", kind: "because" },
-];
+const TEMPLATE_ICONS: Record<string, string> = {
+  "love-story": "♥",
+  anniversary: "∞",
+  wedding: "⌁",
+  "best-friends": "★",
+  birthday: "✦",
+  sorry: "…",
+  memories: "▧",
+  appreciation: "♡",
+  "long-distance": "☾",
+  "just-because": "✿",
+};
 
 export default function Home() {
+  const [selected, setSelected] = useState("love-story");
+  const active = TEMPLATE_LIST.find((template) => template.id === selected) ?? TEMPLATE_LIST[0];
+
   return (
-    <main className="natra-landing min-h-screen overflow-hidden bg-[#fffdfa] text-[#1d2b3d]">
-      <header className="relative z-40 mx-auto flex h-[82px] max-w-[1180px] items-center justify-between px-5 sm:px-8">
+    <main className="h-[100dvh] overflow-hidden bg-[#fffaf5] text-[#202936]">
+      <header className="mx-auto flex h-[68px] max-w-[1320px] items-center justify-between px-5 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5" aria-label="NatraGift home">
-          <GiftIcon className="h-9 w-9 text-[#ff6900]" />
-          <span className="font-display text-[22px] font-bold tracking-[-0.035em] text-[#1e2b3d]">
+          <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-[#ff6900] text-white shadow-[0_8px_20px_rgba(255,105,0,.18)]">
+            <GiftIcon />
+          </span>
+          <span className="text-[20px] font-extrabold tracking-[-.04em]">
             Natra<span className="text-[#ff6900]">Gift</span>
           </span>
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-5">
-          <a href="#how" className="hidden px-4 py-2 text-[14px] font-medium text-[#4e5662] transition hover:text-[#ff6900] sm:inline-flex">
-            How it works
-          </a>
-          <Link href="/create" className="inline-flex items-center gap-3 rounded-full bg-[#ff6900] px-5 py-3 text-[13px] font-bold text-white shadow-[0_9px_22px_rgba(255,105,0,.16)] transition hover:-translate-y-0.5 hover:bg-[#f25e00]">
-            Create a Gift <ArrowRight />
+        <div className="flex items-center gap-3">
+          <span className="hidden text-[13px] text-[#7d838b] sm:block">Digital gifts that open like a letter.</span>
+          <Link
+            href="/create"
+            className="rounded-full bg-[#ff6900] px-4 py-2.5 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(255,105,0,.15)] transition hover:-translate-y-0.5 hover:bg-[#f25e00]"
+          >
+            Create a Gift
           </Link>
-        </nav>
+        </div>
       </header>
 
-      <section className="relative bg-[radial-gradient(circle_at_73%_45%,rgba(255,190,121,.25),transparent_29%),linear-gradient(180deg,#fffdfa_0%,#fff9f3_100%)]">
-        <div className="absolute left-0 right-0 top-0 h-px bg-white" />
-        <div className="mx-auto grid min-h-[490px] max-w-[1180px] items-center gap-6 px-5 pb-16 pt-5 sm:px-8 lg:grid-cols-[.94fr_1.06fr] lg:gap-0 lg:pb-20 lg:pt-7">
-          <div className="relative z-20 max-w-[530px]">
-            <div className="mb-6 h-[3px] w-10 bg-[#ff6900]" />
-            <h1 className="font-display text-[clamp(3.15rem,6vw,5.1rem)] font-bold leading-[1.04] tracking-[-0.052em] text-[#1d2b3d]">
-              Make someone&apos;s
-              <span className="block">day. <span className="font-sans text-[#ff6900]">♥</span></span>
-            </h1>
-            <p className="mt-5 max-w-[450px] text-[18px] leading-[1.65] text-[#69717b] sm:text-[20px]">
-              Create a beautiful digital gift<br className="hidden sm:block" /> that opens like a letter.
-            </p>
-            <Link href="/create" className="mt-7 inline-flex items-center gap-5 rounded-full bg-[#ff6900] px-7 py-[17px] text-[15px] font-bold text-white shadow-[0_14px_30px_rgba(255,105,0,.18)] transition hover:-translate-y-0.5 hover:bg-[#f25e00]">
-              Create a Gift <ArrowRight />
-            </Link>
-          </div>
-
-          <div className="relative flex min-h-[390px] items-center justify-center lg:justify-end">
-            <GiftScene />
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white py-[52px] sm:py-[62px]">
-        <div className="mx-auto max-w-[1040px] px-5 sm:px-8">
-          <SectionHeading title="Choose a gift" />
-          <div className="mt-9 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 sm:gap-5 lg:grid-cols-5">
-            {featured.map(({ id, label, kind }) => {
-              const template = TEMPLATE_LIST.find((t) => t.id === id);
-              if (!template) return null;
-              return (
-                <Link key={id} href={`/create?t=${id}`} className="group text-center">
-                  <div className="mx-auto aspect-square w-full max-w-[122px] overflow-hidden rounded-[15px] bg-[#fff4e8] shadow-[0_4px_15px_rgba(33,42,53,.035)] ring-1 ring-black/[.025] transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_14px_30px_rgba(45,35,25,.10)]">
-                    <PackageIllustration kind={kind} />
-                  </div>
-                  <h3 className="mt-3 text-[14px] font-bold text-[#1d2b3d]">{label}</h3>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section id="how" className="border-y border-[#f5eee7] bg-[#fffaf5] py-[51px] sm:py-[62px]">
-        <div className="mx-auto max-w-[900px] px-5 sm:px-8">
-          <SectionHeading title="How it works" />
-          <div className="mx-auto mt-11 grid max-w-[760px] items-start gap-7 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
-            <HowStep number="1" title="Choose" icon={<CursorIcon />} />
-            <Connector />
-            <HowStep number="2" title="Personalize" icon={<PenIcon />} />
-            <Connector />
-            <HowStep number="3" title="Send" icon={<PaperPlaneIcon />} />
-          </div>
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden bg-[#fff0e1]">
-        <div className="absolute -right-20 -top-24 h-[300px] w-[300px] rounded-full bg-[#ffd8b5]" />
-        <div className="absolute bottom-[-125px] left-[35%] h-[290px] w-[290px] rounded-full bg-[#ffe1c8]" />
-        <div className="absolute left-[48%] top-[-120px] h-[260px] w-[260px] rounded-full bg-[#fff6ec]" />
-        <div className="relative mx-auto grid min-h-[285px] max-w-[1180px] items-center gap-7 px-5 py-12 sm:px-8 md:grid-cols-[.82fr_1.18fr]">
-          <div className="relative z-10">
-            <div className="mb-4 flex items-start gap-4">
-              <GiftIcon className="mt-1 h-10 w-10 shrink-0 text-[#ff6900]" />
-              <h2 className="max-w-[390px] font-display text-[28px] font-bold leading-[1.18] tracking-[-.035em] text-[#1d2b3d] sm:text-[32px]">
-                Ready to send<br className="hidden sm:block" /> something special?
-              </h2>
+      <div className="mx-auto grid h-[calc(100dvh-68px)] max-w-[1320px] gap-5 px-4 pb-4 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(430px,.85fr)] lg:px-8">
+        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-[#f0e5da] bg-white shadow-[0_18px_55px_rgba(73,47,27,.08)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,214,177,.42),transparent_34%),linear-gradient(145deg,#fff,#fff9f3)]" />
+          <div className="relative flex items-center justify-between px-5 py-4 sm:px-7">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#ff6900]">Featured gift</p>
+              <h1 className="mt-0.5 text-[21px] font-extrabold tracking-[-.035em] sm:text-[25px]">{active.name}</h1>
             </div>
-            <Link href="/create" className="ml-14 inline-flex items-center gap-4 rounded-full bg-[#ff6900] px-6 py-[14px] text-[14px] font-bold text-white shadow-[0_12px_24px_rgba(255,105,0,.16)] transition hover:-translate-y-0.5 hover:bg-[#f25e00]">
-              Create your gift <ArrowRight />
+            <span className="hidden rounded-full border border-[#eee4db] bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-[#7d838b] sm:block">
+              Live preview
+            </span>
+          </div>
+
+          <div className="relative min-h-0 flex-1 overflow-hidden px-3 pb-4 sm:px-8">
+            <div className="flex h-full items-center justify-center">
+              <div className="relative max-h-full w-full max-w-[690px]">
+                <div className="mx-auto w-[min(68%,560px)] min-w-[270px] max-w-full rounded-[24px] border-[7px] border-white bg-white p-1 shadow-[0_28px_65px_rgba(66,44,28,.22)] sm:w-[min(62%,600px)]">
+                  <div className="aspect-[3/4] overflow-hidden rounded-[15px] bg-[#f7eee5]">
+                    <LiveBook key={active.id} initial={active.id} />
+                  </div>
+                </div>
+                <div className="pointer-events-none absolute bottom-[-8px] left-1/2 h-8 w-[55%] -translate-x-1/2 rounded-full bg-[#7c563c]/15 blur-xl" />
+              </div>
+            </div>
+          </div>
+
+          <div className="relative flex items-center justify-between border-t border-[#f4ebe3] px-5 py-3 sm:px-7">
+            <p className="max-w-[70%] truncate text-[12px] text-[#747b84]">{active.blurb}</p>
+            <Link href={`/create?t=${active.id}`} className="shrink-0 text-[12px] font-bold text-[#ff6900] hover:underline">
+              Use this template →
             </Link>
           </div>
-          <div className="relative hidden h-[225px] md:block">
-            <GiftBundle />
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <footer className="bg-white px-5 py-7 text-center text-xs text-[#8a919a]">
-        NatraGift · Digital gifts that open like a letter.
-      </footer>
+        <section className="flex min-h-0 flex-col rounded-[28px] border border-[#f0e5da] bg-white p-4 shadow-[0_18px_55px_rgba(73,47,27,.06)] sm:p-5">
+          <div className="flex items-end justify-between px-1 pb-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#ff6900]">Templates</p>
+              <h2 className="mt-1 text-[24px] font-extrabold tracking-[-.04em]">Choose your moment</h2>
+            </div>
+            <span className="text-[11px] font-semibold text-[#9a9ea5]">{TEMPLATE_LIST.length} designs</span>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin]">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              {TEMPLATE_LIST.map((template) => {
+                const isActive = template.id === active.id;
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => setSelected(template.id)}
+                    className={`group text-left transition ${isActive ? "rounded-2xl ring-2 ring-[#ff6900] ring-offset-2 ring-offset-white" : ""}`}
+                    aria-label={`Preview ${template.name}`}
+                  >
+                    <div
+                      className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-black/[.05] p-2.5 shadow-[0_6px_18px_rgba(50,35,25,.06)] transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_12px_25px_rgba(50,35,25,.11)]"
+                      style={{ background: template.palette.soft }}
+                    >
+                      <div
+                        className="relative h-full overflow-hidden rounded-[10px] border border-black/[.06] bg-white shadow-sm"
+                        style={{ color: template.palette.ink }}
+                      >
+                        <div className="h-[42%] p-2" style={{ background: template.palette.accent }}>
+                          <span className="text-[7px] font-bold uppercase tracking-[.13em] text-white/75">
+                            {template.masthead}
+                          </span>
+                          <div className="mt-1 text-[13px] font-black leading-none text-white sm:text-[15px]">
+                            {TEMPLATE_ICONS[template.id] ?? "✦"}
+                          </div>
+                        </div>
+                        <div className="px-2 pt-2">
+                          <div className="text-[9px] font-bold leading-tight sm:text-[10px]">{template.name}</div>
+                          <div className="mt-1 h-1 w-[72%] rounded-full bg-black/10" />
+                          <div className="mt-1 h-1 w-[52%] rounded-full bg-black/[.06]" />
+                        </div>
+                        <div
+                          className="absolute bottom-0 right-0 h-7 w-7 rounded-tl-full"
+                          style={{ background: template.palette.accent2 }}
+                        />
+                      </div>
+                    </div>
+                    <div className="px-1 pt-2">
+                      <p className="truncate text-[12px] font-bold text-[#303743]">{template.name}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <Link
+            href="/create"
+            className="mt-4 flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#ff6900] text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(255,105,0,.14)] transition hover:bg-[#f25e00]"
+          >
+            Start with a blank gift
+          </Link>
+        </section>
+      </div>
     </main>
   );
 }
 
-function SectionHeading({ title }: { title: string }) {
+function GiftIcon() {
   return (
-    <div className="text-center">
-      <h2 className="font-display text-[30px] font-bold tracking-[-.04em] text-[#1d2b3d] sm:text-[34px]">{title}</h2>
-      <div className="mx-auto mt-4 h-[2px] w-10 bg-[#ff6900]" />
-    </div>
-  );
-}
-
-function HowStep({ number, title, icon }: { number: string; title: string; icon: ReactNode }) {
-  return (
-    <div className="relative flex flex-col items-center text-center">
-      <div className="relative grid h-[88px] w-[88px] place-items-center rounded-full bg-[#fff2e6] text-[#ff6900]">
-        <span className="absolute -left-1 -top-1 grid h-7 w-7 place-items-center rounded-full bg-[#ff6900] text-xs font-bold text-white shadow-sm">{number}</span>
-        {icon}
-      </div>
-      <h3 className="mt-3 text-[17px] font-bold text-[#1d2b3d]">{title}</h3>
-    </div>
-  );
-}
-
-function Connector() {
-  return <div className="hidden items-center justify-center pt-10 text-[25px] font-light text-[#ff6900] md:flex">→</div>;
-}
-
-function GiftScene() {
-  return (
-    <div className="relative h-[430px] w-full max-w-[610px]">
-      <div className="absolute right-[3%] top-[7%] h-[350px] w-[350px] rounded-full bg-[#ffe6cf] blur-2xl" />
-      <div className="absolute bottom-[4%] left-[4%] h-[125px] w-[180px] rounded-full bg-[#fff0dd] blur-xl" />
-
-      <div className="absolute bottom-[17%] left-[1%] z-10 hidden sm:block">
-        <FlowerSprig />
-      </div>
-
-      {/* Real envelope behind the live flipbook */}
-      <div className="absolute right-[3%] top-[10%] h-[270px] w-[225px] rotate-[9deg] rounded-[12px] bg-gradient-to-br from-[#ffb878] via-[#ff9850] to-[#ff7820] shadow-[0_24px_42px_rgba(183,92,30,.20)]">
-        <div className="absolute inset-x-0 top-0 h-[82px] overflow-hidden rounded-t-[12px]">
-          <div className="absolute -left-[25px] -top-[38px] h-[150px] w-[275px] rotate-[-1deg] rounded-[45%] bg-[#ffad69]" />
-        </div>
-        <div className="absolute bottom-[-10px] right-[-18px] h-[165px] w-[26px] rotate-[17deg] rounded-full border-l-[9px] border-[#ff781e]" />
-      </div>
-
-      {/* The landing-page example is the actual flipbook engine, not a static mockup. */}
-      <div className="absolute bottom-[3%] right-[12%] z-30 w-[300px] rotate-[5deg] sm:w-[325px]">
-        <div className="rounded-[22px] border-[7px] border-white bg-white p-[3px] shadow-[0_30px_58px_rgba(72,46,28,.22)]">
-          <LiveBook initial="love-story" />
-        </div>
-        <div className="pointer-events-none absolute inset-x-7 -bottom-2 h-8 rounded-full bg-[#9b613b]/20 blur-xl" />
-      </div>
-
-      <div className="absolute left-[9%] top-[10%] z-40 text-[29px] text-[#ff6900]">✦</div>
-      <div className="absolute left-[3%] top-[20%] z-40 text-[24px] text-[#ff6900]">✦</div>
-      <div className="absolute left-[11%] top-[1%] z-40 h-7 w-[2px] rotate-[-38deg] bg-[#ff6900]" />
-      <div className="absolute left-[18%] top-[0%] z-40 h-7 w-[2px] rotate-[-6deg] bg-[#ff6900]" />
-    </div>
-  );
-}
-
-function PackageIllustration({ kind }: { kind: string }) {
-  return (
-    <div className="relative h-full w-full">
-      {kind === "birthday" && <BirthdayPackage />}
-      {kind === "love" && <LovePackage />}
-      {kind === "thanks" && <ThanksPackage />}
-      {kind === "graduation" && <GraduationPackage />}
-      {kind === "because" && <BecausePackage />}
-      {kind === "anniversary" && <AnniversaryPackage />}
-      {kind === "friends" && <FriendsPackage />}
-      {kind === "sorry" && <SorryPackage />}
-      {kind === "memories" && <MemoriesPackage />}
-      {kind === "distance" && <DistancePackage />}
-    </div>
-  );
-}
-
-function BirthdayPackage() {
-  return (
-    <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden="true">
-      <defs>
-        <linearGradient id="giftbox" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#fffdf9"/><stop offset="1" stopColor="#f4eee8"/></linearGradient>
-        <linearGradient id="orangebox" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ff9b4b"/><stop offset="1" stopColor="#f46c12"/></linearGradient>
-      </defs>
-      <g transform="translate(33 45)">
-        <path d="M17 49h104v73H17z" fill="url(#giftbox)" stroke="#e8d9cb" strokeWidth="2"/>
-        <path d="M10 39h118v22H10z" fill="url(#orangebox)" rx="4"/>
-        <path d="M65 39v83" stroke="#ff7b1e" strokeWidth="9"/>
-        <path d="M52 39c-8-18-25-22-30-13-4 8 11 17 30 13Zm26 0c8-18 25-22 30-13 4 8-11 17-30 13Z" fill="#ff8a2d"/>
-        <path d="M10 39h118" stroke="#fff7ef" strokeWidth="2" opacity=".8"/>
-        <path d="M28 76h82" stroke="#eee3da" strokeWidth="2"/>
-        <path d="M29 84h67" stroke="#f1e7de" strokeWidth="2"/>
-      </g>
-      <g fill="#ff6900">
-        <path d="M38 29l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/>
-        <path d="M147 34l2 7 7 2-7 2-2 7-2-7-7-2 7-2z"/>
-        <path d="M157 105l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>
-      </g>
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path d="M4 10h16v10H4zM3 10h18V7H3zM12 7v13" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+      <path d="M12 7C11 2.7 5.8 2.4 5.8 5.3 5.8 7.3 9.3 7.4 12 7Zm0 0c1-4.3 6.2-4.6 6.2-1.7 0 2-3.5 2.1-6.2 1.7Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
     </svg>
   );
-}
-
-function LovePackage() {
-  return (
-    <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden="true">
-      <defs><radialGradient id="heart" cx=".35" cy=".25"><stop stopColor="#ff8c78"/><stop offset="1" stopColor="#e94539"/></radialGradient></defs>
-      <path d="M100 156C90 146 40 116 40 73c0-25 34-36 50-10 16-26 50-15 50 10 0 43-50 73-60 83Z" fill="url(#heart)" transform="translate(0 -2)"/>
-      <path d="M103 102l41 25-25 29-42-26z" fill="#fffaf5" stroke="#f0ddd2" strokeWidth="2"/>
-      <path d="m105 116 13 8 12-2" fill="none" stroke="#ff8b79" strokeWidth="3"/>
-      <path d="M109 130c5-5 10-5 15 0" fill="none" stroke="#ff8b79" strokeWidth="2"/>
-      <circle cx="74" cy="76" r="5" fill="#ffb3a4" opacity=".8"/>
-    </svg>
-  );
-}
-
-function ThanksPackage() {
-  return (
-    <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden="true">
-      <path d="M52 132c14-23 20-47 43-69 11-10 22-10 29 0 9 12-2 29-14 40-15 14-32 23-58 29Z" fill="#d8bd91"/>
-      <g fill="#fff">
-        <circle cx="83" cy="72" r="16"/><circle cx="108" cy="57" r="17"/><circle cx="126" cy="76" r="15"/><circle cx="103" cy="86" r="16"/><circle cx="67" cy="91" r="13"/>
-      </g>
-      <g fill="#f5d6a4"><circle cx="83" cy="72" r="3"/><circle cx="108" cy="57" r="3"/><circle cx="126" cy="76" r="3"/><circle cx="103" cy="86" r="3"/><circle cx="67" cy="91" r="3"/></g>
-      <path d="M45 103l70 16-15 53-70-17z" fill="#c69d67"/>
-      <path d="m45 103 36 8-16 58-35-14z" fill="#b98d58"/>
-      <path d="M119 129l45 15-17 28-47-13z" fill="#fffdf8" stroke="#dfd4ca" strokeWidth="2"/>
-      <text x="130" y="154" fontSize="9" textAnchor="middle" fill="#9a6c50" fontFamily="serif" transform="rotate(10 130 154)">Thank</text>
-      <text x="131" y="165" fontSize="9" textAnchor="middle" fill="#9a6c50" fontFamily="serif" transform="rotate(10 131 165)">you</text>
-    </svg>
-  );
-}
-
-function GraduationPackage() {
-  return (
-    <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden="true">
-      <g transform="translate(30 38)">
-        <path d="M70 16 137 43 70 70 3 43z" fill="#25292e"/>
-        <path d="M35 55v35c19 18 51 20 70 0V55L70 69z" fill="#171b20"/>
-        <path d="M137 43v39" stroke="#e6a021" strokeWidth="3"/>
-        <circle cx="137" cy="85" r="4" fill="#e6a021"/>
-        <path d="M50 101c6 7 13 12 20 12s14-5 20-12" fill="none" stroke="#dfd4c8" strokeWidth="3"/>
-        <path d="M25 106c13-7 25-5 37 4" fill="none" stroke="#e0d7cf" strokeWidth="3"/>
-        <path d="M112 101c-11-6-23-4-34 6" fill="none" stroke="#e0d7cf" strokeWidth="3"/>
-      </g>
-      <path d="M39 151h108" stroke="#e9ded3" strokeWidth="2"/>
-    </svg>
-  );
-}
-
-function BecausePackage() {
-  return (
-    <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden="true">
-      <path d="M76 162c11-29 19-61 38-105" fill="none" stroke="#4c7133" strokeWidth="6" strokeLinecap="round"/>
-      <path d="M96 103c-25-18-35-13-40-5 17 10 30 10 40 5Zm9-22c18-20 30-18 37-11-12 15-24 18-37 11Zm-18 50c-18-16-30-13-35-5 14 11 25 12 35 5Zm22-20c18-18 29-15 35-8-12 13-23 15-35 8Z" fill="#648d3e"/>
-      <g transform="rotate(-8 111 127)">
-        <path d="M91 99h63v57H91z" fill="#fffdf8" stroke="#ded2c7" strokeWidth="2"/>
-        <path d="M91 99h63l-31 25z" fill="#fff8ee"/>
-        <text x="122" y="132" textAnchor="middle" fontSize="10" fill="#845c45" fontFamily="serif">Just</text>
-        <text x="122" y="143" textAnchor="middle" fontSize="10" fill="#845c45" fontFamily="serif">Because</text>
-        <text x="122" y="151" textAnchor="middle" fontSize="9" fill="#ff6900">♥</text>
-      </g>
-    </svg>
-  );
-}
-
-function AnniversaryPackage() {
-  return <MiniTemplateIcon bg="#efe3cf" accent="#7b1e2e" title="ALWAYS US" symbol="♥" />;
-}
-function FriendsPackage() {
-  return <MiniTemplateIcon bg="#ffe7a3" accent="#b93723" title="BFF" symbol="★" />;
-}
-function SorryPackage() {
-  return <MiniTemplateIcon bg="#e3ebf2" accent="#3f6b8f" title="I'm Sorry" symbol="…" />;
-}
-function MemoriesPackage() {
-  return <MiniTemplateIcon bg="#e8dcc4" accent="#934f26" title="MEMORIES" symbol="✦" />;
-}
-function DistancePackage() {
-  return <MiniTemplateIcon bg="#dfe8f7" accent="#2b59c3" title="CLOSER" symbol="☾" />;
-}
-function MiniTemplateIcon({ bg, accent, title, symbol }: { bg: string; accent: string; title: string; symbol: string }) {
-  return (
-    <div className="relative flex h-full w-full items-center justify-center" style={{ background: bg }}>
-      <div className="relative h-[68%] w-[67%] rotate-[-3deg] rounded-[7px] bg-[#fffdf9] shadow-[0_7px_12px_rgba(60,40,25,.14)]">
-        <div className="absolute inset-x-2 top-2 h-[43%] rounded-[4px]" style={{ background: accent, opacity: .88 }}>
-          <span className="absolute inset-0 grid place-items-center text-[20px] font-serif text-white">{symbol}</span>
-        </div>
-        <div className="absolute inset-x-3 bottom-3 text-center text-[6px] font-bold uppercase tracking-[.14em]" style={{ color: accent }}>{title}</div>
-      </div>
-    </div>
-  );
-}
-
-function GiftBundle() {
-  return (
-    <div className="absolute right-[-1%] top-[6px] h-[215px] w-[510px]">
-      <div className="absolute bottom-[12px] right-[3%] h-[76px] w-[400px] rounded-[50%] bg-[#ffd3ae] opacity-55 blur-2xl" />
-      <div className="absolute bottom-[28px] right-[8%] h-[110px] w-[155px] rotate-[3deg] rounded-[9px] bg-gradient-to-br from-[#fffefa] to-[#f5ece2] shadow-[0_18px_30px_rgba(110,64,35,.14)]">
-        <div className="absolute left-1/2 top-[18px] h-[75px] w-[2px] -translate-x-1/2 bg-[#e9ddd2]" />
-        <div className="absolute left-1/2 top-[40px] h-11 w-11 -translate-x-1/2 rounded-full border-2 border-[#ff6900] text-center text-[30px] leading-[37px] text-[#ff6900]">♡</div>
-      </div>
-      <div className="absolute bottom-[28px] right-[18%] h-[105px] w-[145px] rotate-[-4deg] rounded-[9px] bg-gradient-to-br from-[#ffb46f] to-[#ff7620] shadow-[0_18px_30px_rgba(167,79,21,.18)]">
-        <div className="absolute -top-[4px] left-1/2 h-[113px] w-[13px] -translate-x-1/2 bg-[#ff8a2e]" />
-        <div className="absolute -top-[28px] left-1/2 h-14 w-24 -translate-x-1/2">
-          <div className="absolute left-1/2 top-4 h-7 w-14 -translate-x-[90%] rotate-[-28deg] rounded-full border-[7px] border-[#ff7b20]" />
-          <div className="absolute left-1/2 top-4 h-7 w-14 rotate-[28deg] rounded-full border-[7px] border-[#ff7b20]" />
-        </div>
-      </div>
-      <div className="absolute bottom-[26px] right-[34%] h-[113px] w-[152px] rotate-[4deg] rounded-[9px] bg-white shadow-[0_18px_28px_rgba(100,60,30,.15)]">
-        <div className="absolute inset-x-0 top-0 h-14 bg-[#fff8f0]" />
-        <div className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#ff6900] text-center text-[28px] leading-[35px] text-[#ff6900]">♡</div>
-      </div>
-      <div className="absolute bottom-[27px] right-[43%] h-[120px] w-[90px]">
-        <FlowerSprig small />
-      </div>
-      <div className="absolute bottom-[0] right-[25%] h-[22px] w-[125px] rotate-[17deg] rounded-full border-l-[7px] border-[#ff7920]" />
-      <div className="absolute bottom-[42px] right-[2%] h-[17px] w-[115px] rotate-[-22deg] rounded-full border-t-[7px] border-[#ff7920]" />
-    </div>
-  );
-}
-
-function FlowerSprig({ small = false }: { small?: boolean }) {
-  return (
-    <svg viewBox="0 0 130 180" className={small ? "h-[120px] w-[88px]" : "h-[190px] w-[135px]"} aria-hidden="true">
-      <path d="M54 175C57 130 59 87 78 35" fill="none" stroke="#718c50" strokeWidth="3"/>
-      <path d="M57 132C35 113 22 99 14 79M59 112c21-17 33-30 40-51M58 91C40 78 31 65 26 51" fill="none" stroke="#718c50" strokeWidth="2"/>
-      <g fill="#779755">
-        <ellipse cx="28" cy="100" rx="15" ry="5" transform="rotate(35 28 100)"/><ellipse cx="88" cy="84" rx="15" ry="5" transform="rotate(-32 88 84)"/>
-        <ellipse cx="42" cy="73" rx="14" ry="5" transform="rotate(30 42 73)"/><ellipse cx="78" cy="60" rx="14" ry="5" transform="rotate(-32 78 60)"/>
-      </g>
-      <g fill="#fffdf7">
-        <circle cx="15" cy="77" r="6"/><circle cx="27" cy="82" r="5"/><circle cx="101" cy="31" r="6"/><circle cx="90" cy="38" r="5"/><circle cx="78" cy="34" r="5"/>
-      </g>
-      <g fill="#e9c19c"><circle cx="15" cy="77" r="2"/><circle cx="27" cy="82" r="2"/><circle cx="101" cy="31" r="2"/><circle cx="90" cy="38" r="2"/><circle cx="78" cy="34" r="2"/></g>
-    </svg>
-  );
-}
-
-function MiniBouquet() {
-  return (
-    <svg viewBox="0 0 180 100" className="absolute bottom-0 left-1/2 h-[105px] w-[170px] -translate-x-1/2" aria-hidden="true">
-      <path d="M87 97C88 65 91 41 102 16" stroke="#6c8c52" strokeWidth="3" fill="none"/>
-      <path d="M89 70C72 55 63 42 60 28M94 61c18-15 25-26 27-42" stroke="#6c8c52" strokeWidth="2" fill="none"/>
-      <g fill="#f07b43"><circle cx="55" cy="32" r="13"/><circle cx="83" cy="20" r="12"/><circle cx="113" cy="30" r="13"/></g>
-      <g fill="#f6b25f"><circle cx="55" cy="32" r="4"/><circle cx="83" cy="20" r="4"/><circle cx="113" cy="30" r="4"/></g>
-      <path d="M51 54h75l-38 41z" fill="#ead2b8" opacity=".95"/>
-      <path d="M51 54c20 9 55 9 75 0" fill="none" stroke="#cfae91" strokeWidth="2"/>
-    </svg>
-  );
-}
-
-function GiftIcon({ className = "h-8 w-8" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden="true">
-      <path d="M8 20h32v22H8z" stroke="currentColor" strokeWidth="2.7" strokeLinejoin="round"/>
-      <path d="M6 20h36v-8H6zM24 20v22" stroke="currentColor" strokeWidth="2.7" strokeLinejoin="round"/>
-      <path d="M24 12c-1.8-7-11.8-9-12.6-3.4C10.5 13.4 18.5 14 24 12Zm0 0c1.8-7 11.8-9 12.6-3.4C37.5 13.4 29.5 14 24 12Z" stroke="currentColor" strokeWidth="2.7" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-function ArrowRight() {
-  return <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" aria-hidden="true"><path d="M3 10h13M10.5 5.5 15 10l-4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-}
-
-function CursorIcon() {
-  return <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none" aria-hidden="true"><path d="m13 8 23 18-10 2 5 10-5 3-6-10-7 7V8Z" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round"/></svg>;
-}
-
-function PenIcon() {
-  return <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none" aria-hidden="true"><path d="m10 35 3-9L32 7l8 8-19 19-11 1Z" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round"/><path d="m27 12 8 8M13 26l8 8" stroke="currentColor" strokeWidth="2.4"/></svg>;
-}
-
-function PaperPlaneIcon() {
-  return <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none" aria-hidden="true"><path d="m7 23 34-14-13 31-6-13L7 23Z" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round"/><path d="m22 27 19-18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/></svg>;
 }

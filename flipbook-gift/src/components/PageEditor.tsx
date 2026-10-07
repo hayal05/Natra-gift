@@ -177,6 +177,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   }, [at, pages.length]);
 
   const goto = (i: number) => { setIndex(i); setSlotId(null); };
+  const selectedPhotoContent: PhotoContent | null = slot?.kind === "photo" && typeof pages[at]?.slots[slot.id] === "object" ? pages[at]?.slots[slot.id] as PhotoContent : null;
+  const selectedPhotoRect = slot?.kind === "photo" ? photoSlotRect(slot, selectedPhotoContent ?? undefined, W, H) : null;
 
   // Page controls (3.6b). The new page is selected afterwards, so the creator can edit it straight away.
   const roomForPage = canAddPage(pages.length);
@@ -374,9 +376,10 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           {slot && (
             <div aria-hidden className="pointer-events-none absolute rounded-sm border-2 border-rose-600 bg-rose-600/10"
               style={{
-                left: `${(slot.x + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.x ?? 0) : 0)) * 100}%`, top: `${(slot.y + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.y ?? 0) : 0)) * 100}%`, width: `${slot.w * 100}%`, height: `${slot.h * 100}%`,
+                left: `${((slot.kind === "photo" ? selectedPhotoRect?.x ?? slot.x * W : slot.x * W) / W + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.x ?? 0) : 0)) * 100}%`, top: `${((slot.kind === "photo" ? selectedPhotoRect?.y ?? slot.y * H : slot.y * H) / H + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.y ?? 0) : 0)) * 100}%`, width: `${(slot.kind === "photo" ? (selectedPhotoRect?.w ?? slot.w * W) / W : slot.w) * 100}%`, height: `${(slot.kind === "photo" ? (selectedPhotoRect?.h ?? slot.h * H) / H : slot.h) * 100}%`,
                 ...(slot.rot ? { transform: `rotate(${slot.rot.deg}deg)`, transformOrigin: `${((slot.rot.cx - slot.x) / slot.w) * 100}% ${((slot.rot.cy - slot.y) / slot.h) * 100}%` } : {}),
               }} />
+            {slot.kind === "photo" && <div aria-hidden className="pointer-events-none absolute h-4 w-4 rounded-sm border-2 border-white bg-rose-600 shadow" style={{ left: "calc(100% - 8px)", top: "calc(100% - 8px)" }} />}
           )}
         </div>
         {activeTool && (

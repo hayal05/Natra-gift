@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 
 export const UPLOAD_LIMITS = {
   photo: { maxBytes: 5_000_000, types: ["image/jpeg"] as string[], folder: "flipbook", formats: "jpg", resourceType: "image" },
-  audio: { maxBytes: 5_000_000, types: ["audio/mpeg", "audio/mp3"] as string[], folder: "flipbook-audio", formats: "mp3", resourceType: "video" },
+  audio: { maxBytes: 5_000_000, types: ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm", "audio/aac", "audio/flac"] as string[], folder: "flipbook-audio", formats: "mp3,m4a,wav,ogg,webm,aac,flac", resourceType: "video" },
 };
 
 /** Cloudinary's rule: sort the parameters by name, join as name=value with &, append the API secret, SHA-1 as hex. */
@@ -25,7 +25,7 @@ export function makeTicket(input: unknown, env: Env, nowSeconds = Math.floor(Dat
   const rules = UPLOAD_LIMITS[kind];
 
   if (!i || typeof i.type !== "string" || !rules.types.includes(i.type)) {
-    return { ok: false, status: 400, message: kind === "audio" ? "Only MP3 audio can be uploaded." : "Only JPEG photos can be uploaded." };
+    return { ok: false, status: 400, message: kind === "audio" ? "That audio format is not supported. Use MP3, M4A, WAV, OGG, AAC or FLAC." : "Only JPEG photos can be uploaded." };
   }
   if (typeof i.size !== "number" || !Number.isFinite(i.size) || i.size <= 0 || i.size > rules.maxBytes) {
     return { ok: false, status: 400, message: kind === "audio" ? "That audio file is too large." : "That photo is too large." };

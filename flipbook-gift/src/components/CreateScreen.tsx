@@ -55,21 +55,57 @@ export default function CreateScreen() {
   const runEditorAction = (action: string) => {
     const root = document.querySelector("[data-natragift-editor]") as HTMLElement | null;
     if (!root) return;
-    const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>("button"));
-    const click = (matcher: string | RegExp) => buttons.find((b) => typeof matcher === "string" ? (b.textContent || "").trim() === matcher : matcher.test((b.textContent || "").trim()))?.click();
-    if (action === "text") { root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')[0]?.click(); return; }
-    if (action === "media") { Array.from(root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')).find((b) => /photo|image|picture/i.test((b.textContent || "").trim()))?.click(); return; }
-    if (action === "pages") { root.querySelector('[aria-label="Page actions"]')?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-    if (action === "audio" || action === "record") {
-      const audio = Array.from(root.querySelectorAll("p")).find((p) => p.textContent?.trim() === "Audio note");
-      (audio?.parentElement || root.querySelector("audio"))?.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (action === "record") setTimeout(() => click(/^Record$|^Record a new note$/i), 120);
+    const buttons = () => Array.from(root.querySelectorAll<HTMLButtonElement>("button"));
+    const click = (matcher: string | RegExp) => buttons().find((b) => typeof matcher === "string" ? (b.textContent || "").trim() === matcher : matcher.test((b.textContent || "").trim()))?.click();
+    const openDetails = (label: RegExp) => {
+      const summary = Array.from(root.querySelectorAll("summary")).find((el) => label.test(el.textContent || ""));
+      if (summary instanceof HTMLElement) { const details = summary.parentElement; if (details instanceof HTMLDetailsElement) details.open = true; summary.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    };
+    if (action === "add") { click("Add page"); return; }
+    if (action === "duplicate") { click("Duplicate this page"); return; }
+    if (action === "earlier") { click("← Move earlier"); return; }
+    if (action === "later") { click("Move later →"); return; }
+    if (action === "delete") { click("Delete this page"); return; }
+    if (action === "text") {
+      root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')[0]?.click();
       return;
     }
-    if (action === "style") {
-      const summary = Array.from(root.querySelectorAll("summary")).find((el) => /Book style/i.test(el.textContent || ""));
-      if (summary instanceof HTMLElement) { const details = summary.parentElement; if (details instanceof HTMLDetailsElement) details.open = true; summary.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    if (action === "text-font" || action === "text-size" || action === "text-align" || action === "text-color") {
+      root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')[0]?.click();
+      openDetails(/^Customize this page$/);
+      return;
     }
+    if (action === "media") {
+      Array.from(root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')).find((b) => /photo|image|picture/i.test((b.textContent || "").trim()))?.click();
+      return;
+    }
+    if (action === "media-choose") {
+      Array.from(root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')).find((b) => /photo|image|picture/i.test((b.textContent || "").trim()))?.click();
+      setTimeout(() => root.querySelector<HTMLInputElement>('input[type="file"][accept*="image"]')?.click(), 80);
+      return;
+    }
+    if (action === "media-style") {
+      Array.from(root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')).find((b) => /photo|image|picture/i.test((b.textContent || "").trim()))?.click();
+      openDetails(/^Customize this page$/);
+      return;
+    }
+    if (action === "audio") {
+      const audio = Array.from(root.querySelectorAll("p")).find((p) => p.textContent?.trim() === "Audio note");
+      (audio?.parentElement || root.querySelector("audio"))?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (action === "audio-choose") {
+      root.querySelector<HTMLInputElement>('input[type="file"][accept*=".mp3"]')?.click();
+      return;
+    }
+    if (action === "audio-remove") { click("Remove audio"); return; }
+    if (action === "record") {
+      const audio = Array.from(root.querySelectorAll("p")).find((p) => p.textContent?.trim() === "Audio note");
+      (audio?.parentElement || root.querySelector("audio"))?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => click(/^Record$|^Record a new note$/i), 120);
+      return;
+    }
+    if (action === "style") { openDetails(/Book style: colours and fonts/i); }
   };
 
   if (step === "pages") {
@@ -169,12 +205,12 @@ export default function CreateScreen() {
 
 function EditorToolSheet({ tool, onClose, onAction }: { tool: EditorTool; onClose: () => void; onAction: (action: string) => void }) {
   const config: Record<EditorTool, { title: string; icon: string; description: string; actions: { label: string; action: string; primary?: boolean }[] }> = {
-    Pages: { title: "Pages", icon: "▦", description: "Manage the pages of your gift.", actions: [{ label: "＋ Add page", action: "pages", primary: true }, { label: "Duplicate", action: "pages" }, { label: "Reorder", action: "pages" }, { label: "Layouts", action: "pages" }] },
-    Text: { title: "Text", icon: "T", description: "Select text, then use the editor controls for font, size, color and alignment.", actions: [{ label: "Select text", action: "text", primary: true }, { label: "Font", action: "text" }, { label: "Size", action: "text" }, { label: "Color", action: "text" }, { label: "Align", action: "text" }] },
-    Media: { title: "Media", icon: "▧", description: "Choose and edit photos on the current page.", actions: [{ label: "Select photo", action: "media", primary: true }, { label: "Choose photo", action: "media" }, { label: "Fit / Fill", action: "media" }, { label: "Filters", action: "media" }, { label: "Frames", action: "media" }] },
-    Audio: { title: "Audio", icon: "♫", description: "Manage audio attached to this page.", actions: [{ label: "Audio controls", action: "audio", primary: true }, { label: "Add audio", action: "audio" }, { label: "Trim", action: "audio" }, { label: "Volume", action: "audio" }, { label: "Remove", action: "audio" }] },
-    Record: { title: "Voice record", icon: "●", description: "Record a personal voice note for this page.", actions: [{ label: "● Record", action: "record", primary: true }, { label: "Stop", action: "record" }, { label: "Record again", action: "record" }, { label: "Use recording", action: "record" }] },
-    Style: { title: "Book style", icon: "✦", description: "Change the overall look of your gift.", actions: [{ label: "Open style", action: "style", primary: true }, { label: "Colours", action: "style" }, { label: "Fonts", action: "style" }, { label: "Page style", action: "style" }] }
+    Pages: { title: "Pages", icon: "▦", description: "Manage the pages of your gift.", actions: [{ label: "＋ Add page", action: "add", primary: true }, { label: "Duplicate", action: "duplicate" }, { label: "← Earlier", action: "earlier" }, { label: "Later →", action: "later" }, { label: "Delete", action: "delete" }] },
+    Text: { title: "Text", icon: "T", description: "Open the text controls for the selected page element.", actions: [{ label: "Select text", action: "text", primary: true }, { label: "Font", action: "text-font" }, { label: "Size", action: "text-size" }, { label: "Align", action: "text-align" }, { label: "Color", action: "text-color" }] },
+    Media: { title: "Media", icon: "▧", description: "Choose a photo and open its editing controls.", actions: [{ label: "Select photo", action: "media", primary: true }, { label: "Choose photo", action: "media-choose" }, { label: "Fit / Fill", action: "media-style" }, { label: "Filters", action: "media-style" }, { label: "Frames", action: "media-style" }] },
+    Audio: { title: "Audio", icon: "♫", description: "Manage audio attached to the current page.", actions: [{ label: "Audio controls", action: "audio", primary: true }, { label: "Choose audio", action: "audio-choose" }, { label: "Remove audio", action: "audio-remove" }] },
+    Record: { title: "Voice record", icon: "●", description: "Record and review a personal voice note.", actions: [{ label: "● Record", action: "record", primary: true }, { label: "Record again", action: "record" }, { label: "Review / use", action: "record" }] },
+    Style: { title: "Book style", icon: "✦", description: "Change colours and fonts across the whole gift.", actions: [{ label: "Open style", action: "style", primary: true }, { label: "Colours", action: "style" }, { label: "Fonts", action: "style" }] }
   };
   const current = config[tool];
   return (
@@ -189,7 +225,6 @@ function EditorToolSheet({ tool, onClose, onAction }: { tool: EditorTool; onClos
     </section>
   );
 }
-
 function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
     <main className={"mx-auto px-5 py-10 md:py-14 " + (wide ? "max-w-4xl" : "max-w-xl text-center")}>

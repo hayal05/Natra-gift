@@ -107,6 +107,10 @@ export interface Layout {
 /** What a photo slot holds. `src` is a URL or data URI; empty means "not chosen yet" (a placeholder is drawn). */
 export interface PhotoContent {
   src: string;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
   /** Pan, -1 to 1 on each axis, 0 = centred. Only has an effect when the photo overflows the slot. */
   panX?: number;
   panY?: number;

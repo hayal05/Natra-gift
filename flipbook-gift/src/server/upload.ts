@@ -20,11 +20,16 @@ export function makeTicket(input: unknown, env: Env, nowSeconds = Math.floor(Dat
   const { CLOUDINARY_CLOUD_NAME: cloud, CLOUDINARY_API_KEY: key, CLOUDINARY_API_SECRET: secret } = env;
   if (!cloud || !key || !secret) return { ok: false, status: 503, message: "Uploads are not set up." };
 
-  const i = input as { kind?: unknown; type?: unknown; size?: unknown } | null;
+  const i = input as { kind?: unknown; type?: unknown; size?: unknown; name?: unknown } | null;
   const kind = i?.kind === "audio" ? "audio" : i?.kind === "photo" ? "photo" : "photo";
   const rules = UPLOAD_LIMITS[kind];
+  const name = typeof i?.name === "string" ? i.name.toLowerCase() : "";
+  const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
+  const audioExts = [".mp3", ".m4a", ".wav", ".ogg", ".webm", ".aac", ".flac"];
+  const typeOk = typeof i?.type === "string" && rules.types.includes(i.type);
+  const extOk = kind === "audio" && audioExts.includes(ext);
 
-  if (!i || typeof i.type !== "string" || !rules.types.includes(i.type)) {
+  if (!i || (!typeOk && !extOk)) {
     return { ok: false, status: 400, message: kind === "audio" ? "That audio format is not supported. Use MP3, M4A, WAV, OGG, AAC or FLAC." : "Only JPEG photos can be uploaded." };
   }
   if (typeof i.size !== "number" || !Number.isFinite(i.size) || i.size <= 0 || i.size > rules.maxBytes) {

@@ -373,14 +373,14 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
           <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full" style={{ maxHeight: "min(480px, calc(70dvh - 70px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
-          {slot && (
+          {slot && (\n            <>
             <div aria-hidden className="pointer-events-none absolute rounded-sm border-2 border-rose-600 bg-rose-600/10"
               style={{
                 left: `${((slot.kind === "photo" ? selectedPhotoRect?.x ?? slot.x * W : slot.x * W) / W + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.x ?? 0) : 0)) * 100}%`, top: `${((slot.kind === "photo" ? selectedPhotoRect?.y ?? slot.y * H : slot.y * H) / H + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.y ?? 0) : 0)) * 100}%`, width: `${(slot.kind === "photo" ? (selectedPhotoRect?.w ?? slot.w * W) / W : slot.w) * 100}%`, height: `${(slot.kind === "photo" ? (selectedPhotoRect?.h ?? slot.h * H) / H : slot.h) * 100}%`,
                 ...(slot.rot ? { transform: `rotate(${slot.rot.deg}deg)`, transformOrigin: `${((slot.rot.cx - slot.x) / slot.w) * 100}% ${((slot.rot.cy - slot.y) / slot.h) * 100}%` } : {}),
               }}></div>
             {slot.kind === "photo" && <div aria-hidden className="pointer-events-none absolute h-4 w-4 rounded-sm border-2 border-white bg-rose-600 shadow" style={{ left: "calc(100% - 8px)", top: "calc(100% - 8px)" }}></div>}
-          )}
+            </>\n          )}
         </div>
         {activeTool && (
           <section className="fixed inset-x-0 bottom-[76px] z-20 mx-auto w-full max-w-2xl px-3" aria-label={`${activeTool} tools`}>

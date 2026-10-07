@@ -113,17 +113,24 @@ export default function GiftView({ token }: { token: string }) {
     return () => { off(); void leaveFullscreen(); };
   }, []);
 
+  // Keep the control visible even if the flipbook engine has not reported the page index yet.
+  // Prefer the note on the current page; otherwise use the first audio note in the gift.
   const currentAudio = draftForAudio?.pages[currentPage]?.audio;
+  const firstAudioEntry = draftForAudio?.pages
+    .map((page, index) => ({ audio: page.audio, index }))
+    .find((entry) => entry.audio);
+  const visibleAudio = currentAudio ?? firstAudioEntry?.audio;
+  const visibleAudioPage = currentAudio ? currentPage : (firstAudioEntry?.index ?? currentPage);
 
   useEffect(() => {
     const audio = audioRef.current;
     setAudioPlaying(false);
     if (audio) { audio.pause(); audio.currentTime = 0; }
-  }, [currentAudio?.src]);
+  }, [visibleAudio?.src]);
 
   const toggleAudio = () => {
     const audio = audioRef.current;
-    if (!audio || !currentAudio) return;
+    if (!audio || !visibleAudio) return;
     if (audio.paused) void audio.play().then(() => setAudioPlaying(true)).catch(() => setAudioPlaying(false));
     else { audio.pause(); setAudioPlaying(false); }
   };
@@ -144,15 +151,36 @@ export default function GiftView({ token }: { token: string }) {
       <div ref={host} className="relative h-full w-full">
         <div data-book className="absolute inset-0" />
       </div>
-      {mode === "reading" && currentAudio && (
-        <div className="absolute bottom-4 left-4 z-50 flex items-center gap-2" style={{ bottom: "max(1rem, env(safe-area-inset-bottom))", left: "max(1rem, env(safe-area-inset-left))" }}>
-          <audio ref={audioRef} key={currentAudio.src} preload="metadata" src={currentAudio.src}
-            onPlay={() => setAudioPlaying(true)} onPause={() => setAudioPlaying(false)} onEnded={() => setAudioPlaying(false)} className="hidden" />
-          <button type="button" onClick={toggleAudio} aria-label={audioPlaying ? "Pause audio note" : "Play audio note"} aria-pressed={audioPlaying}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-2xl text-stone-900 shadow-xl ring-2 ring-white/80 active:scale-95">
+      {mode === "reading" && visibleAudio && (
+        <div
+          className="fixed bottom-4 left-4 z-[100] flex items-center gap-2"
+          style={{
+            bottom: "max(1rem, env(safe-area-inset-bottom))",
+            left: "max(1rem, env(safe-area-inset-left))",
+          }}
+        >
+          <audio
+            ref={audioRef}
+            key={visibleAudio.src}
+            preload="metadata"
+            src={visibleAudio.src}
+            onPlay={() => setAudioPlaying(true)}
+            onPause={() => setAudioPlaying(false)}
+            onEnded={() => setAudioPlaying(false)}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={toggleAudio}
+            aria-label={audioPlaying ? "Pause audio note" : "Play audio note"}
+            aria-pressed={audioPlaying}
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-2xl font-bold text-stone-900 shadow-2xl ring-4 ring-black/20 active:scale-95"
+          >
             <span aria-hidden="true">{audioPlaying ? "❚❚" : "▶"}</span>
           </button>
-          <div className="rounded-full bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur">Audio note · page {currentPage + 1}</div>
+          <div className="rounded-full bg-black/75 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur">
+            Audio note · page {visibleAudioPage + 1}
+          </div>
         </div>
       )}
             {mode === "reading" && (

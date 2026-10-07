@@ -10,6 +10,8 @@ import PageEditor from "./PageEditor";
 import PreviewBook from "./PreviewBook";
 import PublishDialog from "./PublishDialog";
 
+type EditorTool = "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style";
+
 const input = "mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-base text-stone-900 shadow-sm focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900";
 
 export default function CreateScreen() {
@@ -20,6 +22,7 @@ export default function CreateScreen() {
   const [step, setStep] = useState<"names" | "pages">("names");
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [sending, setSending] = useState(false);
+  const [activeTool, setActiveTool] = useState<EditorTool | null>(null);
 
   // Decide which draft to show: ?t=<id> that differs from the saved draft starts a fresh one (names carry over); otherwise resume.
   useEffect(() => {
@@ -47,54 +50,25 @@ export default function CreateScreen() {
   const suggested = fill(t.invitation, names);
   const set = (p: Partial<Draft>) => setDraft({ ...draft, ...p });
 
-  const activateEditorTool = (tool: "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style") => {
+  const activateEditorTool = (tool: EditorTool) => setActiveTool((current) => current === tool ? null : tool);
+
+  const runEditorAction = (action: string) => {
     const root = document.querySelector("[data-natragift-editor]") as HTMLElement | null;
     if (!root) return;
-
-    const scrollTo = (el: Element | null) => {
-      if (!(el instanceof HTMLElement)) return;
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    };
-
-    const clickFirst = (buttons: NodeListOf<HTMLButtonElement>, predicate: (text: string) => boolean) => {
-      const button = Array.from(buttons).find((b) => predicate((b.textContent || "").trim()));
-      button?.click();
-      return button;
-    };
-
-    if (tool === "Pages") {
-      scrollTo(root.querySelector('[aria-label="Page actions"]'));
-      return;
-    }
-
-    if (tool === "Text" || tool === "Media") {
-      const parts = root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button');
-      const wanted = tool === "Text"
-        ? clickFirst(parts, (text) => !/photo|image|picture/i.test(text))
-        : clickFirst(parts, (text) => /photo|image|picture/i.test(text));
-      if (!wanted) scrollTo(root.querySelector("canvas"));
-      return;
-    }
-
-    if (tool === "Audio" || tool === "Record") {
+    const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>("button"));
+    const click = (matcher: string | RegExp) => buttons.find((b) => typeof matcher === "string" ? (b.textContent || "").trim() === matcher : matcher.test((b.textContent || "").trim()))?.click();
+    if (action === "text") { root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')[0]?.click(); return; }
+    if (action === "media") { Array.from(root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')).find((b) => /photo|image|picture/i.test((b.textContent || "").trim()))?.click(); return; }
+    if (action === "pages") { root.querySelector('[aria-label="Page actions"]')?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    if (action === "audio" || action === "record") {
       const audio = Array.from(root.querySelectorAll("p")).find((p) => p.textContent?.trim() === "Audio note");
-      const audioSection = audio?.parentElement;
-      scrollTo(audioSection || root.querySelector("audio"));
-      if (tool === "Record") {
-        const buttons = root.querySelectorAll("button");
-        setTimeout(() => clickFirst(buttons, (text) => /^Record$|^Record a new note$/i.test(text)), 120);
-      }
+      (audio?.parentElement || root.querySelector("audio"))?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (action === "record") setTimeout(() => click(/^Record$|^Record a new note$/i), 120);
       return;
     }
-
-    if (tool === "Style") {
-      const summaries = root.querySelectorAll("summary");
-      const summary = Array.from(summaries).find((s) => /Book style/i.test(s.textContent || ""));
-      if (summary instanceof HTMLElement) {
-        const details = summary.parentElement;
-        if (details instanceof HTMLDetailsElement) details.open = true;
-        scrollTo(summary);
-      }
+    if (action === "style") {
+      const summary = Array.from(root.querySelectorAll("summary")).find((el) => /Book style/i.test(el.textContent || ""));
+      if (summary instanceof HTMLElement) { const details = summary.parentElement; if (details instanceof HTMLDetailsElement) details.open = true; summary.scrollIntoView({ behavior: "smooth", block: "center" }); }
     }
   };
 
@@ -127,14 +101,18 @@ export default function CreateScreen() {
           )}
         </section>
         {view === "edit" && (
-          <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/98 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-1 overflow-x-auto">
-              {[["Pages","▦","Manage pages, duplicate, reorder and change layouts."],["Text","T","Select a text element and open its editing controls."],["Media","▧","Select a photo and open its editing controls."],["Audio","♫","Open the audio controls for this page."],["Record","●","Start recording a voice note for this page."],["Style","✦","Open book colours and font controls."]].map(([label,icon,hint]) => (
-                <button key={label} type="button" title={hint} aria-label={label} onClick={() => activateEditorTool(label as "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style")} className="flex min-w-[62px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-900 active:scale-95">
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-stone-100 text-xs font-black">{icon}</span><span className="text-[10px] font-semibold">{label}</span>
-                </button>
-              ))}          </div>
-          </nav>
+          <>
+            {activeTool && <EditorToolSheet tool={activeTool} onClose={() => setActiveTool(null)} onAction={runEditorAction} />}
+            <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/98 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
+              <div className="mx-auto flex max-w-2xl items-center justify-between gap-1 overflow-x-auto">
+                {([["Pages","▦"],["Text","T"],["Media","▧"],["Audio","♫"],["Record","●"],["Style","✦"]] as [EditorTool,string][]).map(([label,icon]) => (
+                  <button key={label} type="button" aria-label={label} aria-pressed={activeTool === label} onClick={() => activateEditorTool(label)} className={"flex min-w-[62px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-1.5 transition active:scale-95 " + (activeTool === label ? "bg-stone-100 text-stone-900" : "text-stone-500 hover:bg-stone-100 hover:text-stone-900")}>
+                    <span className={"grid h-7 w-7 place-items-center rounded-lg text-xs font-black " + (activeTool === label ? "bg-rose-700 text-white" : "bg-stone-100")}>{icon}</span><span className="text-[10px] font-semibold">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </nav>
+          </>
         )}
         {sending && <PublishDialog draft={draft} publish={publishGift} onClose={() => setSending(false)} />}
         <p className="sr-only" role="status">{saveFailed ? "Your browser would not save this draft." : "Draft saved on this device."}</p>
@@ -186,6 +164,29 @@ export default function CreateScreen() {
         </div>
       </div>
     </Shell>
+  );
+}
+
+function EditorToolSheet({ tool, onClose, onAction }: { tool: EditorTool; onClose: () => void; onAction: (action: string) => void }) {
+  const config: Record<EditorTool, { title: string; icon: string; description: string; actions: { label: string; action: string; primary?: boolean }[] }> = {
+    Pages: { title: "Pages", icon: "▦", description: "Manage the pages of your gift.", actions: [{ label: "＋ Add page", action: "pages", primary: true }, { label: "Duplicate", action: "pages" }, { label: "Reorder", action: "pages" }, { label: "Layouts", action: "pages" }] },
+    Text: { title: "Text", icon: "T", description: "Select text, then use the editor controls for font, size, color and alignment.", actions: [{ label: "Select text", action: "text", primary: true }, { label: "Font", action: "text" }, { label: "Size", action: "text" }, { label: "Color", action: "text" }, { label: "Align", action: "text" }] },
+    Media: { title: "Media", icon: "▧", description: "Choose and edit photos on the current page.", actions: [{ label: "Select photo", action: "media", primary: true }, { label: "Choose photo", action: "media" }, { label: "Fit / Fill", action: "media" }, { label: "Filters", action: "media" }, { label: "Frames", action: "media" }] },
+    Audio: { title: "Audio", icon: "♫", description: "Manage audio attached to this page.", actions: [{ label: "Audio controls", action: "audio", primary: true }, { label: "Add audio", action: "audio" }, { label: "Trim", action: "audio" }, { label: "Volume", action: "audio" }, { label: "Remove", action: "audio" }] },
+    Record: { title: "Voice record", icon: "●", description: "Record a personal voice note for this page.", actions: [{ label: "● Record", action: "record", primary: true }, { label: "Stop", action: "record" }, { label: "Record again", action: "record" }, { label: "Use recording", action: "record" }] },
+    Style: { title: "Book style", icon: "✦", description: "Change the overall look of your gift.", actions: [{ label: "Open style", action: "style", primary: true }, { label: "Colours", action: "style" }, { label: "Fonts", action: "style" }, { label: "Page style", action: "style" }] }
+  };
+  const current = config[tool];
+  return (
+    <section className="fixed inset-x-0 bottom-[76px] z-20 mx-auto w-full max-w-2xl px-3" aria-label={current.title + " tools"}>
+      <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.14)]">
+        <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
+          <div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg bg-rose-50 text-sm font-black text-rose-700">{current.icon}</span><div><p className="text-sm font-bold text-stone-900">{current.title}</p><p className="text-[11px] text-stone-400">Tool workspace</p></div></div>
+          <button type="button" onClick={onClose} aria-label="Close tool" className="grid h-8 w-8 place-items-center rounded-full bg-stone-100 text-stone-600">×</button>
+        </div>
+        <div className="max-h-[34vh] overflow-y-auto px-4 py-3"><p className="text-xs leading-5 text-stone-500">{current.description}</p><div className="mt-3 flex flex-wrap gap-2">{current.actions.map((item) => <button key={item.label} type="button" onClick={() => onAction(item.action)} className={"rounded-xl border px-3 py-2.5 text-xs font-bold transition active:scale-[.98] " + (item.primary ? "border-rose-700 bg-rose-700 text-white" : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50")}>{item.label}</button>)}</div></div>
+      </div>
+    </section>
   );
 }
 

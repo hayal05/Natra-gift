@@ -68,7 +68,7 @@ export default function CreateScreen() {
     }
 
     if (tool === "Text" || tool === "Media") {
-      const parts = root.querySelectorAll('[aria-label="Parts of this page"] button');
+      const parts = root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button');
       const wanted = tool === "Text"
         ? clickFirst(parts, (text) => !/photo|image|picture/i.test(text))
         : clickFirst(parts, (text) => /photo|image|picture/i.test(text));

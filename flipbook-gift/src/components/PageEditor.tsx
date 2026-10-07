@@ -7,6 +7,7 @@ import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, 
 import { isSample, loadFonts, loadImages, renderPage, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
+import { AUDIO_MAX_SECONDS, audioFileProblem, readAudioDuration, uploadAudio } from "../lib/audio";
 import { LAYOUTS, LAYOUT_LIST, bookStyle, fillPages, type Template } from "../templates";
 
 const W = 360, H = 480, DPR = 2; // logical page size; the canvas is scaled by CSS
@@ -40,6 +41,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState<{ label: string; pct: number | null } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const [audioBusy, setAudioBusy] = useState<{ label: string; pct: number | null } | null>(null);
 
   const book = useMemo(() => bookStyle(template, fontPair, palette), [template, fontPair, palette]);
   const filled = useMemo(() => fillPages(pages, { to: to.trim() || "you", from: from.trim() || "me" }), [pages, to, from]);
@@ -168,6 +171,42 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const setBg = (bg: ColorRef | undefined) => { onChange(pages.map((p, i) => (i === at ? setPageBg(p, bg) : p))); };
   const copyPage = () => { if (!roomForPage) return; onChange(duplicatePage(pages, at)); goto(at + 1); };
 
+  const currentAudio = pages[at]?.audio;
+  const chooseAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || audioBusy) return;
+    const problem = audioFileProblem(file);
+    if (problem) { setAudioError(problem); return; }
+    const original = pagesRef.current[at], target = at;
+    setAudioError(null);
+    setAudioBusy({ label: "Checking audio…", pct: null });
+    try {
+      const duration = await readAudioDuration(file);
+      if (duration > AUDIO_MAX_SECONDS) throw new Error("too-long");
+      setAudioBusy({ label: "Uploading…", pct: 0 });
+      const src = await uploadAudio(file, (f) => setAudioBusy({ label: "Uploading…", pct: Math.round(f * 100) }));
+      const now = pagesRef.current;
+      let i = now.indexOf(original);
+      if (i < 0 && now[target] === original) i = target;
+      if (i < 0) { setAudioError("That page changed while the audio was uploading. Please choose it again."); return; }
+      onChange(now.map((p, k) => k === i ? { ...p, audio: { src, duration } } : p));
+    } catch (err) {
+      const m = err instanceof Error ? err.message : "";
+      setAudioError(
+        m === "too-long" ? "The audio note must be 3 minutes or shorter."
+        : m === "sign" || m === "network" || m === "upload" ? "The audio could not be uploaded. Check your connection and try again."
+        : "That file could not be read as an MP3 audio note."
+      );
+    } finally { setAudioBusy(null); }
+  };
+
+  const removeAudio = () => {
+    if (!currentAudio) return;
+    onChange(pages.map((p, i) => i === at ? { ...p, audio: undefined } : p));
+    setAudioError(null);
+  };
+
   // Drag-to-pan (3.5f). Only a selected photo that sticks out past its box can move; then the page canvas stops scrolling under the finger.
   // Panning is always computed from where the drag began, so fast moves between renders never lose distance.
   const drag = useRef<{ x: number; y: number; start: PhotoContent; moved: boolean } | null>(null);
@@ -251,6 +290,32 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               {photoError && <p role="alert" className="mt-2 text-xs font-bold text-red-700">{photoError}</p>}
             </div>
           )}
+          <div className="mt-3 border-t border-stone-200 pt-3">
+            <p className="font-bold text-stone-900">Audio note</p>
+            <p className="mt-0.5 text-xs text-stone-500">Add one MP3 voice note to this page. Maximum 5 MB and 3 minutes.</p>
+            {currentAudio ? (
+              <div className="mt-2 space-y-2">
+                <audio controls preload="metadata" src={currentAudio.src} className="w-full" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-stone-500">{currentAudio.duration}s audio note</span>
+                  <button type="button" onClick={removeAudio} disabled={!!audioBusy} className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:border-red-300">Remove audio</button>
+                </div>
+              </div>
+            ) : (
+              <label className={"mt-2 inline-block rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs font-bold text-stone-700 transition focus-within:ring-2 focus-within:ring-rose-300 " + (audioBusy ? "cursor-wait opacity-50" : "cursor-pointer hover:border-stone-500")}>
+                Add MP3 voice note
+                <input type="file" accept="audio/mpeg,audio/mp3,.mp3" onChange={chooseAudio} disabled={!!audioBusy} className="sr-only" />
+              </label>
+            )}
+            {audioBusy && (
+              <div className="mt-2" role="status" aria-live="polite">
+                <p className="text-xs text-stone-600">{audioBusy.label}{audioBusy.pct !== null && ` ${audioBusy.pct}%`}</p>
+                <progress className="mt-1 h-2 w-full max-w-[240px]" max={100} {...(audioBusy.pct !== null ? { value: audioBusy.pct } : {})} />
+              </div>
+            )}
+            {audioError && <p role="alert" className="mt-2 text-xs font-bold text-red-700">{audioError}</p>}
+          </div>
+
           {textSlot && (
             <label className="mt-2 block">
               <span className="sr-only">Text for {slotName(layout, textSlot)}</span>

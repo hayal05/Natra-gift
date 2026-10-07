@@ -24,3 +24,23 @@ body {
     animation-duration: .01ms !important;
   }
 }
+
+
+/* NatraGift shared primary UI color — matches the landing page. */
+:root {
+  --natra-primary: #ff6900;
+  --natra-primary-hover: #f25e00;
+}
+
+/* Keep the existing Tailwind utility names used throughout the creator,
+   but make their primary accent match the landing page. */
+.text-rose-700 { color: var(--natra-primary) !important; }
+.bg-rose-700 { background-color: var(--natra-primary) !important; }
+.border-rose-700 { border-color: var(--natra-primary) !important; }
+.ring-rose-700 { --tw-ring-color: var(--natra-primary) !important; }
+
+.hover\\:bg-rose-800:hover { background-color: var(--natra-primary-hover) !important; }
+.hover\\:text-rose-700:hover { color: var(--natra-primary-hover) !important; }
+.hover\\:border-rose-700:hover { border-color: var(--natra-primary-hover) !important; }
+.focus\\:border-rose-700:focus { border-color: var(--natra-primary) !important; }
+.focus\\:ring-rose-700:focus { --tw-ring-color: var(--natra-primary) !important; }

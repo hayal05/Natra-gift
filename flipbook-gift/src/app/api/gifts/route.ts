@@ -11,5 +11,8 @@ export async function POST(req: Request) {
   try {
     const r = await createGift(pgStore, body, siteUrl(req));
     return r.ok ? json(r.value, 201) : json({ message: r.message }, r.status);
-  } catch { return json({ message: "We could not save your gift. Please try again." }, 500); }
+  } catch (error) {
+    console.error("[POST /api/gifts] publish failed", error);
+    return json({ message: "We could not save your gift. Please check the deployment logs." }, 500);
+  }
 }

@@ -1,9 +1,10 @@
 // Recipient page (task 5.2): /g/<private token>. Never indexed; the token is the only way in.
 import type { Metadata } from "next";
 import GiftView from "../../../components/GiftView";
-import { pgStore } from "../../../server/pg";
 
 export const dynamic = "force-dynamic";
+
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://natratech.pro.et").replace(/\/$/, "");
 
 export async function generateMetadata({
   params,
@@ -11,10 +12,10 @@ export async function generateMetadata({
   params: Promise<{ token: string }>;
 }): Promise<Metadata> {
   const { token } = await params;
-  const gift = await pgStore.byPrivateToken(token);
-  const recipient = gift?.recipientName?.trim() || "you";
-  const title = `A gift for ${recipient}`;
+  const title = "A gift for you";
   const description = "A special digital gift from NatraGift. Open it to see your surprise.";
+  const previewImage = `${siteUrl}/g/${token}/opengraph-image`;
+  const giftUrl = `${siteUrl}/g/${token}`;
 
   return {
     title,
@@ -25,13 +26,21 @@ export async function generateMetadata({
       title,
       description,
       type: "website",
-      images: [{ url: `/g/${token}/opengraph-image`, width: 1200, height: 630, alt: "A wrapped digital gift from NatraGift" }],
+      url: giftUrl,
+      siteName: "NatraGift",
+      images: [{
+        url: previewImage,
+        width: 1200,
+        height: 630,
+        type: "image/png",
+        alt: "A wrapped digital gift from NatraGift",
+      }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [`/g/${token}/opengraph-image`],
+      images: [previewImage],
     },
   };
 }

@@ -29,6 +29,8 @@ export default function GiftView({ token }: { token: string }) {
   const [canFs, setCanFs] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [draftForAudio, setDraftForAudio] = useState<Draft | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const host = useRef<HTMLDivElement>(null);
   const shell = useRef<HTMLElement>(null);
   const reader = useRef<{ start: () => void; stop: () => void } | null>(null);
@@ -111,7 +113,22 @@ export default function GiftView({ token }: { token: string }) {
     return () => { off(); void leaveFullscreen(); };
   }, []);
 
-  const close = () => { void leaveFullscreen(); reader.current?.stop(); };
+  const currentAudio = draftForAudio?.pages[currentPage]?.audio;
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    setAudioPlaying(false);
+    if (audio) { audio.pause(); audio.currentTime = 0; }
+  }, [currentAudio?.src]);
+
+  const toggleAudio = () => {
+    const audio = audioRef.current;
+    if (!audio || !currentAudio) return;
+    if (audio.paused) void audio.play().then(() => setAudioPlaying(true)).catch(() => setAudioPlaying(false));
+    else { audio.pause(); setAudioPlaying(false); }
+  };
+
+  const close = () => { audioRef.current?.pause(); setAudioPlaying(false); void leaveFullscreen(); reader.current?.stop(); };
   const reopen = () => { reader.current?.start(); if (shell.current) void enterFullscreen(shell.current); };
   const toggleFs = () => { if (fsElement()) void leaveFullscreen(); else if (shell.current) void enterFullscreen(shell.current); };
 
@@ -127,20 +144,18 @@ export default function GiftView({ token }: { token: string }) {
       <div ref={host} className="relative h-full w-full">
         <div data-book className="absolute inset-0" />
       </div>
-      {mode === "reading" && (
-        <div className="absolute inset-x-3 bottom-3 z-10 flex justify-center" style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
-          {(() => {
-            const audio = draftForAudio?.pages[currentPage]?.audio;
-            return audio ? (
-              <div className="w-full max-w-[420px] rounded-2xl bg-black/55 p-2 shadow-lg backdrop-blur">
-                <audio key={audio.src} controls preload="metadata" src={audio.src} className="w-full" aria-label={`Audio note for page ${currentPage + 1}`} />
-                <p className="px-2 pt-1 text-center text-xs text-white/80">Audio note · page {currentPage + 1}</p>
-              </div>
-            ) : null;
-          })()}
+      {mode === "reading" && currentAudio && (
+        <div className="absolute bottom-4 left-4 z-50 flex items-center gap-2" style={{ bottom: "max(1rem, env(safe-area-inset-bottom))", left: "max(1rem, env(safe-area-inset-left))" }}>
+          <audio ref={audioRef} key={currentAudio.src} preload="metadata" src={currentAudio.src}
+            onPlay={() => setAudioPlaying(true)} onPause={() => setAudioPlaying(false)} onEnded={() => setAudioPlaying(false)} className="hidden" />
+          <button type="button" onClick={toggleAudio} aria-label={audioPlaying ? "Pause audio note" : "Play audio note"} aria-pressed={audioPlaying}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-2xl text-stone-900 shadow-xl ring-2 ring-white/80 active:scale-95">
+            <span aria-hidden="true">{audioPlaying ? "❚❚" : "▶"}</span>
+          </button>
+          <div className="rounded-full bg-black/60 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur">Audio note · page {currentPage + 1}</div>
         </div>
       )}
-      {mode === "reading" && (
+            {mode === "reading" && (
         <div className="absolute right-3 z-10 flex gap-2" style={{ top: "max(0.75rem, env(safe-area-inset-top))", right: "max(0.75rem, env(safe-area-inset-right))" }}>
           {canFs && (
             <button type="button" onClick={toggleFs} aria-label={fs ? "Exit full screen" : "Full screen"} aria-pressed={fs}

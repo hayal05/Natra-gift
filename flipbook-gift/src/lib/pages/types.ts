@@ -125,6 +125,12 @@ export interface TextStyle {
   color?: ColorRef;
 }
 
+export interface AudioContent {
+  src: string;
+  /** Rounded duration in seconds, capped by the editor and server. */
+  duration: number;
+}
+
 /** One page of a gift, exactly as stored in the gifts.content JSON. */
 export interface PageData {
   layout: string;
@@ -132,6 +138,8 @@ export interface PageData {
   /** Text slots hold strings, photo slots hold PhotoContent. */
   slots: Record<string, string | PhotoContent>;
   styles?: Record<string, TextStyle>;
+  /** Optional creator voice/audio note for this page. */
+  audio?: AudioContent;
 }
 
 /** Decoded images by `src`. A missing entry draws the placeholder (still loading, or failed). */

@@ -4,7 +4,7 @@ import { UPLOADS_ENABLED } from "./photo";
 
 export const AUDIO_MAX_BYTES = 5_000_000;
 export const AUDIO_MAX_SECONDS = 180;
-export const AUDIO_TYPES = ["audio/mpeg", "audio/mp3"] as const;
+export const AUDIO_TYPES = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm", "audio/aac", "audio/flac"] as const;
 
 export interface AudioUploadTicket {
   uploadUrl: string;
@@ -12,7 +12,7 @@ export interface AudioUploadTicket {
 }
 
 export function audioFileProblem(file: { type: string; size: number }): string | null {
-  if (!AUDIO_TYPES.includes(file.type as (typeof AUDIO_TYPES)[number])) return "Please choose an MP3 audio file.";
+  if (!AUDIO_TYPES.includes(file.type as (typeof AUDIO_TYPES)[number])) return "Please choose a supported audio file (MP3, M4A, WAV, OGG, AAC or FLAC).";
   if (file.size <= 0) return "That audio file is empty.";
   if (file.size > AUDIO_MAX_BYTES) return "That audio file is too large. The limit is 5 MB.";
   if (!UPLOADS_ENABLED) return "Audio uploads are not enabled yet.";
@@ -39,7 +39,7 @@ export function readAudioDuration(file: Blob): Promise<number> {
   });
 }
 
-export function uploadAudio(blob: Blob, onProgress: (fraction: number) => void): Promise<string> {
+export function uploadAudio(blob: Blob, onProgress: (fraction: number) => void, fileName = "voice-note"): Promise<string> {
   return new Promise((ok, bad) => {
     fetch("/api/upload-sign", {
       method: "POST",
@@ -51,7 +51,7 @@ export function uploadAudio(blob: Blob, onProgress: (fraction: number) => void):
         if (!t || typeof t.uploadUrl !== "string" || typeof t.fields !== "object") throw new Error("sign");
         const form = new FormData();
         for (const [k, v] of Object.entries(t.fields)) form.append(k, v);
-        form.append("file", blob, "voice-note.mp3");
+        form.append("file", blob, fileName);
         const x = new XMLHttpRequest();
         x.open("POST", t.uploadUrl);
         x.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };

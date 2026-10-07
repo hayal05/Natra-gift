@@ -185,7 +185,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       const duration = await readAudioDuration(file);
       if (duration > AUDIO_MAX_SECONDS) throw new Error("too-long");
       setAudioBusy({ label: "Uploading…", pct: 0 });
-      const src = await uploadAudio(file, (f) => setAudioBusy({ label: "Uploading…", pct: Math.round(f * 100) }));
+      const src = await uploadAudio(file, (f) => setAudioBusy({ label: "Uploading…", pct: Math.round(f * 100) }), file.name || "voice-note");
       const now = pagesRef.current;
       let i = now.indexOf(original);
       if (i < 0 && now[target] === original) i = target;
@@ -196,7 +196,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       setAudioError(
         m === "too-long" ? "The audio note must be 3 minutes or shorter."
         : m === "sign" || m === "network" || m === "upload" ? "The audio could not be uploaded. Check your connection and try again."
-        : "That file could not be read as an MP3 audio note."
+        : "That file could not be read as a supported audio note. Try MP3, M4A, WAV, OGG, AAC or FLAC."
       );
     } finally { setAudioBusy(null); }
   };
@@ -292,7 +292,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           )}
           <div className="mt-3 border-t border-stone-200 pt-3">
             <p className="font-bold text-stone-900">Audio note</p>
-            <p className="mt-0.5 text-xs text-stone-500">Add one MP3 voice note to this page. Maximum 5 MB and 3 minutes.</p>
+            <p className="mt-0.5 text-xs text-stone-500">Add one audio note to this page. MP3, M4A, WAV, OGG, AAC and FLAC are supported. Maximum 5 MB and 3 minutes.</p>
             {currentAudio ? (
               <div className="mt-2 space-y-2">
                 <audio controls preload="metadata" src={currentAudio.src} className="w-full" />
@@ -303,8 +303,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               </div>
             ) : (
               <label className={"mt-2 inline-block rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs font-bold text-stone-700 transition focus-within:ring-2 focus-within:ring-rose-300 " + (audioBusy ? "cursor-wait opacity-50" : "cursor-pointer hover:border-stone-500")}>
-                Add MP3 voice note
-                <input type="file" accept="audio/mpeg,audio/mp3,.mp3" onChange={chooseAudio} disabled={!!audioBusy} className="sr-only" />
+                Add audio note
+                <input type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm,.aac,.flac" onChange={chooseAudio} disabled={!!audioBusy} className="sr-only" />
               </label>
             )}
             {audioBusy && (

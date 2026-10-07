@@ -1,7 +1,5 @@
 "use client";
 
-import { UPLOADS_ENABLED } from "./photo";
-
 export const AUDIO_MAX_BYTES = 5_000_000;
 export const AUDIO_MAX_SECONDS = 180;
 export const AUDIO_TYPES = ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm", "audio/aac", "audio/flac"] as const;
@@ -18,7 +16,6 @@ export function audioFileProblem(file: { type: string; size: number; name?: stri
   if (!AUDIO_TYPES.includes(file.type as (typeof AUDIO_TYPES)[number]) && !AUDIO_EXTENSIONS.includes(ext as (typeof AUDIO_EXTENSIONS)[number])) return "Please choose a supported audio file (MP3, M4A, WAV, OGG, AAC or FLAC).";
   if (file.size <= 0) return "That audio file is empty.";
   if (file.size > AUDIO_MAX_BYTES) return "That audio file is too large. The limit is 5 MB.";
-  if (!UPLOADS_ENABLED) return "Audio uploads are not enabled yet.";
   return null;
 }
 

@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./fonts";
 import "./globals.css";
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://natratech.pro.et").replace(/\/$/, "");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "NatraGift — Make someone's day",
   description: "Create a beautiful digital gift that opens like a letter.",
 };

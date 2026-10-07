@@ -262,6 +262,9 @@ export const LAYOUT_LIST: Layout[] = [
     P("p1", 0.08, 0.53, 0.38, 0.27, { frame: "rounded" }),
     T("body", 0.51, 0.53, 0.41, 0.27, { size: 0.032, lh: 1.5 }),
     T("sign", 0.08, 0.84, 0.84, 0.07, { font: "display", italic: true, size: 0.05, color: "accent" }), folio()),
+  L("love-editorial","Love editorial","cover","paper",T("kicker",0.08,0.06,0.84,0.04,KICKER),P("p1",0.08,0.13,0.84,0.5,{frame:"rounded",shadow:true}),T("title",0.08,0.66,0.84,0.12,{font:"display",size:0.1,weight:800,color:"accent"}),T("body",0.08,0.8,0.58,0.08,{size:0.03,lh:1.35}),T("byline",0.68,0.8,0.24,0.08,{font:"display",italic:true,size:0.035,color:"accent",align:"right"})),
+  L("friends-grid","Friends grid","collage","soft",T("kicker",0.07,0.05,0.86,0.04,KICKER),T("title",0.07,0.11,0.86,0.13,{font:"display",size:0.11,weight:900,upper:true}),P("p1",0.07,0.27,0.41,0.28,{frame:"rounded"}),P("p2",0.52,0.27,0.41,0.28,{frame:"rounded"}),P("p3",0.07,0.59,0.27,0.25,{frame:"border"}),P("p4",0.365,0.59,0.27,0.25,{frame:"border"}),P("p5",0.66,0.59,0.27,0.25,{frame:"border"}),T("byline",0.07,0.88,0.86,0.05,{size:0.028,weight:700,tracking:0.06,upper:true})),
+  L("just-because","Just because","cover","paper",S("circle","ellipse",0.7,0.05,0.22,0.22,"accent2",{alpha:0.8}),S("circle2","ellipse",0.03,0.67,0.16,0.16,"accent2",{alpha:0.5}),T("kicker",0.08,0.08,0.84,0.04,KICKER),T("title",0.08,0.16,0.84,0.2,{font:"display",size:0.16,weight:800,color:"accent",lh:0.9}),P("p1",0.12,0.4,0.76,0.31,{frame:"rounded",shadow:true}),T("body",0.08,0.76,0.84,0.08,{size:0.032,lh:1.4}),T("byline",0.08,0.87,0.84,0.05,{font:"display",italic:true,size:0.04,color:"accent"})),
 ];
 
 export const LAYOUTS: Record<string, Layout> = Object.fromEntries(LAYOUT_LIST.map((l) => [l.id, l]));

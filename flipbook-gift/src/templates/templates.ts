@@ -89,7 +89,7 @@ export const TEMPLATE_LIST: Template[] = [
   },
   {
     id: "birthday", name: "Birthday Surprise", blurb: "Confetti colors and a big happy birthday.",
-    masthead: "BIRTHDAY BASH",
+    masthead: "THIS YEAR",
     palette: { paper: "#fffaf0", ink: "#2a1b4a", accent: "#7b3fe4", accent2: "#ff9f43", soft: "#efe3ff", dark: "#2a1b4a" },
     fontPairs: [fp("Fredoka", "Nunito", 700), ALT.modern],
     invitation: "Surprise, {to}! {from} wrapped something up for your birthday.",

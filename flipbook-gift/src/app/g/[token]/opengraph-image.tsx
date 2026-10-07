@@ -8,18 +8,92 @@ export const contentType = "image/png";
 export default function OpenGraphImage() {
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #fff8ef 0%, #fff1df 100%)", fontFamily: "Arial, sans-serif", position: "relative" }}>
-        <div style={{ position: "absolute", top: 42, left: 58, fontSize: 34, fontWeight: 800, color: "#ff6900" }}>NatraGift</div>
-        <div style={{ width: 470, height: 310, borderRadius: 26, background: "linear-gradient(145deg, #ff6900 0%, #f45100 100%)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 28px 55px rgba(113, 55, 15, 0.24)" }}>
-          <div style={{ position: "absolute", top: 0, left: 0, width: 0, height: 0, borderLeft: "235px solid transparent", borderRight: "235px solid transparent", borderTop: "170px solid #ff8a38" }} />
-          <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 62, height: "100%", background: "rgba(255,255,255,0.92)" }} />
-          <div style={{ position: "absolute", top: "50%", left: 0, width: "100%", height: 58, transform: "translateY(-50%)", background: "rgba(255,255,255,0.92)" }} />
-          <div style={{ position: "absolute", top: "50%", left: "50%", width: 92, height: 92, transform: "translate(-50%, -50%)", borderRadius: "50%", background: "#fff", border: "7px solid #ff6900", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 46, fontWeight: 900, color: "#ff6900" }}>♥</div>
-        </div>
-        <div style={{ position: "absolute", right: 78, top: 175, width: 390, display: "flex", flexDirection: "column", color: "#2b211b" }}>
-          <div style={{ fontSize: 30, fontWeight: 700, color: "#8b6b55" }}>You received a</div>
-          <div style={{ marginTop: 8, fontSize: 64, lineHeight: 1.05, fontWeight: 850, letterSpacing: "-2px" }}>special gift ♥</div>
-          <div style={{ marginTop: 24, fontSize: 25, lineHeight: 1.35, color: "#6f5a4a" }}>Open your wrapped surprise</div>
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#fff0df",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: 560,
+            height: 420,
+            borderRadius: 24,
+            background: "linear-gradient(145deg, #4caf50 0%, #2f8f2f 100%)",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 32px 60px rgba(40, 70, 30, 0.28)",
+            transform: "translateY(35px)",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: -20,
+              left: -12,
+              width: 584,
+              height: 125,
+              borderRadius: 22,
+              background: "linear-gradient(180deg, #59bd59 0%, #43a943 100%)",
+              boxShadow: "0 10px 18px rgba(30, 70, 25, 0.18)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: -110,
+              left: 232,
+              width: 100,
+              height: 610,
+              background: "#ff3038",
+              transform: "rotate(0deg)",
+              boxShadow: "0 0 12px rgba(150, 20, 20, 0.12)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: 58,
+              left: -12,
+              width: 584,
+              height: 100,
+              background: "#ff3038",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: -102,
+              left: 190,
+              width: 150,
+              height: 105,
+              border: "30px solid #ff3038",
+              borderBottom: "0",
+              borderRadius: "90px 90px 0 0",
+              transform: "rotate(-18deg)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: -102,
+              left: 275,
+              width: 150,
+              height: 105,
+              border: "30px solid #ff3038",
+              borderBottom: "0",
+              borderRadius: "90px 90px 0 0",
+              transform: "rotate(18deg)",
+            }}
+          />
         </div>
       </div>
     ),

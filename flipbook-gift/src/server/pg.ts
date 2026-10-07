@@ -47,5 +47,13 @@ export const pgStore: GiftStore = {
 
 /** For /api/health: true if the database answers. */
 export async function ping(): Promise<boolean> {
-  try { const q = await db(); await q`SELECT 1`; return true; } catch { return false; }
+  try {
+    const q = await db();
+    await q`SELECT 1`;
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[database] health check failed:", message);
+    return false;
+  }
 }

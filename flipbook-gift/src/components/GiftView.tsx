@@ -54,6 +54,7 @@ export default function GiftView({ token }: { token: string }) {
         const data: unknown = await res.json();
         if (!usable(data)) { setPhase("error"); return; }
         draft = data;
+        setDraftForAudio(draft);
       } catch { if (!cancelled) setPhase("error"); return; }
 
       const template = TEMPLATES[draft.templateId];

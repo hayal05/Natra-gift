@@ -1,0 +1,929 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Flipbook engine demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f3eee8;--fg:#241719;--mut:#7d716d;--bar:#fff;box-sizing:border-box}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#171214;--fg:#f4ecea;--mut:#a99d99;--bar:#261f22}}
+:root[data-theme=dark]{--bg:#171214;--fg:#f4ecea;--mut:#a99d99;--bar:#261f22}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;
+padding-top:env(safe-area-inset-top,0px);overscroll-behavior:none}
+#stage{flex:1 1 auto;min-height:0;padding:12px 12px 4px}
+#stage>div{filter:drop-shadow(0 14px 30px #0005)}
+#bar{flex:none;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:center;padding:6px 12px calc(10px + env(safe-area-inset-bottom,0px));color:var(--mut);font-size:12px}
+#bar b{color:var(--fg);font-weight:600}
+select{font:inherit;color:var(--fg);background:var(--bar);border:1px solid #8886;border-radius:8px;padding:4px 6px}
+</style></head><body>
+<div id="stage"></div>
+<div id="bar"><b id="pn">loading</b><span>Drag a page corner · tap the arrows · or use ← →</span>
+<label>Release threshold <select id="thr"><option value=".25">25%</option><option value=".38" selected>38% (default)</option><option value=".5">50%</option></select></label></div>
+<script>
+                                                
+
+/** Keep the part of a convex polygon where side * ((p - mid) . n) >= 0 (Sutherland-Hodgman, one plane). */
+function clipPolygon(poly      , mid    , n    , side        )       {
+  const f = (p    ) => side * ((p[0] - mid[0]) * n[0] + (p[1] - mid[1]) * n[1]);
+  const out       = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const fa = f(a);
+    const fb = f(b);
+    if (fa >= 0) out.push(a);
+    if (fa >= 0 !== fb >= 0) {
+      const t = fa / (fa - fb);
+      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    }
+  }
+  return out;
+}
+
+/**
+ * Limit where the finger can pull the corner so the paper stays physically plausible:
+ * the lifted corner stays within one page width of the spine at the same height, and
+ * within one page diagonal of the spine at the opposite height.
+ */
+function clampDragPoint(corner    , p    , w        , h        )     {
+  const [cx, cy] = corner;
+  const ax = w - cx; // spine x
+  let x = p[0];
+  let y = p[1];
+
+  let dx = x - ax;
+  let dy = y - cy;
+  let d = Math.hypot(dx, dy);
+  if (d > w) {
+    x = ax + (dx * w) / d;
+    y = cy + (dy * w) / d;
+  }
+
+  const oy = h - cy; // spine point at the opposite height
+  const diag = Math.hypot(w, h);
+  dx = x - ax;
+  dy = y - oy;
+  d = Math.hypot(dx, dy);
+  if (d > diag) {
+    x = ax + (dx * diag) / d;
+    y = oy + (dy * diag) / d;
+  }
+  return [x, y];
+}
+
+/**
+ * Fold geometry for a page of size w x h whose corner `corner` has been dragged to `point`.
+ * Returns null when the finger is (almost) still on the corner, i.e. no visible fold.
+ */
+function computeFold(corner    , point    , w        , h        )                      {
+  let nx = corner[0] - point[0];
+  let ny = corner[1] - point[1];
+  const len = Math.hypot(nx, ny);
+  if (len < 2) return null;
+  nx /= len;
+  ny /= len;
+
+  const mid     = [(corner[0] + point[0]) / 2, (corner[1] + point[1]) / 2];
+  const normal     = [nx, ny];
+  const page       = [
+    [0, 0],
+    [w, 0],
+    [w, h],
+    [0, h],
+  ];
+
+  const liftedPoly = clipPolygon(page, mid, normal, 1);
+  const flatPoly = clipPolygon(page, mid, normal, -1);
+
+  const backPoly = liftedPoly.map((p)     => {
+    const d = (p[0] - mid[0]) * nx + (p[1] - mid[1]) * ny;
+    return [p[0] - 2 * d * nx, p[1] - 2 * d * ny];
+  });
+
+  const d0 = nx * mid[0] + ny * mid[1];
+  const mirror                         = [
+    1 - 2 * nx * nx,
+    -2 * nx * ny,
+    -2 * nx * ny,
+    1 - 2 * ny * ny,
+    2 * d0 * nx,
+    2 * d0 * ny,
+  ];
+
+  return { mid, normal, liftedPoly, flatPoly, backPoly, mirror };
+}
+
+                                                
+
+                                 
+                    
+                                                                          
+                      
+ 
+
+function tracePath(ctx                          , poly      ) {
+  ctx.beginPath();
+  poly.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+  ctx.closePath();
+}
+
+/**
+ * Shadow the lifted paper casts on the page underneath: darkest at the fold line,
+ * fading toward the corner. Draw this on the revealed page, clipped to the lifted area.
+ */
+function drawCastShadow(ctx                          , geo              , w        , h        ) {
+  const { mid, normal, liftedPoly } = geo;
+  const reach = w * 0.2;
+  ctx.save();
+  tracePath(ctx, liftedPoly);
+  ctx.clip();
+  const g = ctx.createLinearGradient(mid[0], mid[1], mid[0] + normal[0] * reach, mid[1] + normal[1] * reach);
+  g.addColorStop(0, "rgba(0,0,0,.4)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+/**
+ * Reverse side of the lifted paper: a soft drop shadow onto the pages below, the paper itself,
+ * a faint mirrored show-through of the front, and a highlight/shade sweep that makes the
+ * curl read as a bend. Draw after the flat front.
+ */
+function drawBackSide(
+  ctx                          ,
+  geo              ,
+  front                   ,
+  w        ,
+  h        ,
+  opts                ,
+) {
+  const { mid, normal, backPoly, mirror } = geo;
+  const [nx, ny] = normal;
+
+  // Paper plus the shadow it throws on whatever lies beneath (pushed away from the fold).
+  ctx.save();
+  tracePath(ctx, backPoly);
+  ctx.shadowColor = "rgba(0,0,0,.45)";
+  ctx.shadowBlur = w * 0.065;
+  ctx.shadowOffsetX = -nx * w * 0.015;
+  ctx.shadowOffsetY = -ny * w * 0.015;
+  ctx.fillStyle = opts.backColor;
+  ctx.fill();
+  ctx.restore();
+
+  // Show-through of the front, mirrored.
+  if (opts.showThrough > 0) {
+    ctx.save();
+    tracePath(ctx, backPoly);
+    ctx.clip();
+    ctx.transform(...mirror);
+    ctx.globalAlpha = opts.showThrough;
+    ctx.drawImage(front, 0, 0, w, h);
+    ctx.restore();
+  }
+
+  // Curl lighting: dark right at the crease, a bright band, then fade out toward the corner.
+  ctx.save();
+  tracePath(ctx, backPoly);
+  ctx.clip();
+  const reach = w * 0.47;
+  const g = ctx.createLinearGradient(mid[0], mid[1], mid[0] - nx * reach, mid[1] - ny * reach);
+  g.addColorStop(0, "rgba(0,0,0,.3)");
+  g.addColorStop(0.35, "rgba(255,255,255,.22)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+                                                     
+
+                              
+                                     
+                                   
+                                                                                      
+                    
+                                                                      
+                                   
+                                                                                   
+                                                                       
+                                                                                                
+                                                                                              
+ 
+
+/** Right half grabs the next page, left 30% grabs the previous one. The middle band is inert. */
+function pickDirection(x        , w        )                {
+  if (x > w * 0.5) return 1;
+  if (x < w * 0.3) return -1;
+  return 0;
+}
+
+/**
+ * Wire Pointer Events (touch, mouse, stylus) on the canvas. One pointer at a time, captured so the
+ * drag keeps working when the finger leaves the canvas. `touch-action: none` stops the browser
+ * from scrolling or zooming while the page is being folded. Returns a detach function.
+ */
+function attachPointer(canvas                   , host             )             {
+  canvas.style.touchAction = "none";
+  canvas.style.userSelect = "none";
+  canvas.style.setProperty("-webkit-user-select", "none");
+  canvas.style.setProperty("-webkit-touch-callout", "none");
+  canvas.style.cursor = "grab";
+
+  let active   
+               
+                   
+                     
+                   
+                   
+                    
+                    
+                  
+                  
+           = null;
+
+  /** Pointer position in page CSS px, robust to the canvas being scaled by CSS. */
+  function local(e              ) {
+    const r = canvas.getBoundingClientRect();
+    const { w, h } = host.size();
+    return { x: ((e.clientX - r.left) / r.width) * w, y: ((e.clientY - r.top) / r.height) * h };
+  }
+
+  function down(e              ) {
+    if (active || host.locked() || !e.isPrimary) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const { w, h } = host.size();
+    const p = local(e);
+    const dir = pickDirection(p.x, w);
+    if (!dir || !host.canTurn(dir)) return;
+
+    const side             = p.y > h / 2 ? "bottom" : "top";
+    const cornerX = dir > 0 ? w : 0;
+    const cornerY = side === "bottom" ? h : 0;
+    active = { id: e.pointerId, dir, side, startX: p.x, startY: p.y, cornerX, cornerY, lastX: cornerX, lastY: cornerY };
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture can fail for synthetic events; the drag still works inside the canvas */
+    }
+    canvas.style.cursor = "grabbing";
+    e.preventDefault();
+  }
+
+  function move(e              ) {
+    if (!active || e.pointerId !== active.id) return;
+    const p = local(e);
+    active.lastX = active.cornerX + (p.x - active.startX);
+    active.lastY = active.cornerY + (p.y - active.startY);
+    host.onDrag(active.dir, active.side, active.lastX, active.lastY);
+    e.preventDefault();
+  }
+
+  function end(e              , cancelled         ) {
+    if (!active || e.pointerId !== active.id) return;
+    const a = active;
+    active = null;
+    canvas.style.cursor = "grab";
+    try {
+      canvas.releasePointerCapture(a.id);
+    } catch {
+      /* already released */
+    }
+    host.onRelease(a.dir, a.side, a.lastX, a.lastY, cancelled);
+  }
+
+  const up = (e              ) => end(e, false);
+  const cancel = (e              ) => end(e, true);
+  const noMenu = (e       ) => e.preventDefault(); // long-press menu on touch devices
+
+  canvas.addEventListener("pointerdown", down);
+  canvas.addEventListener("pointermove", move);
+  canvas.addEventListener("pointerup", up);
+  canvas.addEventListener("pointercancel", cancel);
+  canvas.addEventListener("contextmenu", noMenu);
+
+  return () => {
+    canvas.removeEventListener("pointerdown", down);
+    canvas.removeEventListener("pointermove", move);
+    canvas.removeEventListener("pointerup", up);
+    canvas.removeEventListener("pointercancel", cancel);
+    canvas.removeEventListener("contextmenu", noMenu);
+    active = null;
+  };
+}
+
+// Small DOM overlay for the engine: discreet prev/next buttons plus loading and error states.
+// Plain DOM and inline styles so the engine stays framework-free and exportable as one file.
+
+                                                        
+
+                             
+               
+               
+                                                                           
+                     
+ 
+
+                            
+                   
+                      
+                    
+                    
+ 
+
+                     
+                                     
+                                                                                      
+                                                   
+                                                                                                         
+                                
+                  
+ 
+
+const CSS = `
+@keyframes fb-spin{to{transform:rotate(360deg)}}
+.fb-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;border:0;border-radius:50%;
+background:rgba(0,0,0,.28);color:#fff;font:600 22px/1 system-ui,sans-serif;display:none;place-items:center;padding:0 0 3px;
+cursor:pointer;opacity:.6;transition:opacity .2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.fb-btn:hover,.fb-btn:focus-visible{opacity:1}
+.fb-ov{position:absolute;inset:0;z-index:3;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+text-align:center;padding:16px;font:500 14px/1.4 system-ui,sans-serif;color:inherit}
+.fb-spin{width:26px;height:26px;border-radius:50%;border:3px solid currentColor;border-top-color:transparent;opacity:.55;animation:fb-spin .9s linear infinite}
+.fb-retry{border:1px solid currentColor;background:transparent;color:inherit;border-radius:99px;padding:8px 16px;font:600 13px system-ui,sans-serif;cursor:pointer}
+`;
+
+function createUi(root             , handlers            , opts           )     {
+  const style = document.createElement("style");
+  style.textContent = CSS;
+  root.appendChild(style);
+
+  const mkBtn = (cls        , side                  , label        , glyph        , onClick            ) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = cls;
+    b.style[side] = "6px";
+    b.setAttribute("aria-label", label);
+    b.textContent = glyph;
+    b.addEventListener("click", onClick);
+    if (opts.buttons) root.appendChild(b);
+    return b;
+  };
+  const prevBtn = mkBtn("fb-btn", "left", "Previous page", "‹", () => handlers.prev());
+  const nextBtn = mkBtn("fb-btn", "right", "Next page", "›", () => handlers.next());
+
+  const overlay = document.createElement("div");
+  overlay.className = "fb-ov";
+  root.appendChild(overlay);
+
+  let state              = "loading";
+  let canPrev = false;
+  let canNext = false;
+
+  function renderButtons() {
+    const show = state === "ready";
+    prevBtn.style.display = show && canPrev ? "grid" : "none";
+    nextBtn.style.display = show && canNext ? "grid" : "none";
+  }
+
+  function setState(next             ) {
+    state = next;
+    overlay.replaceChildren();
+    overlay.removeAttribute("role");
+    if (next === "ready") {
+      overlay.style.display = "none";
+    } else if (next === "loading") {
+      overlay.style.display = "flex";
+      overlay.setAttribute("role", "status");
+      const spin = document.createElement("div");
+      spin.className = "fb-spin";
+      const text = document.createElement("div");
+      text.textContent = opts.loadingText;
+      overlay.append(spin, text);
+    } else {
+      overlay.style.display = "flex";
+      overlay.setAttribute("role", "alert");
+      const text = document.createElement("div");
+      text.textContent = opts.errorText;
+      overlay.append(text);
+      if (handlers.retry) {
+        const r = document.createElement("button");
+        r.type = "button";
+        r.className = "fb-retry";
+        r.textContent = opts.retryText;
+        r.addEventListener("click", () => handlers.retry?.());
+        overlay.append(r);
+      }
+    }
+    renderButtons();
+  }
+
+  setState("loading");
+
+  return {
+    setState,
+    setNav(p, n) {
+      canPrev = p;
+      canNext = n;
+      renderButtons();
+    },
+    setInset(inset) {
+      prevBtn.style.left = inset + 6 + "px";
+      nextBtn.style.right = inset + 6 + "px";
+    },
+    destroy() {
+      style.remove();
+      prevBtn.remove();
+      nextBtn.remove();
+      overlay.remove();
+    },
+  };
+}
+
+
+
+
+
+const TURN_MS = 750;
+const COMPLETE_MS = 420;
+const SNAP_BACK_MS = 300;
+/** Default for `tuning.completeFraction`: fraction of page width a dragged corner must travel to complete a turn. */
+const COMPLETE_FRACTION = 0.38;
+/** A container shorter than this (px) is treated as having no definite height. */
+const MIN_CONTAIN_HEIGHT = 10;
+
+const easeOutCubic = (t        ) => 1 - Math.pow(1 - t, 3);
+
+/** Wait for promises and unloaded images; throw if a page cannot be loaded. */
+async function resolveSource(src                                  )                      {
+  const s = await src;
+  if (typeof HTMLImageElement !== "undefined" && s instanceof HTMLImageElement) {
+    if (!s.complete) await s.decode();
+    if (s.naturalWidth === 0) throw new Error("A page image failed to load");
+  }
+  return s;
+}
+
+/**
+ * Flipbook engine: single-page layout that fits its container, re-lays out on resize and on
+ * pixel-ratio change, draws sharp on high-DPI screens, shows loading and error states, and has
+ * discreet prev/next buttons. Fold drawing is in shading.ts, geometry in geometry.ts, pointer
+ * input in pointer.ts, overlay UI in ui.ts.
+ */
+function create(container             , options                 )           {
+  const aspect = options.aspect ?? 3 / 4;
+  const backColor = options.backColor ?? "#f4efe6";
+  const showThrough = options.showThrough ?? 0.14;
+  const maxDpr = options.maxPixelRatio ?? 3;
+  const fit = options.fit ?? "width";
+  const sources = options.pages;
+  const tuning = { completeFraction: COMPLETE_FRACTION };
+
+  // Root holds the canvas, arrows and overlay; the canvas is positioned inside it.
+  const root = document.createElement("div");
+  root.style.cssText = "position:relative;width:100%;overflow:hidden";
+  container.appendChild(root);
+
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = "position:absolute;display:block";
+  canvas.setAttribute("role", "img");
+  root.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    root.remove();
+    throw new Error("Canvas 2D is not available");
+  }
+
+  let state              = "loading";
+  let w = 0;
+  let h = 0;
+  let curDpr = 0;
+  let index = 0;
+  let fold                   = null;
+  let raf = 0;
+  let busy = false;
+  let dragging = false;
+  let destroyed = false;
+  let pendingLayout = false;
+  let resolved                                        = [];
+  let bitmaps                      = [];
+
+  const ui = createUi(
+    root,
+    {
+      prev: () => void turn(-1),
+      next: () => void turn(1),
+      retry: options.onRetry,
+    },
+    {
+      buttons: options.buttons ?? true,
+      loadingText: options.loadingText ?? "Loading your gift…",
+      errorText: options.errorText ?? "Sorry, this book could not be loaded.",
+      retryText: options.retryText ?? "Try again",
+    },
+  );
+
+  function setError(err         ) {
+    if (destroyed) return;
+    state = "error";
+    fold = null;
+    bitmaps = [];
+    ctx .clearRect(0, 0, w, h);
+    ui.setState("error");
+    options.onError?.(err);
+  }
+
+  function updateNav() {
+    canvas.setAttribute("aria-label", `Page ${index + 1} of ${sources.length}`);
+    ui.setNav(index > 0, index < sources.length - 1);
+  }
+
+  function rasterize() {
+    bitmaps = resolved.map((src, i) => {
+      if (typeof src !== "function") return src;
+      const off = document.createElement("canvas");
+      off.width = Math.round(w * curDpr);
+      off.height = Math.round(h * curDpr);
+      const c = off.getContext("2d");
+      if (!c) throw new Error("Canvas 2D is not available");
+      c.scale(curDpr, curDpr);
+      src(c, w, h, i);
+      return off;
+    });
+  }
+
+  /**
+   * Fit the page into the container. Skipped (and retried when the gesture ends) while a fold is
+   * in progress. Re-rasterises pages only when size or pixel ratio actually changed.
+   */
+  function layout(force = false) {
+    if (destroyed) return;
+    if (busy || dragging) {
+      pendingLayout = true;
+      return;
+    }
+    pendingLayout = false;
+
+    root.style.height = fit === "contain" ? "100%" : "auto";
+    const cw = root.clientWidth;
+    const ch = root.clientHeight;
+    if (cw <= 0) return; // hidden or not laid out yet; the ResizeObserver calls us again
+    let nw        ;
+    let nh        ;
+    let top = 0;
+    if (fit === "contain" && ch >= MIN_CONTAIN_HEIGHT) {
+      nw = Math.min(cw, ch * aspect);
+      nh = Math.round(nw / aspect);
+      top = Math.max(0, (ch - nh) / 2);
+    } else {
+      nw = cw;
+      nh = Math.round(nw / aspect);
+      root.style.height = nh + "px";
+    }
+    nw = Math.round(nw);
+    const left = Math.max(0, (cw - nw) / 2);
+    canvas.style.left = left + "px";
+    ui.setInset(left);
+    canvas.style.top = top + "px";
+
+    const dpr = Math.min(typeof devicePixelRatio === "number" ? devicePixelRatio : 1, maxDpr);
+    if (!force && nw === w && nh === h && dpr === curDpr) return;
+    w = nw;
+    h = nh;
+    curDpr = dpr;
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx .setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    if (state === "error") return;
+    if (resolved.length) {
+      try {
+        rasterize();
+      } catch (err) {
+        setError(err);
+        return;
+      }
+    }
+    draw();
+  }
+
+  function draw() {
+    const c = ctx ;
+    c.clearRect(0, 0, w, h);
+    if (!bitmaps.length) return;
+    const geo = fold ? computeFold(fold.corner, fold.point, w, h) : null;
+    if (!fold || !geo) {
+      c.drawImage(bitmaps[index], 0, 0, w, h);
+      return;
+    }
+
+    // 1. The page being revealed underneath, darkened where the lifted paper shades it.
+    c.drawImage(bitmaps[index + fold.dir], 0, 0, w, h);
+    drawCastShadow(c, geo, w, h);
+
+    // 2. The part of the current page still lying flat.
+    c.save();
+    tracePath(c, geo.flatPoly);
+    c.clip();
+    c.drawImage(bitmaps[index], 0, 0, w, h);
+    c.restore();
+
+    // 3. The reverse side: paper, drop shadow, mirrored show-through and curl lighting.
+    drawBackSide(c, geo, bitmaps[index], w, h, { backColor, showThrough });
+  }
+
+  function setFold(dir           , side            , x        , y        ) {
+    if (destroyed || index + dir < 0 || index + dir >= bitmaps.length) return;
+    const corner     = [dir > 0 ? w : 0, side === "bottom" ? h : 0];
+    fold = { dir, corner, point: clampDragPoint(corner, [x, y], w, h) };
+    draw();
+  }
+
+  function clearFold() {
+    fold = null;
+    draw();
+  }
+
+  /** Where the corner ends up when a turn is complete: just past the spine's far edge. */
+  function completeTarget(corner    )     {
+    return [w - corner[0] + (w - 2 * corner[0]) * 0.98, corner[1]];
+  }
+
+  /**
+   * Animate the dragged corner from `from` to `to` with easing. `lift` adds a shallow upward arc
+   * (programmatic turns only). Resolves when finished, or immediately if destroyed.
+   */
+  function animateFold(dir           , corner    , from    , to    , ms        , lift = 0)                {
+    busy = true;
+    const t0 = performance.now();
+    return new Promise((resolve) => {
+      const step = (now        ) => {
+        if (destroyed) return resolve();
+        const t = Math.min(1, (now - t0) / ms);
+        const e = easeOutCubic(t);
+        const x = from[0] + (to[0] - from[0]) * e;
+        const y = from[1] + (to[1] - from[1]) * e - Math.sin(Math.PI * e) * h * lift;
+        fold = { dir, corner, point: clampDragPoint(corner, [x, y], w, h) };
+        draw();
+        if (t < 1) raf = requestAnimationFrame(step);
+        else resolve();
+      };
+      raf = requestAnimationFrame(step);
+    });
+  }
+
+  function finishTurn(dir           , completed         ) {
+    fold = null;
+    busy = false;
+    if (completed) index += dir;
+    if (pendingLayout) layout(true);
+    else draw();
+    updateNav();
+    if (completed) options.onPageChange?.(index);
+  }
+
+  /** Programmatic turn: the corner swings across the page along a shallow arc. */
+  async function turn(dir           )                   {
+    const target = index + dir;
+    if (destroyed || state !== "ready" || busy || dragging || target < 0 || target >= bitmaps.length) return false;
+    const corner     = [dir > 0 ? w : 0, h];
+    await animateFold(dir, corner, corner, completeTarget(corner), TURN_MS, 0.22);
+    if (destroyed) return false;
+    finishTurn(dir, true);
+    return true;
+  }
+
+  /** Finger lifted: complete the turn if dragged far enough, otherwise snap back. */
+  async function release(dir           , cancelled         ) {
+    dragging = false;
+    if (destroyed) return;
+    if (!fold) {
+      if (pendingLayout) layout(true); // a tap that never folded anything
+      return;
+    }
+    const corner = fold.corner;
+    const from = fold.point;
+    const travelled = Math.hypot(from[0] - corner[0], from[1] - corner[1]);
+    const completed = !cancelled && travelled > w * tuning.completeFraction;
+    await animateFold(dir, corner, from, completed ? completeTarget(corner) : corner, completed ? COMPLETE_MS : SNAP_BACK_MS);
+    if (destroyed) return;
+    finishTurn(dir, completed);
+  }
+
+  const detachPointer = attachPointer(canvas, {
+    size: () => ({ w, h }),
+    locked: () => destroyed || busy || state !== "ready",
+    canTurn: (dir) => index + dir >= 0 && index + dir < bitmaps.length,
+    onDrag: (dir, side, x, y) => {
+      dragging = true;
+      setFold(dir, side, x, y);
+    },
+    onRelease: (dir, _side, _x, _y, cancelled) => {
+      void release(dir, cancelled);
+    },
+  });
+
+  function onKey(e               ) {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    const t = e.target                      ;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (e.key === "ArrowRight") void turn(1);
+    else if (e.key === "ArrowLeft") void turn(-1);
+  }
+  if (options.keyboard ?? true) document.addEventListener("keydown", onKey);
+
+  // Re-layout on container resize; devicePixelRatio changes (zoom, moving screens) show up as resizes
+  // or are picked up by the next layout. Coalesced to one layout per frame.
+  let resizeRaf = 0;
+  const scheduleLayout = () => {
+    if (resizeRaf) return;
+    resizeRaf = requestAnimationFrame(() => {
+      resizeRaf = 0;
+      layout();
+    });
+  };
+  const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleLayout) : null;
+  observer?.observe(container);
+  if (!observer) addEventListener("resize", scheduleLayout);
+
+  layout(true);
+  updateNav();
+
+  const ready                   = (async () => {
+    if (!sources.length) {
+      setError(new Error("This book has no pages"));
+      return false;
+    }
+    try {
+      resolved = await Promise.all(sources.map(resolveSource));
+    } catch (err) {
+      setError(err);
+      return false;
+    }
+    if (destroyed) return false;
+    layout(true);
+    if (state === "error") return false;
+    state = "ready";
+    ui.setState("ready");
+    updateNav();
+    return true;
+  })();
+
+  return {
+    next: () => turn(1),
+    prev: () => turn(-1),
+    setFold,
+    clearFold,
+    resize: () => layout(),
+    tuning,
+    ready,
+    get state() {
+      return state;
+    },
+    get index() {
+      return index;
+    },
+    get pageCount() {
+      return sources.length;
+    },
+    destroy() {
+      destroyed = true;
+      cancelAnimationFrame(raf);
+      cancelAnimationFrame(resizeRaf);
+      observer?.disconnect();
+      removeEventListener("resize", scheduleLayout);
+      document.removeEventListener("keydown", onKey);
+      detachPointer();
+      ui.destroy();
+      root.remove();
+      bitmaps = [];
+      resolved = [];
+    },
+  };
+}
+
+// Demo app for the engine (task 1.6). Inlined after the engine bundle by scripts/build-demo.mjs.
+const $ = (s) => document.querySelector(s);
+const SERIF = 'Georgia,"Times New Roman",serif';
+const SANS = 'system-ui,-apple-system,"Segoe UI",sans-serif';
+const PAL = ["#f6b6a8", "#f3869f", "#8e5a9b"];
+const PAPER = "#fffaf6", INK = "#241719", ACC = "#d6336c";
+
+function wrap(c, text, x, y, maxW, lh) {
+  let line = "";
+  for (const word of text.split(" ")) {
+    const test = line + word + " ";
+    if (c.measureText(test).width > maxW && line) { c.fillText(line, x, y); y += lh; line = word + " "; }
+    else line = test;
+  }
+  c.fillText(line, x, y);
+  return y + lh;
+}
+function text(c, s, x, y, font, color, align) { c.font = font; c.fillStyle = color; c.textAlign = align || "left"; c.fillText(s, x, y); }
+// Generated placeholder "photo": gradient sky, sun, layered hills.
+function scene(c, x, y, w, h, k) {
+  c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
+  const g = c.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, PAL[k % 3]); g.addColorStop(1, PAL[(k + 1) % 3]);
+  c.fillStyle = g; c.fillRect(x, y, w, h);
+  c.fillStyle = "rgba(255,255,255,.8)"; c.beginPath(); c.arc(x + w * (0.3 + 0.2 * (k % 2)), y + h * 0.3, Math.min(w, h) * 0.11, 0, 7); c.fill();
+  for (let L = 0; L < 3; L++) {
+    c.fillStyle = `rgba(30,15,25,${0.18 + 0.17 * L})`; c.beginPath(); c.moveTo(x, y + h);
+    for (let i = 0; i <= 20; i++) c.lineTo(x + (w * i) / 20, y + h * (0.58 + 0.1 * L + 0.06 * Math.sin(i * 0.55 + k * 2 + L * 2)));
+    c.lineTo(x + w, y + h); c.fill();
+  }
+  c.restore();
+}
+const folio = (c, w, h, i) => text(c, String(i + 1).padStart(2, "0") + "  ·  OUR STORY", 24, h - 20, "600 10px " + SANS, INK);
+
+const pages = [
+  (c, w, h) => { // cover
+    scene(c, 0, 0, w, h, 0);
+    const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "rgba(0,0,0,.35)"); g.addColorStop(0.4, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.6)");
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    text(c, "OUR STORY", w / 2, w * 0.17 + 26, `800 ${w * 0.15}px ${SERIF}`, "#fff", "center");
+    text(c, "ISSUE NO. 1 · THE LOVE ISSUE", w / 2, w * 0.17 + 50, "600 10px " + SANS, "#fff", "center");
+    text(c, "10 REASONS I LOVE YOU", 24, h - 90, "600 13px " + SANS, "#fff");
+    text(c, "THE DAY EVERYTHING CHANGED", 24, h - 66, "600 13px " + SANS, "#fff");
+    text(c, "For Maya", 24, h - 28, `italic 500 20px ${SERIF}`, "#fff");
+  },
+  (c, w, h, i) => { // letter
+    c.fillStyle = PAPER; c.fillRect(0, 0, w, h);
+    const o = h * 0.26, fs = Math.max(12, Math.min(15, w * 0.036));
+    scene(c, 0, 0, w, o, 2);
+    text(c, "EDITOR'S LETTER", 32, o + 34, "600 11px " + SANS, ACC);
+    text(c, "Dear Maya,", 32, o + 70, `800 ${fs * 1.8}px ${SERIF}`, INK);
+    c.fillStyle = INK; c.font = `400 ${fs}px ${SANS}`; c.textAlign = "left";
+    wrap(c, "I never planned for you. Then you laughed at my worst joke, and my whole year rearranged itself around that sound. This little magazine is my way of saying thank you for every ordinary Tuesday that felt like a holiday.", 32, o + 102, w - 64, fs * 1.55);
+    text(c, "— Daniel", 32, h - 52, `italic 500 22px ${SERIF}`, ACC);
+    folio(c, w, h, i);
+  },
+  (c, w, h, i) => { // full photo + caption
+    c.fillStyle = PAPER; c.fillRect(0, 0, w, h); scene(c, 0, 0, w, h * 0.74, 1);
+    text(c, "MOMENT", 28, h * 0.74 + 34, "600 11px " + SANS, ACC);
+    c.fillStyle = INK; c.font = `italic 500 20px ${SERIF}`; c.textAlign = "left";
+    wrap(c, "The afternoon we stopped pretending it was just coffee.", 28, h * 0.74 + 64, w - 56, 26);
+    folio(c, w, h, i);
+  },
+  (c, w, h, i) => { // quote over colour + photo
+    c.fillStyle = ACC; c.fillRect(0, 0, w, h);
+    text(c, "“", 32, h * 0.24, `800 ${w * 0.26}px ${SERIF}`, "rgba(255,255,255,.4)");
+    c.fillStyle = "#fff"; c.font = `700 ${w * 0.075}px ${SERIF}`; c.textAlign = "left";
+    wrap(c, "Home is wherever you are laughing.", 32, h * 0.34, w - 64, w * 0.1);
+    c.save(); c.shadowColor = "#0005"; c.shadowBlur = 16; c.fillStyle = "#fff"; c.fillRect(28, h * 0.6 - 4, w - 56, h * 0.25 + 8); c.restore();
+    scene(c, 32, h * 0.6, w - 64, h * 0.25, 0);
+    text(c, "— Daniel to Maya", 32, h - 52, "600 12px " + SANS, "#fff");
+    folio(c, w, h, i);
+  },
+  (c, w, h, i) => { // two polaroids
+    c.fillStyle = PAPER; c.fillRect(0, 0, w, h);
+    [[0.3, 0.28, -0.05, 0], [0.62, 0.62, 0.04, 2]].forEach(([a, b, r, k]) => {
+      c.save(); c.translate(w * (0.5 + (a - 0.4) * 0.9), h * b * 0.9 + 30); c.rotate(r);
+      c.shadowColor = "#0004"; c.shadowBlur = 14; c.fillStyle = "#fff"; c.fillRect(-w * 0.3, -h * 0.17, w * 0.6, h * 0.34);
+      c.shadowColor = "transparent"; scene(c, -w * 0.27, -h * 0.15, w * 0.54, h * 0.26, k + 1); c.restore();
+    });
+    text(c, "Evidence that we were, in fact, the problem.", w / 2, h - 60, `italic 500 15px ${SERIF}`, INK, "center");
+    folio(c, w, h, i);
+  },
+  (c, w, h, i) => { // list with photo header
+    c.fillStyle = PAPER; c.fillRect(0, 0, w, h);
+    const o = h * 0.2, sp = Math.min(64, (h - o - 150) / 4);
+    scene(c, 0, 0, w, o, 1);
+    text(c, "TOP 4", 32, o + 34, "600 11px " + SANS, ACC);
+    c.fillStyle = INK; c.font = `800 24px ${SERIF}`; c.textAlign = "left"; wrap(c, "Why it is you", 32, o + 66, w - 64, 28);
+    ["You make quiet feel safe.", "You remember the small things.", "You show up, every time.", "You are my favorite hello."].forEach((t, k) => {
+      const y = o + 130 + k * sp;
+      text(c, String(k + 1), 32, y + sp * 0.3, `800 ${sp * 0.6}px ${SERIF}`, ACC);
+      c.fillStyle = INK; c.font = "400 15px " + SANS; wrap(c, t, 86, y + sp * 0.2, w - 120, 20);
+    });
+    folio(c, w, h, i);
+  },
+  (c, w, h, i) => { // photo + caption, second
+    c.fillStyle = PAPER; c.fillRect(0, 0, w, h); scene(c, 24, 24, w - 48, h * 0.6, 2);
+    text(c, "SOMEDAY", 28, h * 0.6 + 66, "600 11px " + SANS, ACC);
+    c.fillStyle = INK; c.font = `italic 500 20px ${SERIF}`; c.textAlign = "left";
+    wrap(c, "Porch light on, you on the couch, nowhere to be.", 28, h * 0.6 + 96, w - 56, 26);
+    folio(c, w, h, i);
+  },
+  (c, w, h) => { // closing
+    c.fillStyle = INK; c.fillRect(0, 0, w, h);
+    const r = Math.min(w, h) * 0.2, cy = h * 0.27;
+    c.save(); c.beginPath(); c.arc(w / 2, cy, r, 0, 7); c.clip(); scene(c, w / 2 - r, cy - r, 2 * r, 2 * r, 2); c.restore();
+    c.strokeStyle = PAL[0]; c.lineWidth = 2; c.beginPath(); c.arc(w / 2, cy, r + 6, 0, 7); c.stroke();
+    const y = h * 0.58;
+    text(c, "THE END", w / 2, y, `${w * 0.14}px ${SERIF}`, PAPER, "center");
+    text(c, "To be continued, always.", w / 2, y + 40, `italic 500 18px ${SERIF}`, PAL[0], "center");
+    text(c, "With love, Daniel ❤", w / 2, y + 90, "600 13px " + SANS, "#fff", "center");
+  },
+];
+
+const fb = create($("#stage"), { pages, fit: "contain", backColor: "#f4efe6", onPageChange: update });
+function update() {
+  $("#pn").textContent = fb.state === "ready" ? `Page ${fb.index + 1} of ${fb.pageCount}` : fb.state;
+}
+fb.ready.then(update);
+const sel = $("#thr");
+sel.onchange = () => { fb.tuning.completeFraction = parseFloat(sel.value); };
+window.fb = fb;
+
+</script></body></html>

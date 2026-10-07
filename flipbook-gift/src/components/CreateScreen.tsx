@@ -52,62 +52,6 @@ export default function CreateScreen() {
 
   const activateEditorTool = (tool: EditorTool) => setActiveTool((current) => current === tool ? null : tool);
 
-  const runEditorAction = (action: string) => {
-    const root = document.querySelector("[data-natragift-editor]") as HTMLElement | null;
-    if (!root) return;
-    const buttons = () => Array.from(root.querySelectorAll<HTMLButtonElement>("button"));
-    const click = (matcher: string | RegExp) => buttons().find((b) => typeof matcher === "string" ? (b.textContent || "").trim() === matcher : matcher.test((b.textContent || "").trim()))?.click();
-    const openDetails = (label: RegExp) => {
-      const summary = Array.from(root.querySelectorAll("summary")).find((el) => label.test(el.textContent || ""));
-      if (summary instanceof HTMLElement) { const details = summary.parentElement; if (details instanceof HTMLDetailsElement) details.open = true; summary.scrollIntoView({ behavior: "smooth", block: "center" }); }
-    };
-    if (action === "add") { click("Add page"); return; }
-    if (action === "duplicate") { click("Duplicate this page"); return; }
-    if (action === "earlier") { click("← Move earlier"); return; }
-    if (action === "later") { click("Move later →"); return; }
-    if (action === "delete") { click("Delete this page"); return; }
-    if (action === "text") {
-      root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')[0]?.click();
-      return;
-    }
-    if (action === "text-font" || action === "text-size" || action === "text-align" || action === "text-color") {
-      root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')[0]?.click();
-      openDetails(/^Customize this page$/);
-      return;
-    }
-    if (action === "media") {
-      Array.from(root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')).find((b) => /photo|image|picture/i.test((b.textContent || "").trim()))?.click();
-      return;
-    }
-    if (action === "media-choose") {
-      Array.from(root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')).find((b) => /photo|image|picture/i.test((b.textContent || "").trim()))?.click();
-      setTimeout(() => root.querySelector<HTMLInputElement>('input[type="file"][accept*="image"]')?.click(), 80);
-      return;
-    }
-    if (action === "media-style") {
-      Array.from(root.querySelectorAll<HTMLButtonElement>('[aria-label="Parts of this page"] button')).find((b) => /photo|image|picture/i.test((b.textContent || "").trim()))?.click();
-      openDetails(/^Customize this page$/);
-      return;
-    }
-    if (action === "audio") {
-      const audio = Array.from(root.querySelectorAll("p")).find((p) => p.textContent?.trim() === "Audio note");
-      (audio?.parentElement || root.querySelector("audio"))?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    if (action === "audio-choose") {
-      root.querySelector<HTMLInputElement>('input[type="file"][accept*=".mp3"]')?.click();
-      return;
-    }
-    if (action === "audio-remove") { click("Remove audio"); return; }
-    if (action === "record") {
-      const audio = Array.from(root.querySelectorAll("p")).find((p) => p.textContent?.trim() === "Audio note");
-      (audio?.parentElement || root.querySelector("audio"))?.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTimeout(() => click(/^Record$|^Record a new note$/i), 120);
-      return;
-    }
-    if (action === "style") { openDetails(/Book style: colours and fonts/i); }
-  };
-
   if (step === "pages") {
     return (
       <main className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#f7f5f2] text-stone-900">
@@ -127,7 +71,7 @@ export default function CreateScreen() {
                 <button type="button" onClick={() => setStep("names")} className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-600">Gift details</button>
               </div>
               <div data-natragift-editor className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId}
+                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
                   onChange={(pages) => set({ pages })} />
               </div>
@@ -138,7 +82,7 @@ export default function CreateScreen() {
         </section>
         {view === "edit" && (
           <>
-            {activeTool && <EditorToolSheet tool={activeTool} onClose={() => setActiveTool(null)} onAction={runEditorAction} />}
+            
             <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/98 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
               <div className="mx-auto flex max-w-2xl items-center justify-between gap-1 overflow-x-auto">
                 {([["Pages","▦"],["Text","T"],["Media","▧"],["Audio","♫"],["Record","●"],["Style","✦"]] as [EditorTool,string][]).map(([label,icon]) => (
@@ -203,28 +147,7 @@ export default function CreateScreen() {
   );
 }
 
-function EditorToolSheet({ tool, onClose, onAction }: { tool: EditorTool; onClose: () => void; onAction: (action: string) => void }) {
-  const config: Record<EditorTool, { title: string; icon: string; description: string; actions: { label: string; action: string; primary?: boolean }[] }> = {
-    Pages: { title: "Pages", icon: "▦", description: "Manage the pages of your gift.", actions: [{ label: "＋ Add page", action: "add", primary: true }, { label: "Duplicate", action: "duplicate" }, { label: "← Earlier", action: "earlier" }, { label: "Later →", action: "later" }, { label: "Delete", action: "delete" }] },
-    Text: { title: "Text", icon: "T", description: "Open the text controls for the selected page element.", actions: [{ label: "Select text", action: "text", primary: true }, { label: "Font", action: "text-font" }, { label: "Size", action: "text-size" }, { label: "Align", action: "text-align" }, { label: "Color", action: "text-color" }] },
-    Media: { title: "Media", icon: "▧", description: "Choose a photo and open its editing controls.", actions: [{ label: "Select photo", action: "media", primary: true }, { label: "Choose photo", action: "media-choose" }, { label: "Fit / Fill", action: "media-style" }, { label: "Filters", action: "media-style" }, { label: "Frames", action: "media-style" }] },
-    Audio: { title: "Audio", icon: "♫", description: "Manage audio attached to the current page.", actions: [{ label: "Audio controls", action: "audio", primary: true }, { label: "Choose audio", action: "audio-choose" }, { label: "Remove audio", action: "audio-remove" }] },
-    Record: { title: "Voice record", icon: "●", description: "Record and review a personal voice note.", actions: [{ label: "● Record", action: "record", primary: true }, { label: "Record again", action: "record" }, { label: "Review / use", action: "record" }] },
-    Style: { title: "Book style", icon: "✦", description: "Change colours and fonts across the whole gift.", actions: [{ label: "Open style", action: "style", primary: true }, { label: "Colours", action: "style" }, { label: "Fonts", action: "style" }] }
-  };
-  const current = config[tool];
-  return (
-    <section className="fixed inset-x-0 bottom-[76px] z-20 mx-auto w-full max-w-2xl px-3" aria-label={current.title + " tools"}>
-      <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.14)]">
-        <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
-          <div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg bg-rose-50 text-sm font-black text-rose-700">{current.icon}</span><div><p className="text-sm font-bold text-stone-900">{current.title}</p><p className="text-[11px] text-stone-400">Tool workspace</p></div></div>
-          <button type="button" onClick={onClose} aria-label="Close tool" className="grid h-8 w-8 place-items-center rounded-full bg-stone-100 text-stone-600">×</button>
-        </div>
-        <div className="max-h-[34vh] overflow-y-auto px-4 py-3"><p className="text-xs leading-5 text-stone-500">{current.description}</p><div className="mt-3 flex flex-wrap gap-2">{current.actions.map((item) => <button key={item.label} type="button" onClick={() => onAction(item.action)} className={"rounded-xl border px-3 py-2.5 text-xs font-bold transition active:scale-[.98] " + (item.primary ? "border-rose-700 bg-rose-700 text-white" : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50")}>{item.label}</button>)}</div></div>
-      </div>
-    </section>
-  );
-}
+
 function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
     <main className={"mx-auto px-5 py-10 md:py-14 " + (wide ? "max-w-4xl" : "max-w-xl text-center")}>

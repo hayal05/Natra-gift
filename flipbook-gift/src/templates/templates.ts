@@ -21,7 +21,7 @@ const pg = (layout: string, slots: PageData["slots"], bg?: string): PageData => 
 
 export const TEMPLATE_LIST: Template[] = [
   {
-    id: "love-story", name: "Love Story", blurb: "A romantic magazine all about the two of you.",
+    id: "love-story", name: "Love Story", blurb: "A refined love editorial — intimate, cinematic, and made for two.",
     masthead: "OUR STORY",
     palette: { paper: "#fff8f6", ink: "#24171b", accent: "#9f3150", accent2: "#ef9bb0", soft: "#f9e1e4", dark: "#28121b" },
     fontPairs: [fp("Playfair Display", "Lato"), ALT.classic],
@@ -37,7 +37,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "anniversary", name: "Anniversary", blurb: "Celebrate the years, the places, the little rituals.",
+    id: "anniversary", name: "Anniversary", blurb: "A timeless anniversary keepsake built around chapters, milestones, and the years ahead.",
     masthead: "ALWAYS US",
     palette: { paper: "#faf6ef", ink: "#241b1b", accent: "#7a2433", accent2: "#c9a45b", soft: "#eee2cf", dark: "#241015" },
     fontPairs: [fp("Cormorant Garamond", "Montserrat", 700), ALT.modern],
@@ -54,7 +54,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "wedding", name: "Wedding", blurb: "An elegant keepsake for the happy couple.",
+    id: "wedding", name: "Wedding", blurb: "A modern wedding keepsake with invitation-like elegance and quiet botanical warmth.",
     masthead: "THE WEDDING",
     palette: { paper: "#fdfcf8", ink: "#34362f", accent: "#5f705b", accent2: "#cbb894", soft: "#edf0e7", dark: "#2d352d" },
     fontPairs: [fp("Italiana", "Jost", 400), ALT.classic],
@@ -71,7 +71,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "best-friends", name: "Best Friends", blurb: "Loud, funny and full of inside jokes.",
+    id: "best-friends", name: "Best Friends", blurb: "A modern friendship scrapbook — candid photos, inside jokes, and the stories only you share.",
     masthead: "BFF WEEKLY",
     palette: { paper: "#fffdf7", ink: "#17181b", accent: "#c7432f", accent2: "#f3c447", soft: "#fff0bd", dark: "#1b1b24" },
     fontPairs: [fp("Archivo Black", "DM Sans", 400), ALT.modern],
@@ -88,7 +88,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "birthday", name: "Birthday Surprise", blurb: "Confetti colors and a big happy birthday.",
+    id: "birthday", name: "Birthday Surprise", blurb: "A stylish birthday issue with bold type, joyful color, and one unforgettable year.",
     masthead: "THIS YEAR",
     palette: { paper: "#fffaf2", ink: "#261d3d", accent: "#7040c7", accent2: "#ff9b57", soft: "#eee5ff", dark: "#251a42" },
     fontPairs: [fp("Fredoka", "Nunito", 700), ALT.modern],
@@ -104,7 +104,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "sorry", name: "I'm Sorry", blurb: "A calm, sincere way to say it properly.",
+    id: "sorry", name: "I'm Sorry", blurb: "A quiet, honest letter for the words that deserve care, space, and sincerity.",
     masthead: "A FEW WORDS",
     palette: { paper: "#fafafa", ink: "#202833", accent: "#426c8d", accent2: "#a7c1d4", soft: "#e4edf3", dark: "#1d2935" },
     fontPairs: [fp("Lora", "Source Sans 3", 700), ALT.modern],
@@ -120,7 +120,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "memories", name: "Our Memories", blurb: "A warm, film-photo scrapbook of favorite days.",
+    id: "memories", name: "Our Memories", blurb: "A tactile photo journal inspired by film prints, contact sheets, and imperfect memories.",
     masthead: "OUR MEMORIES",
     palette: { paper: "#f4eee4", ink: "#342920", accent: "#91502b", accent2: "#d2a06c", soft: "#e8dcc9", dark: "#2a1f18" },
     fontPairs: [fp("DM Serif Display", "Work Sans", 400), ALT.classic],
@@ -137,7 +137,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "appreciation", name: "Appreciation", blurb: "A heartfelt thank-you for someone who matters.",
+    id: "appreciation", name: "Appreciation", blurb: "A warm editorial thank-you designed to feel personal, thoughtful, and lasting.",
     masthead: "WITH GRATITUDE",
     palette: { paper: "#fbfaf4", ink: "#1f2d24", accent: "#2f6b4a", accent2: "#d1ad4c", soft: "#e6efe2", dark: "#14271c" },
     fontPairs: [fp("Libre Baskerville", "Open Sans", 700), ALT.modern],
@@ -153,7 +153,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "long-distance", name: "Long Distance", blurb: "Same moon, different time zones.",
+    id: "long-distance", name: "Long Distance", blurb: "A cinematic postcard from one place to another — distance, dates, and the promise of seeing each other again.",
     masthead: "CLOSER",
     palette: { paper: "#f5f8fc", ink: "#14223d", accent: "#315fc2", accent2: "#8caef0", soft: "#e0e9f8", dark: "#0f1c35" },
     fontPairs: [fp("Space Grotesk", "Inter", 700), ALT.classic],
@@ -169,7 +169,7 @@ export const TEMPLATE_LIST: Template[] = [
     ],
   },
   {
-    id: "just-because", name: "Just Because", blurb: "No occasion needed. A bright little surprise.",
+    id: "just-because", name: "Just Because", blurb: "A light, charming mini-editorial for the beautiful moments that need no occasion.",
     masthead: "JUST BECAUSE",
     palette: { paper: "#fff8f2", ink: "#2c2230", accent: "#a9473f", accent2: "#45bfa9", soft: "#ffe1d5", dark: "#20313a" },
     fontPairs: [fp("Abril Fatface", "Poppins", 400), ALT.classic],

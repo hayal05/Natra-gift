@@ -44,7 +44,7 @@ export const TEMPLATE_LIST: Template[] = [
     invitation: "Happy anniversary, {to}. {from} has been saving this one for you.",
     pages: [
       pg("cover-frame", { kicker: "The Anniversary Edition", title: "Always Us", p1: ph(1), body: "Every year, a new favorite chapter\nThe things we kept", byline: "For {to}" }),
-      pg("split-top", { p1: ph(2), kicker: "The beginning", title: "Where it started", body: "A crowded room, one shy hello, and a feeling I still can't explain." }),
+      pg("chapter-number", { p1: ph(2), kicker: "Chapter 01 · The beginning", title: "01", body: "A crowded room, one shy hello, and a feeling I still can't explain.", caption: "Where it all began" }),
       pg("collage-3", { p1: ph(3), p2: ph(4), p3: ph(5), caption: "A few of the places we've been brave together." }),
       pg("letter-corner", { p1: ph(6), kicker: "A letter", title: "Through every season", body: "Some years were easy and some years were hard, and in every one of them you were the person I wanted to tell first. Thank you for choosing me again and again, on the loud days and the quiet ones. I would choose you in every version of the story.", sign: "{from}" }),
       pg("photo-framed", { p1: ph(2), kicker: "Our favorite", caption: "The night we danced in the kitchen." }),
@@ -60,7 +60,7 @@ export const TEMPLATE_LIST: Template[] = [
     fontPairs: [fp("Italiana", "Jost", 400), ALT.classic],
     invitation: "{from} has a gift for you on your wedding day, {to}. Open it and smile.",
     pages: [
-      pg("cover-split", { p1: ph(1), kicker: "The Wedding Edition", title: "Forever Begins", byline: "For {to}", body: "Vows, laughter, and everyone we love" }),
+      pg("wedding-invite", { p1: ph(1), kicker: "The Wedding Edition", title: "Forever Begins", byline: "For {to}", body: "Vows, laughter, and everyone we love" }),
       pg("letter", { p1: ph(2), kicker: "A note for the day", title: "Dear {to},", body: "Today two people I love become one wonderful story, and I am so happy to watch it begin. May your home always be full of laughter, good food, and open doors.", sign: "{from}" }),
       pg("photo-framed", { p1: ph(3), kicker: "The proposal", caption: "A yes that was never in doubt." }),
       pg("polaroid-one", { p1: ph(4), caption: "Getting ready", kicker: "The morning of" }),
@@ -95,7 +95,7 @@ export const TEMPLATE_LIST: Template[] = [
     invitation: "Surprise, {to}! {from} wrapped something up for your birthday.",
     pages: [
       pg("cover-bold", { kicker: "The Birthday Edition", title: "Surprise!", p1: ph(1), body: "Cake, confetti, and one very big year", byline: "For {to}" }),
-      pg("photo-rounded", { title: "Happy birthday!", p1: ph(2), caption: "Today the whole world is a little brighter, because it's your day." }),
+      pg("birthday-number", { kicker: "The Birthday Edition", title: "YOUR\nDAY", p1: ph(2), body: "A whole year worth celebrating.", byline: "For {to}" }),
       pg("collage-3", { p1: ph(3), p2: ph(4), p3: ph(5), caption: "A year of adventures, one photo at a time." }),
       pg("letter", { p1: ph(6), kicker: "From me to you", title: "Dear {to},", body: "Another year older and somehow even more wonderful. I hope today is full of cake, laughter, and people who adore you. Make a big wish, and know that I'm cheering for every single one.", sign: "{from}" }),
       pg("list", { title: "Birthday wishes", p1: ph(1), kicker: "Your big year", body: "1. Cake for breakfast\n2. Zero worries\n3. Dancing in the kitchen\n4. Adventures big and small\n5. Everyone you love, close by" }),
@@ -111,7 +111,7 @@ export const TEMPLATE_LIST: Template[] = [
     invitation: "{from} has something to say to you, {to}. Take your time.",
     pages: [
       pg("cover-frame", { kicker: "A letter, not an excuse", title: "I'm Sorry", p1: ph(1), body: "What I should have said\nWhat I want to do next", byline: "For {to}" }),
-      pg("letter", { p1: ph(2), kicker: "First, the truth", title: "{to},", body: "I hurt you, and I'm sorry. Not because things are awkward, but because you matter to me and I let you down. You deserved better from me, and I am going to do better.", sign: "{from}" }),
+      pg("quiet-apology", { p1: ph(2), kicker: "First, the truth", title: "{to},", body: "I hurt you, and I'm sorry. Not because things are awkward, but because you matter to me and I let you down. You deserved better from me, and I am going to do better.", sign: "{from}" }),
       pg("photo-framed", { p1: ph(3), kicker: "What I miss", caption: "Us, the way we were before I messed up." }),
       pg("split-top", { p1: ph(4), kicker: "What I understand now", title: "I should have listened", body: "I was thinking about myself when I should have been thinking about you." }),
       pg("two-column", { title: "What I'll do differently", p1: ph(5), body: "Listen first, then talk. Say what I feel before it turns into silence. Own it quickly when I'm wrong.", body2: "Show you with actions, not just words. Give you all the time you need. Keep trying, every day." }),
@@ -128,7 +128,7 @@ export const TEMPLATE_LIST: Template[] = [
     pages: [
       pg("cover-full", { p1: ph(1), title: "Our Memories", kicker: "The Keepsake Issue", body: "The little moments\nThe big ones too", byline: "For {to}" }),
       pg("polaroid-one", { p1: ph(2), caption: "That summer", kicker: "Remember when" }),
-      pg("collage-2", { kicker: "Scrapbook", p1: ph(3), p2: ph(4), caption: "Mostly blurry, completely perfect." }),
+      pg("contact-sheet", { kicker: "Contact sheet · 06 frames", p1: ph(3), p2: ph(4), p3: ph(5), p4: ph(1), p5: ph(2), p6: ph(6), caption: "Mostly blurry, completely perfect." }),
       pg("photo-full", { p1: ph(5), kicker: "Favorite day", caption: "Sun on our faces and nowhere to be." }),
       pg("split-side", { p1: ph(6), kicker: "The story goes", title: "Wrong turn, best turn", body: "We were lost for an hour and laughed for all of it. Funny how the detours turn into the memories we tell most." }),
       pg("collage-2-side", { p1: ph(1), p2: ph(3), title: "Little things", caption: "Tickets, receipts, and inside jokes." }),
@@ -148,7 +148,7 @@ export const TEMPLATE_LIST: Template[] = [
       pg("list", { title: "Because of you", p1: ph(3), kicker: "Thank you for", body: "1. Always showing up\n2. Believing in me\n3. Making hard days lighter\n4. Your patience\n5. Being exactly you" }),
       pg("photo-rounded", { title: "You make a difference", p1: ph(4), caption: "People like you quietly change everything for the better." }),
       pg("collage-2-side", { p1: ph(5), p2: ph(6), title: "Moments I won't forget", caption: "Small kindnesses that stayed with me." }),
-      pg("quote-big", { quote: "Your kindness didn't go unnoticed. It never does.", byline: "From {from}", p1: ph(2) }),
+      pg("gratitude", { quote: "Your kindness didn't go unnoticed. It never does.", body: "From the small things to the moments that mattered most, you made a difference.", sign: "{from}", p1: ph(2) }),
       pg("closing-dark", { p1: ph(1), title: "With gratitude", body: "Thank you, truly, from the bottom of my heart.", sign: "{from}" }),
     ],
   },
@@ -161,7 +161,7 @@ export const TEMPLATE_LIST: Template[] = [
     pages: [
       pg("cover-split", { p1: ph(1), kicker: "The Long-Distance Issue", title: "Closer", byline: "For {to}", body: "Same moon\nDifferent time zones" }),
       pg("letter", { p1: ph(2), kicker: "Across the miles", title: "Hi {to},", body: "Today I thought of you at least a hundred times. The distance is real, but so is this: you're the first person I want to tell everything. Every mile is just a reason to love you louder.", sign: "{from}" }),
-      pg("photo-full", { p1: ph(3), kicker: "Same sky", caption: "Wherever you are, I'm looking at the same moon." }),
+      pg("route-postcard", { p1: ph(3), kicker: "Same sky · Different place", title: "Still under one sky", body: "Wherever you are, I'm looking at the same moon.", caption: "HERE  ·  THERE  ·  TOGETHER SOON" }),
       pg("split-bottom", { kicker: "Counting down", title: "Until I see you", body: "Every day crossed off is one day closer. I already know where I'm taking you first.", p1: ph(4) }),
       pg("collage-3", { p1: ph(5), p2: ph(6), p3: ph(2), caption: "The plan: all of this, together, soon." }),
       pg("quote-big", { quote: "Not goodbye, just see you soon.", byline: "{from} to {to}", p1: ph(1) }),

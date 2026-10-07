@@ -41,6 +41,8 @@ export default function GiftView({ token }: { token: string }) {
     let book: Flipbook | undefined;
     const ctl = new AbortController();
     setMode("envelope");
+    setDraftForAudio(null);
+    setCurrentPage(0);
 
     (async () => {
       let draft: Draft;

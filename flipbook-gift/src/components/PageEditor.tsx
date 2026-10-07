@@ -379,6 +379,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
             </div>
           </section>
         )}
+      </div>
     </div>
   );
 }

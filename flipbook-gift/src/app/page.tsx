@@ -108,14 +108,52 @@ export default function Home() {
                         className="relative h-full overflow-hidden rounded-[10px] border border-black/[.06] bg-white shadow-sm"
                         style={{ color: template.palette.ink }}
                       >
-                        <div className="h-[42%] p-2" style={{ background: template.palette.accent }}>
-                          <span className="text-[7px] font-bold uppercase tracking-[.13em] text-white/75">
-                            {template.masthead}
-                          </span>
-                          <div className="mt-1 text-[13px] font-black leading-none text-white sm:text-[15px]">
+                        <div className="absolute inset-0" style={{ background: template.palette.paper }} />
+                        <div className="relative h-full p-2">
+                          {template.id === "memories" || template.id === "best-friends" ? (
+                            <div className="absolute inset-x-2 top-2 grid h-[46%] grid-cols-3 gap-1">
+                              {[0, 1, 2].map((i) => (
+                                <div key={i} className="rounded-[5px] border border-black/10" style={{ background: i === 1 ? template.palette.accent2 : template.palette.soft }} />
+                              ))}
+                            </div>
+                          ) : template.id === "long-distance" ? (
+                            <div className="absolute inset-x-3 top-5 h-[32%]">
+                              <div className="absolute left-0 top-1/2 h-px w-full border-t border-dashed" style={{ borderColor: template.palette.accent }} />
+                              <span className="absolute left-0 top-[calc(50%-4px)] h-2 w-2 rounded-full" style={{ background: template.palette.accent }} />
+                              <span className="absolute right-0 top-[calc(50%-4px)] h-2 w-2 rounded-full" style={{ background: template.palette.accent }} />
+                            </div>
+                          ) : template.id === "sorry" ? (
+                            <div className="absolute inset-x-4 top-4 h-[38%] rounded-md border" style={{ borderColor: template.palette.accent2 }}>
+                              <div className="mx-auto mt-4 h-1 w-1/2 rounded-full" style={{ background: template.palette.accent }} />
+                              <div className="mx-auto mt-2 h-1 w-1/3 rounded-full bg-black/10" />
+                            </div>
+                          ) : (
+                            <div className="absolute inset-x-2 top-2 h-[46%] overflow-hidden rounded-[6px]" style={{ background: "linear-gradient(135deg, " + template.palette.accent + ", " + template.palette.accent2 + ")" }}>
+                              <div className="absolute -right-5 -top-5 h-16 w-16 rounded-full bg-white/15" />
+                              <div className="absolute -bottom-7 -left-3 h-16 w-16 rounded-full bg-black/10" />
+                            </div>
+                          )}
+
+                          <div className="absolute inset-x-2 bottom-2">
+                            <div className="text-[6px] font-bold uppercase tracking-[.16em] opacity-55">{template.masthead}</div>
+                            <div className="mt-0.5 text-[13px] font-black leading-[.92] tracking-[-.04em] sm:text-[15px]">
+                              {template.id === "birthday" ? "THIS YEAR" :
+                               template.id === "anniversary" ? "ALWAYS US" :
+                               template.id === "wedding" ? "FOREVER" :
+                               template.id === "sorry" ? "I'm Sorry" :
+                               template.id === "long-distance" ? "CLOSER" :
+                               template.id === "memories" ? "KEEP THIS" :
+                               template.id === "appreciation" ? "THANK YOU" :
+                               template.id === "best-friends" ? "US, UNFILTERED" :
+                               template.id === "just-because" ? "NO REASON" : "OUR STORY"}
+                            </div>
+                            <div className="mt-1 h-0.5 w-[54%] rounded-full" style={{ background: template.palette.accent }} />
+                          </div>
+                          <div className="absolute right-2 top-2 text-[9px] font-black" style={{ color: template.palette.accent }}>
                             {TEMPLATE_ICONS[template.id] ?? "✦"}
                           </div>
                         </div>
+                      </div>                       </div>
                         <div className="px-2 pt-2">
                           <div className="text-[9px] font-bold leading-tight sm:text-[10px]">{template.name}</div>
                           <div className="mt-1 h-1 w-[72%] rounded-full bg-black/10" />

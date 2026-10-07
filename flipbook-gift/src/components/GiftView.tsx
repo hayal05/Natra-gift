@@ -27,6 +27,8 @@ export default function GiftView({ token }: { token: string }) {
   const [mode, setMode] = useState<Mode>("envelope");
   const [fs, setFs] = useState(false);
   const [canFs, setCanFs] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [draftForAudio, setDraftForAudio] = useState<Draft | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const shell = useRef<HTMLElement>(null);
   const reader = useRef<{ start: () => void; stop: () => void } | null>(null);
@@ -56,6 +58,7 @@ export default function GiftView({ token }: { token: string }) {
       const style = bookStyle(template, draft.fontPair, draftPalette(draft));
       const names = { to: draft.to.trim() || "you", from: draft.from.trim() || "me" };
       const pages = fillPages(draft.pages, names);
+      setCurrentPage(0);
       const message = draft.invitation ?? fill(template.invitation, names);
 
       await loadFonts(style.fonts); // the envelope and the pages must not draw in a fallback face
@@ -77,6 +80,7 @@ export default function GiftView({ token }: { token: string }) {
             errorText: "This gift could not be drawn.",
             retryText: "Try again",
             onRetry: () => window.location.reload(),
+            onPageChange: (i) => setCurrentPage(i),
           });
           setMode("reading");
         },
@@ -120,6 +124,20 @@ export default function GiftView({ token }: { token: string }) {
       <div ref={host} className="relative h-full w-full">
         <div data-book className="absolute inset-0" />
       </div>
+      {mode === "reading" && pagesForAudio(draftForAudio) && null}
+      {mode === "reading" && (
+        <div className="absolute inset-x-3 bottom-3 z-10 flex justify-center" style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+          {(() => {
+            const audio = draftForAudio?.pages[currentPage]?.audio;
+            return audio ? (
+              <div className="w-full max-w-[420px] rounded-2xl bg-black/55 p-2 shadow-lg backdrop-blur">
+                <audio key={audio.src} controls preload="metadata" src={audio.src} className="w-full" aria-label={`Audio note for page ${currentPage + 1}`} />
+                <p className="px-2 pt-1 text-center text-xs text-white/80">Audio note · page {currentPage + 1}</p>
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
       {mode === "reading" && (
         <div className="absolute right-3 z-10 flex gap-2" style={{ top: "max(0.75rem, env(safe-area-inset-top))", right: "max(0.75rem, env(safe-area-inset-right))" }}>
           {canFs && (

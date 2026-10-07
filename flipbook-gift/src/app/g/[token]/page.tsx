@@ -5,7 +5,6 @@ import GiftView from "../../../components/GiftView";
 export const dynamic = "force-dynamic";
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://natratech.pro.et").replace(/\/$/, "");
-const shareImage = "/natragift-share.jpg?v=3";
 
 export async function generateMetadata({
   params,
@@ -15,7 +14,6 @@ export async function generateMetadata({
   const { token } = await params;
   const title = "A gift for you";
   const description = "A special digital gift from NatraGift. Open it to see your surprise.";
-  const previewImage = `${siteUrl}${shareImage}`;
   const giftUrl = `${siteUrl}/g/${token}`;
 
   return {
@@ -28,19 +26,11 @@ export async function generateMetadata({
       type: "website",
       url: giftUrl,
       siteName: "NatraGift",
-      images: [{
-        url: previewImage,
-        width: 600,
-        height: 314,
-        type: "image/jpeg",
-        alt: "A wrapped digital gift from NatraGift",
-      }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [previewImage],
     },
   };
 }

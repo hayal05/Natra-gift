@@ -14,13 +14,16 @@ export const color = (book: BookStyle, ref: ColorRef): string =>
 
 /** Slot rectangle in CSS px (before rotation). Also used by the editor for hit-testing. */
 export const slotRect = (s: SlotDef, w: number, h: number) => ({ x: s.x * w, y: s.y * h, w: s.w * w, h: s.h * h });
+export const textSlotRect = (s: TextSlotDef, st: TextStyle | undefined, w: number, h: number) => ({
+  x: (s.x + (st?.x ?? 0)) * w, y: (s.y + (st?.y ?? 0)) * h, w: s.w * w, h: s.h * h,
+});
 
 /** The slot under a point (px), topmost first; text and photo slots only. Rotation is ignored (good enough for taps). */
 export function slotAt(layout: Layout, w: number, h: number, px: number, py: number): SlotDef | null {
   for (let i = layout.slots.length - 1; i >= 0; i--) {
     const s = layout.slots[i];
     if (s.kind === "shape") continue;
-    const r = slotRect(s, w, h);
+    const r = textSlotRect(s, st, w, h);
     if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return s;
   }
   return null;

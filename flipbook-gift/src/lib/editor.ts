@@ -1,6 +1,6 @@
 // Pure helpers for the page editor (task 3.2): which slots a creator can select, their names, and tap hit-testing.
 // No React here, so it can be checked from the command line (scripts/test-editor.ts).
-import { slotRect } from "./pages/render";
+import { slotRect, textSlotRect } from "./pages/render";
 import { SAMPLE_COUNT, isSample } from "./pages/sample";
 import type { ColorRef, Layout, PageData, Palette, PhotoContent, PhotoFrame, PhotoSlotDef, SlotDef, TextSlotDef, TextStyle } from "./pages/types";
 
@@ -34,11 +34,12 @@ export function slotSummary(s: EditableSlot, page: PageData): string {
 }
 
 /** The editable slot under a point given in page pixels (w x h), topmost first. Rotation is ignored, as in slotAt. */
-export function editableAt(l: Layout, w: number, h: number, px: number, py: number): EditableSlot | null {
+export function editableAt(l: Layout, w: number, h: number, px: number, py: number, styles?: Record<string, TextStyle>): EditableSlot | null {
   const list = editableSlots(l);
   for (let i = list.length - 1; i >= 0; i--) {
-    const r = slotRect(list[i], w, h);
-    if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return list[i];
+    const s = list[i];
+    const r = s.kind === "text" ? textSlotRect(s, styles?.[s.id], w, h) : slotRect(s, w, h);
+    if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return s;
   }
   return null;
 }
@@ -91,6 +92,15 @@ export function setSlotText(page: PageData, s: TextSlotDef, text: string): PageD
 }
 
 /** Merges a style change into a raw page. A key set to undefined goes back to the layout's own look; an empty style is removed. */
+export function setTextPosition(page: PageData, id: string, dx: number, dy: number): PageData {
+  const current = page.styles?.[id] ?? {};
+  const clamp = (v: number) => Math.max(-0.45, Math.min(0.45, Math.round(v * 1000) / 1000));
+  const x = clamp(dx), y = clamp(dy);
+  const styles = { ...page.styles, [id]: { ...current, x: x || undefined, y: y || undefined } };
+  if (styles[id] && styles[id].x === undefined && styles[id].y === undefined) delete styles[id];
+  return { ...page, styles: Object.keys(styles).length ? styles : undefined };
+}
+
 export function setTextStyle(page: PageData, id: string, patch: Partial<TextStyle>): PageData {
   const merged: Record<string, unknown> = { ...page.styles?.[id], ...patch };
   for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];

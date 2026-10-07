@@ -124,7 +124,6 @@ export default function GiftView({ token }: { token: string }) {
       <div ref={host} className="relative h-full w-full">
         <div data-book className="absolute inset-0" />
       </div>
-      {mode === "reading" && pagesForAudio(draftForAudio) && null}
       {mode === "reading" && (
         <div className="absolute inset-x-3 bottom-3 z-10 flex justify-center" style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
           {(() => {

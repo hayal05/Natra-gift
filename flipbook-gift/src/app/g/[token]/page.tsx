@@ -21,7 +21,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    robots: { index: false, follow: false, nocache: false },
+    alternates: { canonical: giftUrl },
     openGraph: {
       title,
       description,

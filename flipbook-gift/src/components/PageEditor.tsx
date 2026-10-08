@@ -3,8 +3,8 @@
 // Task 3.3 adds the layout picker and 3.4 the text controls (text box in the selection card, style controls in the collapsed Customize panel).
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, editableSlots, isAdjusted, movePage, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
-import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
+import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, editableSlots, isAdjusted, movePage, resetTextBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
+import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, textSlotRect, sizeFactor, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_WIDTH_MIN, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextSlotDef, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
 import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS, audioFileProblem, readAudioDuration, recordingSupported, uploadAudio } from "../lib/audio";
@@ -118,6 +118,14 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     ro.observe(cv);
     return () => ro.disconnect();
   }, []);
+  const pageBox = useRef<HTMLDivElement>(null);
+  /** What a tap on text hits: the slot plus the text as drawn (it may have grown or been scaled), padded for fingers. */
+  const textArea = (s: TextSlotDef, st: TextStyle | undefined, raw: string) => {
+    const slotR = textSlotRect(s, st, W, H);
+    const t = raw.trim() ? textFitRect(s, st, raw, book, W, H) : slotR;
+    const x1 = Math.min(slotR.x, t.x) - 6, y1 = Math.min(slotR.y, t.y) - 6;
+    return { x: x1, y: y1, w: Math.max(slotR.x + slotR.w, t.x + t.w) + 6 - x1, h: Math.max(slotR.y + slotR.h, t.y + t.h) + 6 - y1 };
+  };
   const pagesRef = useRef(pages);
   pagesRef.current = pages;
   const photoSlot = slot && slot.kind === "photo" ? slot : null;
@@ -317,7 +325,51 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   // Panning is always computed from where the drag began, so fast moves between renders never lose distance.
   const drag = useRef<{ x: number; y: number; start: PhotoContent; moved: boolean } | null>(null);
   const resize = useRef<{ x: number; y: number; start: PhotoContent; moved: boolean } | null>(null);
-  const textDrag = useRef<{ x: number; y: number; start: TextStyle; moved: boolean } | null>(null);
+  const textDrag = useRef<{ x: number; y: number; start: TextStyle; moved: boolean; wasSelected: boolean } | null>(null);
+  // CapCut-style gestures on a selected text: two fingers pinch to scale; corner handle scales; side handle sets the width.
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinch = useRef<{ dist: number; scale: number; w: number; left: number } | null>(null);
+  const suppressTap = useRef(false);
+  const handle = useRef<{ kind: "scale" | "width"; anchorX: number; anchorY: number; d0: number; hx0: number; scale: number; w: number; left: number } | null>(null);
+  /** Scales font size and box width together (so wrapping stays the same), keeping the box inside the page. */
+  const scaleText = (startScale: number, startW: number, left: number, factor: number) => {
+    const maxW = Math.max(TEXT_WIDTH_MIN, 1 - left);
+    const f = Math.min(Math.max(factor, TEXT_SCALE_MIN / startScale, TEXT_WIDTH_MIN / startW), TEXT_SCALE_MAX / startScale, maxW / startW);
+    setStyle({ scale: Math.round(startScale * f * 1000) / 1000, w: Math.round(startW * f * 10000) / 10000 });
+  };
+  const FRAME_PAD = 5; // page px between the text and its selection frame
+  /** The selection frame of the selected text, in page px: the real box width, hugging the text vertically. */
+  const frameRect = () => {
+    if (!textSlot) return null;
+    const r = textSlotRect(textSlot, style, W, H), has = typed.trim().length > 0 && textFit;
+    const y = has ? textFit!.y : r.y, hh = has ? textFit!.h : r.h;
+    return { x: r.x - FRAME_PAD, y: y - FRAME_PAD, w: r.w + FRAME_PAD * 2, h: hh + FRAME_PAD * 2 };
+  };
+  const pagePoint = (e: React.PointerEvent) => {
+    const b = pageBox.current!.getBoundingClientRect();
+    return { x: ((e.clientX - b.left) / b.width) * W, y: ((e.clientY - b.top) / b.height) * H };
+  };
+  const handleDown = (kind: "scale" | "width") => (e: React.PointerEvent<HTMLElement>) => {
+    e.stopPropagation(); e.preventDefault();
+    const f = frameRect(), g = textGeom();
+    if (!f || !g || !pageBox.current) return;
+    handle.current = { kind, anchorX: f.x, anchorY: f.y, d0: Math.hypot(f.w, f.h) || 1, hx0: pagePoint(e).x, scale: g.scale, w: g.w, left: g.left };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const handleMove = (e: React.PointerEvent<HTMLElement>) => {
+    const h = handle.current;
+    if (!h) return;
+    e.stopPropagation();
+    const p = pagePoint(e);
+    if (h.kind === "scale") scaleText(h.scale, h.w, h.left, Math.hypot(p.x - h.anchorX, p.y - h.anchorY) / h.d0);
+    else setStyle({ scale: h.scale, w: Math.round(Math.min(Math.max(h.w + (p.x - h.hx0) / W, TEXT_WIDTH_MIN), Math.max(TEXT_WIDTH_MIN, 1 - h.left)) * 10000) / 10000 });
+  };
+  const handleUp = (e: React.PointerEvent<HTMLElement>) => { e.stopPropagation(); handle.current = null; };
+  const textGeom = () => {
+    if (!textSlot) return null;
+    const left = textSlot.x + (style.x ?? 0);
+    return { left, scale: sizeFactor(style), w: style.w ?? textSlot.w };
+  };
   const decoded = photoSlot && photo.src && !isSample(photo.src) ? images.get(photo.src) : undefined;
   const imgSize = decoded ? { w: (decoded as HTMLImageElement).naturalWidth || decoded.width || 0, h: (decoded as HTMLImageElement).naturalHeight || decoded.height || 0 } : null;
   const canPan = (() => {
@@ -329,20 +381,29 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const inEditor = (e: React.PointerEvent) => (e.target as HTMLElement).tagName === "TEXTAREA";
   const down = (e: React.PointerEvent<HTMLDivElement>) => {
     if (inEditor(e)) return; // the text editor handles its own touches (caret placement, selection, handles)
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2 && textSlot && !editingText) {
+      // Second finger on a selected text: pinch to scale. The first finger's drag/tap is cancelled.
+      const [a, b] = [...pointers.current.values()], g = textGeom();
+      if (g) { pinch.current = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, scale: g.scale, w: g.w, left: g.left }; textDrag.current = null; suppressTap.current = true; }
+      return;
+    }
+    if (pointers.current.size > 1) { suppressTap.current = true; return; }
+    suppressTap.current = false;
     drag.current = null;
     resize.current = null;
     textDrag.current = null;
     if (e.button !== undefined && e.button !== 0) return;
     const r = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - r.left) / r.width) * W, py = ((e.clientY - r.top) / r.height) * H;
-    const hit = editableAt(layout, pages[at], W, H, px, py, pages[at]?.styles);
+    const hit = editableAt(layout, pages[at], W, H, px, py, pages[at]?.styles, textArea);
     if (photoSlot) {
       const pr = photoSlotRect(photoSlot, photo, W, H), hs = Math.max(16, Math.min(28, Math.min(pr.w, pr.h) * 0.12));
       if (px >= pr.x + pr.w - hs && py >= pr.y + pr.h - hs) { resize.current = { x: e.clientX, y: e.clientY, start: photo, moved: false }; setSlotId(photoSlot.id); e.currentTarget.setPointerCapture(e.pointerId); return; }
     }
     if (hit?.kind === "text") {
       const start = pages[at]?.styles?.[hit.id] ?? {};
-      textDrag.current = { x: e.clientX, y: e.clientY, start, moved: false };
+      textDrag.current = { x: e.clientX, y: e.clientY, start, moved: false, wasSelected: hit.id === slotId };
       setSlotId(hit.id);
       e.currentTarget.setPointerCapture(e.pointerId);
       return;
@@ -356,6 +417,13 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   };
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
     if (inEditor(e)) return;
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pz = pinch.current;
+    if (pz) {
+      if (pointers.current.size >= 2) { const [a, b] = [...pointers.current.values()]; scaleText(pz.scale, pz.w, pz.left, (Math.hypot(a.x - b.x, a.y - b.y) || 1) / pz.dist); }
+      return;
+    }
+    if (suppressTap.current) return;
     const rr = resize.current;
     if (rr && photoSlot) {
       const rect = e.currentTarget.getBoundingClientRect(), dx = (e.clientX - rr.x) / rect.width, dy = (e.clientY - rr.y) / rect.height;
@@ -385,6 +453,14 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   };
   const tap = (e: React.PointerEvent<HTMLDivElement>) => {
     if (inEditor(e)) return;
+    pointers.current.delete(e.pointerId);
+    if (pinch.current && pointers.current.size < 2) pinch.current = null;
+    if (suppressTap.current) { // a pinch or multi-finger touch never counts as a tap; wait until every finger is up
+      if (pointers.current.size === 0) suppressTap.current = false;
+      textDrag.current = null; drag.current = null; resize.current = null;
+      return;
+    }
+    const wasSelectedText = textDrag.current?.wasSelected;
     const wasTextDrag = textDrag.current?.moved;
     const wasPhotoDrag = drag.current?.moved;
     const wasResize = resize.current?.moved;
@@ -393,10 +469,11 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     resize.current = null;
     if (wasTextDrag || wasPhotoDrag || wasResize) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const hit = editableAt(layout, pages[at], W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles);
+    const hit = editableAt(layout, pages[at], W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles, textArea);
     if (hit?.kind === "text") {
+      // CapCut flow: the first tap selects (frame + handles); tapping the already-selected text opens the keyboard.
       setSlotId(hit.id);
-      setEditingText(true);
+      setEditingText(!!wasSelectedText);
     } else {
       setSlotId(hit && hit.id !== slotId ? hit.id : null);
       setEditingText(false);
@@ -406,27 +483,48 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   return (
     <div style={{ ["--panel-reserve" as string]: activeTool ? "calc(var(--tool-panel-h, 208px) + 8px)" : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
-        <div className="relative mx-auto w-fit max-w-full select-none overflow-hidden rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={() => { drag.current = null; resize.current = null; textDrag.current = null; }}
+        <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
-          <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
+          <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full rounded-lg" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
-          {slot && (
+          {slot && slot.kind === "photo" && (
             <div
               aria-hidden
               className="pointer-events-none absolute rounded-sm border-2 border-rose-600 bg-rose-600/10"
               style={{
-                left: `${((slot.kind === "photo" ? selectedPhotoRect?.x ?? slot.x * W : textFit?.x ?? slot.x * W) / W) * 100}%`,
-                top: `${((slot.kind === "photo" ? selectedPhotoRect?.y ?? slot.y * H : textFit?.y ?? slot.y * H) / H) * 100}%`,
-                width: `${(slot.kind === "photo" ? (selectedPhotoRect?.w ?? slot.w * W) / W : (textFit?.w ?? slot.w * W) / W) * 100}%`,
-                height: `${(slot.kind === "photo" ? (selectedPhotoRect?.h ?? slot.h * H) / H : (textFit?.h ?? slot.h * H) / H) * 100}%`,
+                left: `${((selectedPhotoRect?.x ?? slot.x * W) / W) * 100}%`,
+                top: `${((selectedPhotoRect?.y ?? slot.y * H) / H) * 100}%`,
+                width: `${((selectedPhotoRect?.w ?? slot.w * W) / W) * 100}%`,
+                height: `${((selectedPhotoRect?.h ?? slot.h * H) / H) * 100}%`,
                 ...(slot.rot ? { transform: `rotate(${slot.rot.deg}deg)`, transformOrigin: `${((slot.rot.cx - slot.x) / slot.w) * 100}% ${((slot.rot.cy - slot.y) / slot.h) * 100}%` } : {}),
               }}
             >
-              {slot.kind === "photo" && (
-                <div aria-hidden className="pointer-events-none absolute h-4 w-4 rounded-sm border-2 border-white bg-rose-600 shadow" style={{ right: -8, bottom: -8 }} />
-              )}
+              <div aria-hidden className="pointer-events-none absolute h-4 w-4 rounded-sm border-2 border-white bg-rose-600 shadow" style={{ right: -8, bottom: -8 }} />
             </div>
           )}
+          {textSlot && (() => {
+            const f = frameRect();
+            if (!f) return null;
+            const hbtn = "pointer-events-auto absolute grid h-8 w-8 place-items-center touch-none";
+            const dot = "grid place-items-center rounded-full border-2 border-rose-600 bg-white text-[11px] font-black leading-none text-rose-700 shadow";
+            return (
+              <div
+                className="pointer-events-none absolute border-2 border-rose-600 shadow-[0_0_0_1px_rgba(255,255,255,0.85)]"
+                style={{
+                  left: `${(f.x / W) * 100}%`, top: `${(f.y / H) * 100}%`, width: `${(f.w / W) * 100}%`, height: `${(f.h / H) * 100}%`,
+                  ...(textSlot.rot ? { transform: `rotate(${textSlot.rot.deg}deg)`, transformOrigin: `${((textSlot.rot.cx - f.x / W) / (f.w / W)) * 100}% ${((textSlot.rot.cy - f.y / H) / (f.h / H)) * 100}%` } : {}),
+                }}
+              >
+                {!editingText && (
+                  <>
+                    <button type="button" aria-label="Edit text" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setEditingText(true); }} className={hbtn} style={{ right: -16, top: -16 }}><span className={dot + " h-5 w-5"}>✎</span></button>
+                    <div role="slider" aria-label="Text box width" aria-valuemin={0} aria-valuenow={Math.round(((style.w ?? textSlot.w)) * 100)} onPointerDown={handleDown("width")} onPointerMove={handleMove} onPointerUp={handleUp} onPointerCancel={handleUp} className={hbtn} style={{ right: -16, top: "50%", marginTop: -16 }}><span className="h-6 w-2.5 rounded-full border-2 border-rose-600 bg-white shadow" /></div>
+                    <div role="slider" aria-label="Text size" aria-valuenow={Math.round(sizeFactor(style) * 100)} onPointerDown={handleDown("scale")} onPointerMove={handleMove} onPointerUp={handleUp} onPointerCancel={handleUp} className={hbtn} style={{ right: -16, bottom: -16 }}><span className={dot + " h-5 w-5"}>⤡</span></div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
           {editBox && textSlot && (
             <textarea
               ref={textInput}
@@ -474,7 +572,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                 {activeTool === "Text" && (
                   <div className="space-y-3">
                     <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Text elements">{slots.filter(x=>x.kind==="text").map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} className={chip(x.id===slotId)}>{slotName(layout,x)}</button>)}</div>
-                    {textSlot ? <><div className="rounded-xl border border-stone-200 bg-stone-50 p-2"><textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={3} placeholder={textSlot.hint} aria-label="Text board" className="w-full resize-none rounded-lg border-0 bg-transparent px-2 py-1 text-sm font-medium focus:outline-none"/><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Fonts</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{([["display","Headline"],["body","Reading"]] as [FontRole,string][]).map(([r,label])=><button key={r} type="button" onClick={()=>setStyle({font:r===textSlot.font?undefined:r})} className={chip(cur.font===r)}>{label}</button>)}</div></details><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Size & alignment</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z})} className={chip(cur.size===z)}>{z}</button>)}{(["left","center","right"] as Align[]).map(a=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} className={chip(cur.align===a)+" capitalize"}>{a}</button>)}</div></details></div><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Color</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{TEXT_COLORS.map(([k,name])=><button key={k} type="button" aria-label={name} onClick={()=>setStyle({color:k===textSlot.color?undefined:k})} className={"h-9 w-9 shrink-0 rounded-full border-2 "+(cur.color===k?"border-rose-700 ring-2 ring-rose-300":"border-stone-300")} style={{background:book.palette[k]}}/>)}</div></details></> : <p className="text-xs text-stone-500">Choose a text element above.</p>}
+                    {textSlot ? <><div className="rounded-xl border border-stone-200 bg-stone-50 p-2"><textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={3} placeholder={textSlot.hint} aria-label="Text board" className="w-full resize-none rounded-lg border-0 bg-transparent px-2 py-1 text-sm font-medium focus:outline-none"/><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Fonts</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{([["display","Headline"],["body","Reading"]] as [FontRole,string][]).map(([r,label])=><button key={r} type="button" onClick={()=>setStyle({font:r===textSlot.font?undefined:r})} className={chip(cur.font===r)}>{label}</button>)}</div></details><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Size & alignment</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}{(["left","center","right"] as Align[]).map(a=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} className={chip(cur.align===a)+" capitalize"}>{a}</button>)}</div><label className="block border-t border-stone-200 px-3 py-2 text-xs font-bold text-stone-600">Size {Math.round(sizeFactor(style)*100)}%<input type="range" min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="mt-2 w-full accent-rose-700"/></label><div className="border-t border-stone-200 px-3 py-2"><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></div></details></div><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Color</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{TEXT_COLORS.map(([k,name])=><button key={k} type="button" aria-label={name} onClick={()=>setStyle({color:k===textSlot.color?undefined:k})} className={"h-9 w-9 shrink-0 rounded-full border-2 "+(cur.color===k?"border-rose-700 ring-2 ring-rose-300":"border-stone-300")} style={{background:book.palette[k]}}/>)}</div></details></> : <p className="text-xs text-stone-500">Choose a text element above.</p>}
                   </div>
                 )}
                 {activeTool === "Media" && (

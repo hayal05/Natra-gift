@@ -93,6 +93,13 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
       if (st.size !== undefined) { if (!oneOf(st.size, ["S", "M", "L"])) return bad("A text style is not valid."); o.size = st.size as TextStyle["size"]; }
       if (st.align !== undefined) { if (!oneOf(st.align, ["left", "center", "right"])) return bad("A text style is not valid."); o.align = st.align as TextStyle["align"]; }
       if (st.color !== undefined) { if (!oneOf(st.color, PALETTE_KEYS)) return bad("A text style is not valid."); o.color = st.color as TextStyle["color"]; }
+      const num = (v: unknown, lo: number, hi: number) => (typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : undefined);
+      for (const [k, lo, hi] of [["x", -0.45, 0.45], ["y", -0.45, 0.45], ["scale", 0.4, 4], ["w", 0.1, 1]] as const) {
+        if (st[k] === undefined) continue;
+        const v = num(st[k], lo, hi);
+        if (v === undefined) return bad("A text style is not valid.");
+        o[k] = v;
+      }
       styles[d.id] = o;
     }
     if (Object.keys(styles).length) page.styles = styles;

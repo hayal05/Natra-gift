@@ -54,7 +54,8 @@ export default function CreateScreen() {
 
   if (step === "pages") {
     return (
-      <main className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#f7f5f2] text-stone-900">
+      <main className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#f7f5f2] text-stone-900"
+        style={{ ["--hdr-h" as string]: "56px", ["--nav-h" as string]: "calc(76px + env(safe-area-inset-bottom, 0px))", ["--tool-panel-h" as string]: "clamp(176px, 30dvh, 236px)" }}>
         <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-stone-200 bg-white/95 px-3 backdrop-blur">
           <button type="button" onClick={() => setStep("names")} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full text-xl text-stone-700 hover:bg-stone-100">←</button>
           <div className="min-w-0 text-center"><p className="truncate text-sm font-bold">{t.name}</p><p className="text-[11px] text-stone-400">Auto-saved</p></div>
@@ -65,12 +66,8 @@ export default function CreateScreen() {
         </header>
         <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {view === "edit" ? (
-            <div className="mx-auto w-full max-w-2xl px-3 pb-28 pt-3">
-              <div className="mb-3 flex items-center justify-between px-1">
-                <div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-400">Editing</p><p className="text-sm font-semibold text-stone-700">{names.to} · {draft.pages.length} pages</p></div>
-                <button type="button" onClick={() => setStep("names")} className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-600">Gift details</button>
-              </div>
-              <div data-natragift-editor className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? "calc(var(--nav-h) + var(--tool-panel-h) + 16px)" : "calc(var(--nav-h) + 16px)" }}>
+              <div data-natragift-editor>
                 <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
                   onChange={(pages) => set({ pages })} />

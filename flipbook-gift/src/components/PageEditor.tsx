@@ -2,9 +2,9 @@
 // Flat page editor (task 3.2): one page shown large, tap a slot to select it, thumbnail strip to move between pages.
 // Task 3.3 adds the layout picker and 3.4 the text controls (text box in the selection card, style controls in the collapsed Customize panel).
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, editableSlots, isAdjusted, movePage, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
-import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, textFitRect, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
+import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
 import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS, audioFileProblem, readAudioDuration, recordingSupported, uploadAudio } from "../lib/audio";
@@ -106,6 +106,18 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const style: TextStyle = (textSlot && pages[at]?.styles?.[textSlot.id]) || {};
   const typed = textSlot ? (typeof page.slots[textSlot.id] === "string" ? (page.slots[textSlot.id] as string) : "") : "";
   const textFit = textSlot ? textFitRect(textSlot, style, typed, book, W, H) : null;
+  // On-page text editor: exact typography of the drawn text, scaled from page px to the canvas as shown on screen.
+  const editBox = textSlot && editingText ? textEditBox(textSlot, style, typed, book, W, H) : null;
+  const [shownScale, setShownScale] = useState(1);
+  useEffect(() => {
+    const cv = main.current;
+    if (!cv) return;
+    const measure = () => { if (cv.clientWidth > 0) setShownScale(cv.clientWidth / W); };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(cv);
+    return () => ro.disconnect();
+  }, []);
   const pagesRef = useRef(pages);
   pagesRef.current = pages;
   const photoSlot = slot && slot.kind === "photo" ? slot : null;
@@ -125,15 +137,16 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
 
   useEffect(() => { setPhotoError(null); }, [slotId, index]);
   useEffect(() => { if (!textSlot) setEditingText(false); }, [textSlot?.id]);
-  useEffect(() => {
+  // When editing starts (or moves to another text), focus synchronously, which keeps the mobile keyboard tied to the tap,
+  // and put the caret at the end of the text. Later taps inside the box are left to the browser so the finger can place the caret.
+  useLayoutEffect(() => {
     if (!editingText) return;
-    requestAnimationFrame(() => {
-      const input = textInput.current;
-      if (!input) return;
-      input.focus();
-      const end = input.value.length;
-      input.setSelectionRange(end, end);
-    });
+    const input = textInput.current;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+    input.scrollTop = input.scrollHeight;
   }, [editingText, slotId]);
   useEffect(() => { setCanRecord(recordingSupported()); }, []);
   /** Throws away any recording (in progress or waiting for a decision) and releases the microphone. */
@@ -313,7 +326,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     const o = photoOverflow(photoSlotRect(photoSlot, photo, W, H), imgSize, photo);
     return o.x > 0 || o.y > 0;
   })();
+  const inEditor = (e: React.PointerEvent) => (e.target as HTMLElement).tagName === "TEXTAREA";
   const down = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (inEditor(e)) return; // the text editor handles its own touches (caret placement, selection, handles)
     drag.current = null;
     resize.current = null;
     textDrag.current = null;
@@ -340,6 +355,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (inEditor(e)) return;
     const rr = resize.current;
     if (rr && photoSlot) {
       const rect = e.currentTarget.getBoundingClientRect(), dx = (e.clientX - rr.x) / rect.width, dy = (e.clientY - rr.y) / rect.height;
@@ -368,6 +384,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     setPhotoProps({ x: Math.max(0, Math.min(1 - sw, sx + dx)), y: Math.max(0, Math.min(1 - sh, sy + dy)) });
   };
   const tap = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (inEditor(e)) return;
     const wasTextDrag = textDrag.current?.moved;
     const wasPhotoDrag = drag.current?.moved;
     const wasResize = resize.current?.moved;
@@ -380,7 +397,6 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     if (hit?.kind === "text") {
       setSlotId(hit.id);
       setEditingText(true);
-      requestAnimationFrame(() => textInput.current?.focus());
     } else {
       setSlotId(hit && hit.id !== slotId ? hit.id : null);
       setEditingText(false);
@@ -388,11 +404,11 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   };
 
   return (
-    <div>
+    <div style={{ ["--panel-reserve" as string]: activeTool ? "calc(var(--tool-panel-h, 208px) + 8px)" : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
-        <div className="relative select-none overflow-hidden rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={() => { drag.current = null; resize.current = null; textDrag.current = null; }}
+        <div className="relative mx-auto w-fit max-w-full select-none overflow-hidden rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={() => { drag.current = null; resize.current = null; textDrag.current = null; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
-          <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full" style={{ maxHeight: "min(480px, calc(70dvh - 70px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
+          <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
           {slot && (
             <div
@@ -411,31 +427,42 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               )}
             </div>
           )}
-          {editingText && textSlot && textFit && (
+          {editBox && textSlot && (
             <textarea
               ref={textInput}
               value={typed}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setEditingText(false); textInput.current?.blur(); } }}
+              maxLength={textLimit(textSlot)}
               aria-label="Edit text on page"
-              className="pointer-events-auto absolute resize-none overflow-hidden border-0 bg-transparent p-0 text-transparent caret-rose-700 outline-none"
+              autoCapitalize="sentences"
+              autoCorrect="on"
+              spellCheck
+              enterKeyHint="enter"
+              className="pointer-events-auto absolute m-0 box-border resize-none overflow-x-hidden overflow-y-auto border-0 bg-transparent p-0 text-transparent caret-rose-700 outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               style={{
-                left: `${textFit.x / W * 100}%`, top: `${textFit.y / H * 100}%`,
-                width: `${textFit.w / W * 100}%`, height: `${textFit.h / H * 100}%`,
-                fontFamily: style.font === "body" ? book.fonts.body : book.fonts.display,
-                fontSize: `${textFit.h * 0.7}px`,
-                lineHeight: 1.3,
+                // Laid out in page px and scaled as one unit, so font size, line height and wrapping match the canvas exactly.
+                left: `${(editBox.x / W) * 100}%`, top: `${(editBox.y / H) * 100}%`,
+                width: editBox.w, height: editBox.h,
+                transform: `scale(${shownScale})`, transformOrigin: "0 0",
+                paddingTop: editBox.padTop,
+                fontFamily: editBox.family, fontWeight: editBox.weight, fontStyle: editBox.italic ? "italic" : "normal",
+                fontSize: editBox.px, lineHeight: `${editBox.lineH}px`, letterSpacing: `${editBox.tracking}px`,
+                textAlign: editBox.align, textTransform: editBox.upper ? "uppercase" : "none",
+                whiteSpace: "pre-wrap", overflowWrap: "break-word",
+                // Re-enable what the page container switches off, so the browser can place the caret and select text by touch.
+                userSelect: "text", WebkitUserSelect: "text", touchAction: "manipulation",
               }}
             />
           )}
         </div>
         {activeTool && (
-          <section className="fixed inset-x-0 bottom-[76px] z-20 mx-auto w-full max-w-2xl px-3" aria-label={`${activeTool} tools`}>
-            <div className="max-h-[30vh] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]">
-              <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
-                <div><p className="text-sm font-bold text-stone-900">{activeTool === "Record" ? "Voice record" : activeTool === "Style" ? "Book style" : activeTool}</p><p className="text-[11px] text-stone-400">Focused tool workspace</p></div>
+          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ height: "var(--tool-panel-h, 208px)" }}>
+              <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-4 py-2">
+                <p className="text-sm font-bold text-stone-900">{activeTool === "Record" ? "Voice record" : activeTool === "Style" ? "Book style" : activeTool}</p>
               </div>
-              <div className="max-h-[22vh] overflow-y-auto px-4 py-3">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3">
                 {activeTool === "Pages" && (
                   <div className="space-y-4">
                     <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Primary page actions"><button type="button" onClick={addNewPage} disabled={!roomForPage} className={chip(false)+" shrink-0 disabled:opacity-40"}>＋ Add page</button><button type="button" onClick={copyPage} disabled={!roomForPage} className={chip(false)+" shrink-0 disabled:opacity-40"}>Duplicate</button></div><details className="rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Page actions</summary><div className="flex flex-wrap gap-2 border-t border-stone-200 px-3 py-2"><button type="button" onClick={() => shiftPage(-1)} disabled={!canEarlier} className={chip(false)+" disabled:opacity-40"}>← Earlier</button><button type="button" onClick={() => shiftPage(1)} disabled={!canLater} className={chip(false)+" disabled:opacity-40"}>Later →</button>{!confirmDelete && <button type="button" onClick={() => setConfirmDelete(true)} disabled={!canDelete} className={chip(false)+" disabled:opacity-40"}>Delete</button>}</div></details>

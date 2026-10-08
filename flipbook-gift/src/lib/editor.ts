@@ -34,7 +34,7 @@ export function slotSummary(s: EditableSlot, page: PageData): string {
 }
 
 /** The editable slot under a point given in page pixels (w x h), topmost first. Rotation is ignored, as in slotAt. */
-export function editableAt(l: Layout, w: number, h: number, px: number, py: number, styles?: Record<string, TextStyle>): EditableSlot | null {
+export function editableAt(l: Layout, page: PageData, w: number, h: number, px: number, py: number, styles?: Record<string, TextStyle>): EditableSlot | null {
   const list = editableSlots(l);
   for (let i = list.length - 1; i >= 0; i--) {
     const s = list[i];

@@ -306,7 +306,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     if (e.button !== undefined && e.button !== 0) return;
     const r = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - r.left) / r.width) * W, py = ((e.clientY - r.top) / r.height) * H;
-    const hit = editableAt(layout, W, H, px, py, pages[at]?.styles);
+    const hit = editableAt(layout, pages[at], W, H, px, py, pages[at]?.styles);
     if (photoSlot) {
       const pr = photoSlotRect(photoSlot, photo, W, H), hs = Math.max(16, Math.min(28, Math.min(pr.w, pr.h) * 0.12));
       if (px >= pr.x + pr.w - hs && py >= pr.y + pr.h - hs) { resize.current = { x: e.clientX, y: e.clientY, start: photo, moved: false }; setSlotId(photoSlot.id); e.currentTarget.setPointerCapture(e.pointerId); return; }
@@ -362,7 +362,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     resize.current = null;
     if (wasTextDrag || wasPhotoDrag || wasResize) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const hit = editableAt(layout, W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles);
+    const hit = editableAt(layout, pages[at], W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles);
     setSlotId(hit && hit.id !== slotId ? hit.id : null);
   };
 

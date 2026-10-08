@@ -79,7 +79,6 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-[1320px] px-5 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
-        <section className="flex flex-col">
           <div className="flex items-end justify-between px-1 pb-4">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#ff6900]">Templates</p>
@@ -163,8 +162,7 @@ export default function Home() {
           >
             Use “{active.name}”
           </Link>
-        </section>
-      </div>
+      </section>
     </main>
   );
 }

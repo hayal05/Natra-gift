@@ -1,5 +1,6 @@
 // The shared voice-note player (task 8.2). Plain TypeScript and DOM: no React and no imports, so the recipient page, Preview and
-// the offline export can all use it. It injects its own <style id="fba-style">. All text is set with textContent.
+// the offline export can all use it. It injects its own <style id="fba-style">. All text is set with textContent (the two icons are fixed constants).
+// Look: a slim blue pill, bare play/pause icon on the left and a thin waveform that fills as the note plays (matches the editor pill, src/components/VoiceNotePill.tsx).
 // Rules (tasks.md, Phase 8): one note per page; the button exists only while the current page has a note; a page turn stops the
 // note; no autoplay; a file that cannot play shows a message, never a silent dead button.
 // Usage: call `show(note)` whenever the page changes (it always stops and resets), `show(null)` when the page has no note.
@@ -9,7 +10,7 @@ export interface AudioNote { src: string; duration: number }
 export interface AudioPlayerOptions {
   /** Accessible name of the button. Default "voice note". The button says "Play <label>" / "Pause <label>". */
   label?: string;
-  /** Shown beside the button until the note has been played once. Default "Tap to hear a voice note". */
+  /** No longer shown: the pill is a slim waveform with no hint text. Kept so existing callers still compile. */
   hint?: string;
   /** Called whenever the state changes. */
   onState?: (state: AudioPlayerState) => void;
@@ -39,22 +40,43 @@ export interface AudioPlayer {
 }
 
 const CSS = `
-.fba-root{position:absolute;left:50%;transform:translateX(-50%);bottom:max(12px,env(safe-area-inset-bottom));z-index:20;pointer-events:auto;display:flex;align-items:center;gap:10px;max-width:calc(100% - 96px);
-  padding:6px 14px 6px 6px;border-radius:999px;background:var(--fba-bg,rgba(0,0,0,.72));color:var(--fba-fg,#fff);font:600 13px/1.3 system-ui,-apple-system,sans-serif;
-  box-shadow:0 4px 16px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);-webkit-tap-highlight-color:transparent;box-sizing:border-box}
+.fba-root{position:absolute;left:50%;transform:translateX(-50%);bottom:max(12px,env(safe-area-inset-bottom));z-index:20;pointer-events:auto;display:flex;align-items:center;gap:10px;width:84%;max-width:calc(100% - 24px);height:44px;\
+  padding:0 16px 0 0;border-radius:999px;background:var(--fba-bg,#1b8fd0);color:var(--fba-fg,#fff);font:600 13px/1.3 system-ui,-apple-system,sans-serif;\
+  box-shadow:0 3px 10px rgba(0,0,0,.25);-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 .fba-root[hidden]{display:none}
-.fba-btn{flex:none;width:48px;height:48px;min-width:44px;min-height:44px;border:0;border-radius:50%;padding:0;cursor:pointer;background:var(--fba-accent,#fff);color:var(--fba-bg-solid,#111);
-  font:inherit;font-size:18px;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
-.fba-btn:active{transform:scale(.95)}
-.fba-btn:focus-visible{outline:3px solid var(--fba-fg,#fff);outline-offset:2px}
+.fba-btn{flex:none;width:44px;height:44px;min-width:44px;min-height:44px;border:0;border-radius:50%;padding:0;cursor:pointer;background:transparent;color:var(--fba-fg,#fff);
+  display:flex;align-items:center;justify-content:center;touch-action:manipulation;font:inherit;font-size:20px}
+.fba-btn svg{width:34px;height:34px;flex:none;display:block;overflow:visible}
+.fba-btn:active{transform:scale(.92)}
+.fba-btn:focus-visible{outline:3px solid var(--fba-fg,#fff);outline-offset:-3px}
 .fba-btn[aria-busy="true"]{opacity:.7;cursor:progress}
-.fba-text{display:flex;flex-direction:column;min-width:0}
-.fba-time{font-variant-numeric:tabular-nums;white-space:nowrap}
-.fba-hint{font-weight:500;opacity:.85}
-.fba-hint[hidden]{display:none}
-.fba-err{font-weight:700;color:#ffb4b4}
+.fba-wave{flex:1;min-width:0;height:100%;display:flex;align-items:center;justify-content:space-between}
+.fba-wave[hidden]{display:none}
+.fba-bar{flex:none;width:2.5px;border-radius:999px;background:var(--fba-fg,#fff)}
+.fba-time{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.fba-err{flex:1;min-width:0;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fba-err[hidden]{display:none}
 `;
+
+// A calm, speech-like waveform: thin bars, quiet at the ends and swelling in the middle. Seeded from the note's src so each note keeps its own shape.
+const BARS = 44;
+const waveform = (seed: string): number[] => {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967295; };
+  return Array.from({ length: BARS }, (_, i) => {
+    const t = i / (BARS - 1);
+    const env = 0.18 + 0.82 * Math.pow(Math.sin(Math.PI * t), 1.5);
+    return Math.max(0.12, Math.min(1, env * (0.35 + 0.65 * rnd())));
+  });
+};
+// Static, hard-coded icon markup (no user text ever goes into it). The ring is a real SVG circle centred in a 34x34 box, so it is always a perfect,
+// even circle, and each icon is centred on that same point (17,17) by geometry rather than by nudging.
+const RING = '<circle cx="17" cy="17" r="16" fill="none" stroke="currentColor" stroke-width="2"/>';
+const icon = (inner: string) => `<svg viewBox="0 0 34 34" aria-hidden="true">${RING}${inner}</svg>`;
+const ICON_PLAY = icon('<path d="M14 11.5v11l9-5.5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>'); // centroid is (17,17)
+const ICON_PAUSE = icon('<rect x="12" y="11.5" width="3.5" height="11" rx="1" fill="currentColor"/><rect x="18.5" y="11.5" width="3.5" height="11" rx="1" fill="currentColor"/>');
+const ICON_RETRY = icon('<path d="M22.5 13.8A6.5 6.5 0 1 0 23.5 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M23 10.5v3.8h-3.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>');
 
 const fmt = (s: number): string => {
   const t = Math.max(0, Math.round(Number.isFinite(s) ? s : 0));
@@ -82,39 +104,44 @@ export function createAudioPlayer(container: HTMLElement, options: AudioPlayerOp
   const btn = doc.createElement("button");
   btn.type = "button";
   btn.className = "fba-btn";
-  const text = doc.createElement("div");
-  text.className = "fba-text";
+  const wave = doc.createElement("div");
+  wave.className = "fba-wave";
+  wave.setAttribute("aria-hidden", "true");
+  const barEls: HTMLElement[] = [];
+  for (let i = 0; i < BARS; i++) { const bar = doc.createElement("span"); bar.className = "fba-bar"; barEls.push(bar); wave.appendChild(bar); }
   const time = doc.createElement("span");
   time.className = "fba-time";
-  const hint = doc.createElement("span");
-  hint.className = "fba-hint";
-  hint.textContent = options.hint ?? "Tap to hear a voice note";
   const err = doc.createElement("span");
   err.className = "fba-err";
   err.setAttribute("role", "alert");
   err.hidden = true;
-  text.append(time, hint, err);
-  root.append(btn, text);
+  root.append(btn, wave, err, time);
   container.appendChild(root);
 
   let audio: HTMLAudioElement | null = null;
   let note: AudioNote | null = null;
   let state: AudioPlayerState = "hidden";
-  let played = false;
   let destroyed = false;
+  let shape: number[] = [];
 
   const total = () => (audio && Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : note?.duration ?? 0);
 
   function render() {
     const playing = state === "playing" || state === "loading";
-    btn.textContent = state === "error" ? "↻" : playing ? "❚❚" : "▶";
+    btn.innerHTML = state === "error" ? ICON_RETRY : playing ? ICON_PAUSE : ICON_PLAY; // fixed constants only
     btn.setAttribute("aria-label", state === "error" ? `Try the ${label} again` : `${playing ? "Pause" : "Play"} ${label}`);
     btn.setAttribute("aria-busy", state === "loading" ? "true" : "false");
     const cur = audio && state !== "idle" ? audio.currentTime : 0;
     time.textContent = state === "idle" || state === "error" ? fmt(total()) : `${fmt(cur)} / ${fmt(total())}`;
     time.hidden = state === "error";
-    hint.hidden = played || state === "error";
     err.hidden = state !== "error";
+    wave.hidden = state === "error";
+    const tot = total(), progress = tot > 0 ? Math.min(1, cur / tot) : 0;
+    const started = state !== "idle" && state !== "hidden" && (progress > 0 || playing);
+    barEls.forEach((bar, i) => {
+      bar.style.height = `${Math.round((shape[i] ?? 0.2) * 62)}%`;
+      bar.style.opacity = !started || (i + 0.5) / BARS <= progress ? "1" : "0.5"; // heard bars stay solid, the rest dim
+    });
     root.hidden = state === "hidden";
   }
 
@@ -144,7 +171,7 @@ export function createAudioPlayer(container: HTMLElement, options: AudioPlayerOp
     const a = doc.createElement("audio");
     a.preload = "metadata";
     a.onplay = () => set("loading");
-    a.onplaying = () => { played = true; set("playing"); };
+    a.onplaying = () => set("playing");
     a.onwaiting = () => { if (state === "playing") set("loading"); };
     a.onpause = () => { if (!a.ended && state !== "idle" && state !== "hidden" && state !== "error") set("paused"); };
     a.onended = () => { a.currentTime = 0; set("paused"); };
@@ -181,8 +208,8 @@ export function createAudioPlayer(container: HTMLElement, options: AudioPlayerOp
   function show(next: AudioNote | null) {
     if (destroyed) return;
     release();
-    played = false;
     note = next && typeof next.src === "string" && next.src ? { src: next.src, duration: next.duration } : null;
+    shape = note ? waveform(note.src) : [];
     if (note) set("idle"); else set("hidden");
     render();
   }

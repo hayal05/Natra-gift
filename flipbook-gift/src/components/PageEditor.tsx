@@ -469,7 +469,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     resize.current = null;
     if (wasTextDrag || wasPhotoDrag || wasResize) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const hit = editableAt(layout, pages[at], W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles, textArea);
+    const hit = editableAt(layout, pages[at], W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles);
     if (hit?.kind === "text") {
       // CapCut flow: the first tap selects (frame + handles); tapping the already-selected text opens the keyboard.
       setSlotId(hit.id);

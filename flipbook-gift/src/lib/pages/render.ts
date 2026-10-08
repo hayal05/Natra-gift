@@ -67,7 +67,7 @@ function wrapLines(c: CanvasRenderingContext2D, text: string, maxW: number): str
 }
 
 function drawText(c: CanvasRenderingContext2D, s: TextSlotDef, raw: string, st: TextStyle | undefined, book: BookStyle, w: number, h: number, pageNo: number) {
-  const r = slotRect(s, w, h);
+  const r = textSlotRect(s, st, w, h);
   let text = s.auto === "folio" ? `${String(pageNo + 1).padStart(2, "0")}  ·  ${book.masthead}` : s.text ?? raw;
   if (!text.trim()) return;
   if (s.upper) text = text.toUpperCase();

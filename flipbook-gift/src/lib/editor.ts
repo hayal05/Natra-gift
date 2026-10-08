@@ -109,15 +109,14 @@ export const TEXT_COLORS: [keyof Palette, string][] = [
   ["ink", "Text"], ["accent", "Accent"], ["accent2", "Accent 2"], ["paper", "Paper"], ["dark", "Dark"],
 ];
 
-const PAGE_W = 360, PAGE_H = 480; // the editor's logical page; only used to estimate how much text a slot holds
+/** Safety ceiling for the text of any one box (a long letter is about 1,500 characters). It is NOT a layout limit:
+ *  boxes wrap at their width and grow taller as you type, like a text box in Word or CapCut, so this only stops
+ *  a runaway paste from bloating the saved gift. The same number is enforced by the server. */
+export const TEXT_MAX_CHARS = 5000;
 
-/** Most characters a text slot accepts: about what fits at its normal size (a letter body is about 330, a title about 50).
- *  A one-line slot gets double, because the renderer shrinks such text to fit rather than wrapping it. */
-export function textLimit(s: TextSlotDef): number {
-  const px = s.size * PAGE_W;
-  const lines = Math.max(1, Math.floor((s.h * PAGE_H) / (px * (s.lh ?? 1.3))));
-  const perLine = (s.w * PAGE_W) / (px * 0.5);
-  return Math.max(24, Math.round(lines * perLine * (lines === 1 ? 2 : 1)));
+/** Most characters a text slot accepts. Every slot gets the same generous ceiling (see TEXT_MAX_CHARS). */
+export function textLimit(_s?: TextSlotDef): number {
+  return TEXT_MAX_CHARS;
 }
 
 /** Sets the text of a slot on a raw page. Typed text has no {to}/{from} tokens and is not character-truncated. */

@@ -337,7 +337,7 @@ export const LAYOUT_LIST: Layout[] = [
     P("p1",0.08,0.28,0.52,0.45,{frame:"rounded"}), P("p2",0.63,0.28,0.29,0.2,{frame:"border"}), P("p3",0.63,0.51,0.29,0.2,{frame:"border"}),
     T("caption",0.08,0.78,0.84,0.1,{size:0.035,lh:1.45}), folio()),
   L("birthday-letter","Birthday — letter","text","paper",
-    T("title",0.08,0.07,0.84,0.15,{font:"display",size:0.095,weight:900,color:"accent"}), P("p1",0.68,0.08,0.24,0.2,{frame:"rounded"}),
+    T("title",0.08,0.07,0.56,0.15,{font:"display",size:0.095,weight:900,color:"accent"}), P("p1",0.68,0.08,0.24,0.2,{frame:"rounded"}),
     T("body",0.08,0.29,0.84,0.46,{size:0.04,lh:1.58}), T("sign",0.08,0.8,0.84,0.07,{font:"display",italic:true,size:0.06,color:"accent"}), folio()),
 
   L("sorry-cover","Sorry — quiet cover","cover","paper",

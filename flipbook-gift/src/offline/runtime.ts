@@ -1,7 +1,7 @@
 // The script inside the offline file (task 6.1). Bundled by scripts/build-offline.mjs into public/offline/runtime.js.
 // Same flow as the recipient page (GiftView): envelope, then a full-screen book with Close and Full screen, and a closed screen.
 import { create, type Flipbook } from "../engine";
-import { createAudioPlayer, createPageLayer, type AudioPlayer, type PageLayer } from "../audio";
+import { createAudioPlayer, createPageLayer, type AudioPlayer, type PageLayer } from "../audio/player"; // not "../audio": its index also pulls in the recorder, which reads process.env and crashes a plain browser file
 import { createEnvelope, type Envelope } from "../envelope";
 import { loadFonts, loadImages, pageDrawFn } from "../lib/pages";
 import { enterFullscreen, fsElement, fsSupported, leaveFullscreen, onFullscreenChange } from "../lib/fullscreen";
@@ -9,6 +9,17 @@ import { LAYOUTS } from "../templates/layouts";
 import type { OfflineGift } from "./types";
 
 const app = document.getElementById("app") as HTMLElement;
+
+/** A big base64 data URI is unreliable as an <audio> source on iPhone Safari, so notes are played from a Blob URL (task 10.2b). */
+function noteUrl(src: string): string {
+  const m = /^data:([^;,]*)(;base64)?,/i.exec(src);
+  if (!m || !m[2]) return src;
+  try {
+    const bin = atob(src.slice(m[0].length)), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: m[1] || "audio/mpeg" }));
+  } catch { return src; }
+}
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string, parent?: HTMLElement) {
   const e = document.createElement(tag); e.className = cls; if (text !== undefined) e.textContent = text; parent?.appendChild(e); return e;
@@ -23,6 +34,7 @@ async function main() {
   try { g = JSON.parse(document.getElementById("gift")!.textContent || ""); }
   catch { message("This gift could not be opened", "The file looks damaged. Ask the sender for a new copy."); return; }
 
+  for (const p of g.pages) if (p.audio) p.audio = { ...p.audio, src: noteUrl(p.audio.src) };
   await loadFonts(g.style.fonts);
   const root = el("div", "fbo-root", undefined, app);
   const stage = el("div", "fbo-stage", undefined, root);

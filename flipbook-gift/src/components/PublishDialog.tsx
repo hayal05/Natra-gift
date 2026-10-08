@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Draft } from "../lib/draft";
 import { OfflineError, audioCount, downloadOffline } from "../lib/offline";
-import { PUBLISH_ENABLED, countSamples, type Publisher } from "../lib/publish";
+import { PUBLISH_ENABLED, countSamples, countEmptyPhotos, type Publisher } from "../lib/publish";
 
 type Done = { giftUrl: string; editUrl: string; copied: boolean; shared: boolean };
 const btn = "rounded-full px-5 py-2.5 text-sm font-bold";
@@ -20,6 +20,7 @@ export default function PublishDialog({ draft, publish, enabled = PUBLISH_ENABLE
   const notes = audioCount(draft);
   const [offlineError, setOfflineError] = useState<string | null>(null);
   const samples = countSamples(draft.pages);
+  const empties = countEmptyPhotos(draft.pages);
   const to = draft.to.trim() || "them";
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function PublishDialog({ draft, publish, enabled = PUBLISH_ENABLE
         {!done && (
           <div className="mt-4 space-y-4 text-stone-700">
             <p>Publishing makes a private link. Only people you send it to can open the gift.</p>
+            {empties > 0 && <p role="note" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{empties === 1 ? "One added photo has" : empties + " added photos have"} no picture yet, so {empties === 1 ? "it shows" : "they show"} an empty frame. You can send anyway, or close this and add {empties === 1 ? "a picture" : "pictures"} or delete {empties === 1 ? "it" : "them"} first.</p>}
             {samples > 0 && <p role="note" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{samples === 1 ? "One photo is" : samples + " photos are"} still a sample picture. You can send it anyway, or close this and replace {samples === 1 ? "it" : "them"} first.</p>}
             {!enabled && <p role="status" className="rounded-lg bg-stone-100 p-3 text-sm">Publishing is not available yet, so nothing can be sent from here. Your draft is saved on this device.</p>}
             {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}

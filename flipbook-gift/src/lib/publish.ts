@@ -11,6 +11,10 @@ export type Publisher = (draft: Draft) => Promise<PublishResult>;
 export const countSamples = (pages: PageData[]): number =>
   pages.reduce((n, p) => n + Object.values(p.slots).filter((v) => typeof v !== "string" && isSample(v.src)).length, 0);
 
+/** Added photos (10.8e) that still have no picture: the recipient would see only an empty frame. */
+export const countEmptyPhotos = (pages: PageData[]): number =>
+  pages.reduce((n, p) => n + (p.extras ?? []).filter((e) => { const v = e.kind === "photo" ? p.slots[e.id] : undefined; return typeof v === "object" && !v.src; }).length, 0);
+
 export const publishGift: Publisher = async (draft) => {
   if (!PUBLISH_ENABLED) return { ok: false, message: "Publishing is not available yet." };
   try {

@@ -8,7 +8,10 @@ const OUT = "public/offline";
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(`${OUT}/fonts`, { recursive: true });
 
-await build({ entryPoints: ["src/offline/runtime.ts"], bundle: true, minify: true, format: "iife", target: "es2020", outfile: `${OUT}/runtime.js`, legalComments: "none" });
+await build({ entryPoints: ["src/offline/runtime.ts"], bundle: true, minify: true, format: "iife", target: "es2020", outfile: `${OUT}/runtime.js`, legalComments: "none", define: { "process.env.NEXT_PUBLIC_UPLOADS": '"0"', "process.env.NODE_ENV": '"production"' } });
+
+// Guard: a plain browser file has no `process`; if any imported module reads it, the whole file shows a blank page (found 2026-10-08).
+if (/\bprocess\.(env|cwd|platform)/.test(readFileSync(`${OUT}/runtime.js`, "utf8"))) throw new Error("public/offline/runtime.js references `process`; the offline file would not open. Import from a narrower module.");
 
 const WEIGHTS = [400, 600, 700, 800, 900]; // the weights loadFonts() requests, plus italic 400
 const manifest = {};

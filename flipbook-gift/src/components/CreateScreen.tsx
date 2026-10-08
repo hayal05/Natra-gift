@@ -9,8 +9,10 @@ import { publishGift } from "../lib/publish";
 import PageEditor from "./PageEditor";
 import PreviewBook from "./PreviewBook";
 import PublishDialog from "./PublishDialog";
+import { Icon, type IconName } from "./icons";
 
-type EditorTool = "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style";
+type EditorTool = "Pages" | "Edit" | "Audio" | "Style";
+const TOOLS: [EditorTool, IconName][] = [["Pages", "pages"], ["Edit", "text"], ["Audio", "audio"], ["Style", "style"]];
 
 const input = "mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-base text-stone-900 shadow-sm focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900";
 
@@ -68,7 +70,7 @@ export default function CreateScreen() {
           {view === "edit" ? (
             <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? "calc(var(--nav-h) + var(--tool-panel-h) + 16px)" : "calc(var(--nav-h) + 16px)" }}>
               <div data-natragift-editor>
-                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool}
+                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} onClose={() => setActiveTool(null)}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
                   onChange={(pages) => set({ pages })} />
               </div>
@@ -81,10 +83,10 @@ export default function CreateScreen() {
           <>
             
             <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/98 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
-              <div className="mx-auto flex max-w-2xl items-center justify-between gap-1 overflow-x-auto">
-                {([["Pages","▦"],["Text","T"],["Media","▧"],["Audio","♫"],["Record","●"],["Style","✦"]] as [EditorTool,string][]).map(([label,icon]) => (
-                  <button key={label} type="button" aria-label={label} aria-pressed={activeTool === label} onClick={() => activateEditorTool(label)} className={"flex min-w-[62px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-1.5 transition active:scale-95 " + (activeTool === label ? "bg-stone-100 text-stone-900" : "text-stone-500 hover:bg-stone-100 hover:text-stone-900")}>
-                    <span className={"grid h-7 w-7 place-items-center rounded-lg text-xs font-black " + (activeTool === label ? "bg-rose-700 text-white" : "bg-stone-100")}>{icon}</span><span className="text-[10px] font-semibold">{label}</span>
+              <div className="mx-auto flex max-w-2xl items-stretch justify-between gap-1">
+                {TOOLS.map(([label, icon]) => (
+                  <button key={label} type="button" aria-label={label} aria-pressed={activeTool === label} onClick={() => activateEditorTool(label)} className={"flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-1.5 transition active:scale-95 " + (activeTool === label ? "bg-stone-100 text-stone-900" : "text-stone-500 hover:bg-stone-100 hover:text-stone-900")}>
+                    <span className={"grid h-7 w-7 place-items-center rounded-lg " + (activeTool === label ? "bg-rose-700 text-white" : "bg-stone-100")}><Icon name={icon} size={18} /></span><span className="text-[11px] font-semibold">{label}</span>
                   </button>
                 ))}
               </div>

@@ -1,4 +1,5 @@
 // Manual check for the templates. Run: node --experimental-strip-types scripts/test-templates.ts
+import { readFileSync } from "node:fs";
 import { TEMPLATE_LIST } from "../src/templates/templates.ts";
 import { LAYOUTS } from "../src/templates/layouts.ts";
 import { instantiate } from "../src/templates/build.ts";
@@ -63,6 +64,14 @@ for (const t of TEMPLATE_LIST) {
   const alt = instantiate(t, { to: "A", from: "B" }, 1);
   ok(`${id}: font pair 1 applies`, alt.book.fonts.display === t.fontPairs[1].display);
 }
+// Task 10.1: every template opens as its own book, and the landing page never links to a bare /create (that resumes the last draft).
+const covers = new Set(TEMPLATE_LIST.map((t) => t.pages[0].layout));
+ok(`10 different cover layouts (${covers.size})`, covers.size === TEMPLATE_LIST.length);
+const seqs = new Set(TEMPLATE_LIST.map((t) => t.pages.map((p) => p.layout).join(",")));
+ok(`10 different page sequences (${seqs.size})`, seqs.size === TEMPLATE_LIST.length);
+const landing = readFileSync(new URL("../src/app/page.tsx", import.meta.url), "utf8");
+ok("landing page has no link to a bare /create", !/href=["']\/create["']/.test(landing));
+ok("landing page links carry the template id", (landing.match(/create\?t=\$\{active\.id\}/g) ?? []).length >= 3);
 console.log(`${TEMPLATE_LIST.length} templates, ${TEMPLATE_LIST.reduce((n, t) => n + t.pages.length, 0)} pages`);
 console.log(fails ? `${fails} FAILED` : "all template checks passed", warns ? `(${warns} warnings)` : "");
 process.exit(fails ? 1 : 0);

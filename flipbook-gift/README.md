@@ -73,4 +73,4 @@ Check by hand: on an iPhone (Safari) and Android (Chrome) record, listen, use, p
 
 ## Known limits
 
-No accounts, no recording in the browser (notes are uploaded files), one note per page, no rate limiting (size caps and signed uploads only), no way yet to reopen a gift from `/create?edit=<token>` (the API exists: `GET`/`PUT /api/gifts/mine` with the edit token as a `Bearer` header), no undo. See `tasks.md` (deferred list) and `project-status.md`.
+No accounts, one voice note per page (an uploaded file or a recording up to 2:30), up to 8 added text or photo components per page, no undo (deleting a component or page asks first), no rate limiting (size caps and signed uploads only), no way yet to reopen a gift from `/create?edit=<token>` (the API exists: `GET`/`PUT /api/gifts/mine` with the edit token as a `Bearer` header), no undo. See `tasks.md` (deferred list) and `project-status.md`.

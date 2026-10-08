@@ -27,14 +27,31 @@ const getOk = async (url: string, what: string, init?: RequestInit) => {
 const family = (css: string) => css.split(",")[0].trim().replace(/^['"]|['"]$/g, "");
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+const AUDIO_MIME_BY_EXT: Record<string, string> = { mp3: "audio/mpeg", m4a: "audio/mp4", aac: "audio/aac", wav: "audio/wav" };
+const GENERIC_TYPES = /^(application|binary)\/octet-stream$|^$/;
+
+/**
+ * The audio type to store a fetched voice note under (task 10.2b), or null if it is not audio.
+ * Cloudinary may serve a note as video/x-m4a, video/quicktime or a generic type, so when the type is not plainly audio
+ * the file extension of the URL decides. The result is always one of the four formats the app allows, so phones can play it.
+ */
+export function noteMime(type: string, url: string): string | null {
+  const ext = /\.([a-z0-9]+)(?:[?#].*)?$/i.exec(url)?.[1]?.toLowerCase() ?? "";
+  const byExt = AUDIO_MIME_BY_EXT[ext];
+  const t = type.toLowerCase().split(";")[0].trim();
+  if (t.startsWith("audio/") || t === "video/mp4" || t === "video/x-m4a" || t === "video/quicktime" || GENERIC_TYPES.test(t)) return byExt ?? (t.startsWith("audio/") ? t : null);
+  return null;
+}
+
 /** Replaces every https voice note with a data URI so the file plays with no network (task 8.7). Throws if one cannot be fetched. */
 export async function inlineAudio(pages: PageData[]): Promise<PageData[]> {
   const cache = new Map<string, Promise<string>>();
   const grab = (src: string) => {
     if (!cache.has(src)) cache.set(src, (async () => {
       const blob = await (await getOk(src, "A voice note", { mode: "cors" })).blob();
-      if (!/^(audio\/|video\/mp4$)/.test(blob.type)) throw new OfflineError("A voice note is not an audio file, so it cannot be saved in the file.");
-      return dataUri(blob);
+      const mime = noteMime(blob.type, src);
+      if (!mime) throw new OfflineError("A voice note is not an audio file, so it cannot be saved in the file.");
+      return dataUri(new Blob([blob], { type: mime })); // stored under a type phones can play, whatever the server called it
     })());
     return cache.get(src)!;
   };

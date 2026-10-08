@@ -3,14 +3,19 @@
 // Task 3.3 adds the layout picker and 3.4 the text controls (text box in the selection card, style controls in the collapsed Customize panel).
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, editableSlots, isAdjusted, movePage, resetTextBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
+import { GROUP_NAMES, actionBarSpot, otherBoxes, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, addSlot, deleteSlot, duplicateSlot, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, isAdjusted, pageEditable, movePage, resetTextBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
 import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, textSlotRect, sizeFactor, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_WIDTH_MIN, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextSlotDef, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
 import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS, audioFileProblem, readAudioDuration, recordingSupported, uploadAudio } from "../lib/audio";
 import { createRecorder, type Recorder } from "../audio/recorder";
+import type { ReactNode } from "react";
+import { Icon, type IconName } from "./icons";
 import { LAYOUTS, LAYOUT_LIST, bookStyle, fillPages, type Template } from "../templates";
 
+// Panel layout helpers (10.5): a small heading over a block, and one row per control with its label on the left.
+const Group = ({ title, children }: { title: string; children: ReactNode }) => <div role="group" aria-label={title}><h3 className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-stone-400">{title}</h3>{children}</div>;
+const Row = ({ label, children }: { label: string; children: ReactNode }) => <div className="flex items-center gap-3 border-t border-stone-100 first:border-t-0"><span className="w-12 shrink-0 text-xs font-bold text-stone-500">{label}</span><div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1">{children}</div></div>;
 const fmtClock = (n: number) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}`;
 const W = 360, H = 480, DPR = 2; // logical page size; the canvas is scaled by CSS
 const TW = 60, TH = 80;
@@ -31,10 +36,12 @@ interface Props {
   /** False while the editor is hidden (Preview open); a recording in progress is then cancelled. Default true. */
   active?: boolean;
   /** Bottom tool workspace selected by the creator. */
-  activeTool?: "Pages" | "Text" | "Media" | "Audio" | "Record" | "Style" | null;
+  activeTool?: "Pages" | "Edit" | "Audio" | "Style" | null;
+  /** Closes the tool panel (the X in its header). */
+  onClose?: () => void;
 }
 
-export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null }: Props) {
+export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
@@ -45,10 +52,11 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const thumbs = useRef<(HTMLCanvasElement | null)[]>([]);
   const strip = useRef<HTMLUListElement>(null);
   const picks = useRef<Record<string, HTMLCanvasElement | null>>({});
-  const [panelOpen, setPanelOpen] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState<{ label: string; pct: number | null } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmSlotDelete, setConfirmSlotDelete] = useState(false);
+  const [slotNote, setSlotNote] = useState<string | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [audioBusy, setAudioBusy] = useState<{ label: string; pct: number | null } | null>(null);
   // Voice recording (9.4): "idle" -> "starting" (permission prompt) -> "recording" -> "review" (listen, use or record again).
@@ -65,7 +73,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const at = Math.min(index, filled.length - 1);
   const page = filled[at];
   const layout = LAYOUTS[page.layout];
-  const slots = editableSlots(layout);
+  const slots = pageEditable(layout, page);
   const slot = slots.find((s) => s.id === slotId) ?? null;
 
   useEffect(() => { let alive = true; loadFonts(book.fonts).then(() => alive && setReady(true)); return () => { alive = false; }; }, [book]);
@@ -84,7 +92,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     filled.forEach((p, i) => draw(thumbs.current[i], p, i, W, H)); // thumbnails draw at full size and are scaled down by CSS
   }, [ready, book, filled, images, page, at]);
 
-  // Layout picker previews: every layout drawn with this page's content. Only while the panel is open.
+  // Layout picker previews: every layout drawn with this page's content. Only while the Pages tab is open.
+  const panelOpen = activeTool === "Pages";
   useEffect(() => {
     if (!ready || !panelOpen) return;
     for (const l of LAYOUT_LIST) {
@@ -132,6 +141,14 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const rawPhoto = photoSlot ? pages[at]?.slots[photoSlot.id] : undefined;
   const photo: PhotoContent = typeof rawPhoto === "object" && rawPhoto ? rawPhoto : { src: "" };
   const editPage = (next: PageData) => onChange(pages.map((p, i) => (i === at ? next : p)));
+  // Component actions (10.6): add text or photo, copy and delete the selected one. Delete has an inline Yes / Keep step because there is no undo.
+  useEffect(() => { setConfirmSlotDelete(false); setSlotNote(null); }, [slotId, at]);
+  const addComp = (kind: "text" | "photo") => { const r = addSlot(pages[at], layout, kind); if (r.reason) { setSlotNote(r.reason); return; } editPage(r.page); setSlotId(r.id ?? null); setEditingText(false); setSlotNote(null); };
+  const copyComp = () => { if (!slot) return; const r = duplicateSlot(pages[at], layout, slot.id); if (r.reason) { setSlotNote(r.reason); return; } editPage(r.page); setSlotId(r.id ?? null); setEditingText(false); setSlotNote(null); };
+  const removeComp = () => { if (!slot) return; const r = deleteSlot(pages[at], layout, slot.id); setConfirmSlotDelete(false); if (r.reason) { setSlotNote(r.reason); return; } editPage(r.page); setSlotId(null); setEditingText(false); setSlotNote(null); };
+  const addTextWhy = addSlot(pages[at], layout, "text").reason ?? null; // why adding is not possible right now (the limit), if so
+  const copyWhy = slot ? duplicateSlot(pages[at], layout, slot.id).reason ?? null : null;
+  const deleteWhy = slot ? deleteSlot(pages[at], layout, slot.id).reason ?? null : null;
   const setText = (v: string) => textSlot && editPage(setSlotText(pages[at], textSlot, v));
   const setPhotoProps = (patch: Partial<PhotoContent>) => photoSlot && editPage(setPhoto(pages[at], photoSlot.id, patch));
   const setStyle = (patch: Partial<TextStyle>) => textSlot && editPage(setTextStyle(pages[at], textSlot.id, patch));
@@ -141,7 +158,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const cur = {
     font: style.font ?? textSlot?.font, size: style.size ?? "M", align: style.align ?? textSlot?.align ?? "left", color: style.color ?? textSlot?.color,
   };
-  const chip = (on: boolean) => "rounded-md border px-3 py-1.5 text-xs font-bold transition " + (on ? "border-rose-700 bg-rose-700 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500");
+  const chip = (on: boolean) => "min-h-[44px] rounded-md border px-3 py-1.5 text-xs font-bold transition " + (on ? "border-rose-700 bg-rose-700 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500");
 
   useEffect(() => { setPhotoError(null); }, [slotId, index]);
   useEffect(() => { if (!textSlot) setEditingText(false); }, [textSlot?.id]);
@@ -170,8 +187,10 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   dropRef.current = dropRecording;
   useEffect(() => { dropRef.current(); setRecError(null); }, [index]); // a recording belongs to the page it was made for
   useEffect(() => { if (!active) dropRef.current(); }, [active]);
+  // 10.8a: the recording controls live only in the Audio tab, so leaving it (X, another tab) must not leave the microphone on.
+  useEffect(() => { if (activeTool !== "Audio") { dropRef.current(); setRecError(null); } }, [activeTool]);
   useEffect(() => () => dropRef.current(), []); // unmount
-  useEffect(() => { setConfirmDelete(false); }, [index, pages.length]); // a pending question never follows the creator to another page
+  useEffect(() => { setConfirmDelete(false); }, [index, pages.length, activeTool]); // a pending question never follows the creator to another page
 
   // Choose a photo (3.5g, 3.8). The file is shrunk in the browser first (and uploaded when uploads are on), so a broken file
   // shows a message and the old photo stays. While it works the page can still be edited; the result goes to the page it was chosen for.
@@ -525,6 +544,22 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               </div>
             );
           })()}
+          {slot && !editingText && (() => {
+            const r = slot.kind === "photo" ? (selectedPhotoRect ?? { x: slot.x * W, y: slot.y * H, w: slot.w * W, h: slot.h * H }) : (frameRect() ?? { x: slot.x * W, y: slot.y * H, w: slot.w * W, h: slot.h * H });
+            const bw = (confirmSlotDelete ? 176 : 104) / shownScale, bh = 52 / shownScale; // the bar is a fixed size on screen, the page may be scaled
+            const spot = actionBarSpot(r, otherBoxes(layout, pages[at], W, H, slot.id), W, H, bw, bh); // covers no other component (10.8c)
+            const stop = (e: React.PointerEvent) => e.stopPropagation();
+            const b = "pointer-events-auto grid h-11 w-11 place-items-center rounded-lg text-white disabled:opacity-40";
+            return (
+              <div role="toolbar" aria-label="Selected component actions" onPointerDown={stop} onPointerUp={stop} className="absolute z-10 flex gap-1 rounded-xl bg-stone-900/90 p-1 shadow-lg" style={{ left: `${(spot.x / W) * 100}%`, top: `${(spot.y / H) * 100}%` }}>
+                {confirmSlotDelete ? (
+                  <><span className="grid place-items-center px-2 text-xs font-bold text-white">Delete?</span><button type="button" onClick={removeComp} className={b + " bg-red-700 text-xs font-bold"} style={{ width: "auto", paddingInline: 12 }}>Yes</button><button type="button" onClick={() => setConfirmSlotDelete(false)} className={b + " text-xs font-bold"} style={{ width: "auto", paddingInline: 12 }}>Keep</button></>
+                ) : (
+                  <><button type="button" onClick={copyComp} disabled={!!copyWhy} aria-label="Duplicate this component" title={copyWhy ?? "Duplicate"} className={b}><Icon name="duplicate" size={18} /></button><button type="button" onClick={() => setConfirmSlotDelete(true)} disabled={!!deleteWhy} aria-label="Delete this component" title={deleteWhy ?? "Delete"} className={b}><Icon name="trash" size={18} /></button></>
+                )}
+              </div>
+            );
+          })()}
           {editBox && textSlot && (
             <textarea
               ref={textInput}
@@ -557,41 +592,89 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
         {activeTool && (
           <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
             <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ height: "var(--tool-panel-h, 208px)" }}>
-              <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-4 py-2">
-                <p className="text-sm font-bold text-stone-900">{activeTool === "Record" ? "Voice record" : activeTool === "Style" ? "Book style" : activeTool}</p>
+              <div className="flex shrink-0 items-center justify-between border-b border-stone-100 pl-4 pr-1">
+                <p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Book style" : activeTool === "Audio" ? "Voice note" : activeTool}</p>
+                {onClose && <button type="button" onClick={onClose} aria-label={`Close ${activeTool} tools`} className="grid h-11 w-11 place-items-center rounded-lg text-stone-500 hover:text-stone-900"><Icon name="close" size={18} /></button>}
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3">
                 {activeTool === "Pages" && (
                   <div className="space-y-4">
-                    <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Primary page actions"><button type="button" onClick={addNewPage} disabled={!roomForPage} className={chip(false)+" shrink-0 disabled:opacity-40"}>＋ Add page</button><button type="button" onClick={copyPage} disabled={!roomForPage} className={chip(false)+" shrink-0 disabled:opacity-40"}>Duplicate</button></div><details className="rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Page actions</summary><div className="flex flex-wrap gap-2 border-t border-stone-200 px-3 py-2"><button type="button" onClick={() => shiftPage(-1)} disabled={!canEarlier} className={chip(false)+" disabled:opacity-40"}>← Earlier</button><button type="button" onClick={() => shiftPage(1)} disabled={!canLater} className={chip(false)+" disabled:opacity-40"}>Later →</button>{!confirmDelete && <button type="button" onClick={() => setConfirmDelete(true)} disabled={!canDelete} className={chip(false)+" disabled:opacity-40"}>Delete</button>}</div></details>
-                    {confirmDelete && canDelete && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete page {at + 1}?</span><button type="button" onClick={removePage} className="rounded-md bg-red-700 px-3 py-1.5 text-xs font-bold text-white">Delete</button><button type="button" onClick={() => setConfirmDelete(false)} className={chip(false)}>Keep</button></div>}
-                    <div><p className="mb-2 text-xs font-bold text-stone-500">Pages</p><ul ref={strip} className="flex gap-3 overflow-x-auto pb-2" aria-label="Pages">{filled.map((p,i)=><li key={i} className="relative shrink-0"><button type="button" onClick={()=>goto(i)} aria-current={i===at?"page":undefined} className={"block overflow-hidden rounded-md ring-2 transition "+(i===at?"ring-rose-700":"ring-stone-200")} style={{width:TW,height:TH}}><canvas ref={el=>{thumbs.current[i]=el}} width={W*DPR} height={H*DPR} className="block h-full w-full"/></button>{p.audio&&<span aria-hidden className="pointer-events-none absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-700 text-[11px] text-white">♪</span>}<span className="mt-1 block text-center text-xs text-stone-500">{i+1}</span></li>)}</ul></div>
-                    <details className="rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Layout</summary><div className="grid grid-cols-4 gap-2 border-t border-stone-200 p-2">{LAYOUT_LIST.map(l=><button key={l.id} type="button" onClick={()=>chooseLayout(l.id)} aria-pressed={l.id===page.layout} className={"overflow-hidden rounded-md border-2 "+(l.id===page.layout?"border-rose-700":"border-stone-200")}><canvas ref={el=>{picks.current[l.id]=el}} width={LW} height={LH} className="block aspect-[3/4] w-full"/><span className="block truncate px-1 py-1 text-[9px] text-stone-600">{l.name}</span></button>)}</div></details>
+                    <Group title="Page actions">
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {([["Add page", "plus", addNewPage, !roomForPage], ["Duplicate", "duplicate", copyPage, !roomForPage], ["Earlier", "arrow-left", () => shiftPage(-1), !canEarlier], ["Later", "arrow-right", () => shiftPage(1), !canLater], ["Delete", "trash", () => setConfirmDelete(true), !canDelete]] as [string, IconName, () => void, boolean][]).map(([label, icon, run, off]) => (
+                          <button key={label} type="button" onClick={run} disabled={off} aria-label={label === "Add page" || label === "Delete" || label === "Duplicate" ? `${label} page` : `Move page ${label.toLowerCase()}`} className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-lg border border-stone-300 bg-white px-1 py-1 text-[10px] font-bold disabled:opacity-40 " + (label === "Delete" ? "text-red-700" : "text-stone-700")}><Icon name={icon} size={18} />{label}</button>
+                        ))}
+                      </div>
+                      {confirmDelete && canDelete && <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete page {at + 1}?</span><button type="button" onClick={removePage} className="min-h-[44px] rounded-md bg-red-700 px-4 text-xs font-bold text-white">Delete</button><button type="button" onClick={() => setConfirmDelete(false)} className={chip(false)}>Keep</button></div>}
+                    </Group>
+                    <Group title="All pages"><ul ref={strip} className="flex gap-3 overflow-x-auto pb-2" aria-label="Pages">{filled.map((p,i)=><li key={i} className="relative shrink-0"><button type="button" onClick={()=>goto(i)} aria-current={i===at?"page":undefined} aria-label={`Go to page ${i+1}`} className={"block overflow-hidden rounded-md ring-2 transition "+(i===at?"ring-rose-700":"ring-stone-200")} style={{width:TW,height:TH}}><canvas ref={el=>{thumbs.current[i]=el}} width={W*DPR} height={H*DPR} className="block h-full w-full"/></button>{p.audio&&<span aria-hidden className="pointer-events-none absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-700 text-white"><Icon name="audio" size={11} /></span>}<span className="mt-1 block text-center text-xs text-stone-500">{i+1}</span></li>)}</ul></Group>
+                    <Group title="Layout"><div className="grid grid-cols-4 gap-2">{LAYOUT_LIST.map(l=><button key={l.id} type="button" onClick={()=>chooseLayout(l.id)} aria-pressed={l.id===page.layout} className={"overflow-hidden rounded-md border-2 "+(l.id===page.layout?"border-rose-700":"border-stone-200")}><canvas ref={el=>{picks.current[l.id]=el}} width={LW} height={LH} className="block aspect-[3/4] w-full"/><span className="block truncate px-1 py-1 text-[9px] text-stone-600">{l.name}</span></button>)}</div></Group>
                   </div>
                 )}
-                {activeTool === "Text" && (
-                  <div className="space-y-3">
-                    <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Text elements">{slots.filter(x=>x.kind==="text").map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} className={chip(x.id===slotId)}>{slotName(layout,x)}</button>)}</div>
-                    {textSlot ? <><div className="rounded-xl border border-stone-200 bg-stone-50 p-2"><textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={3} placeholder={textSlot.hint} aria-label="Text board" className="w-full resize-none rounded-lg border-0 bg-transparent px-2 py-1 text-sm font-medium focus:outline-none"/><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Fonts</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{([["display","Headline"],["body","Reading"]] as [FontRole,string][]).map(([r,label])=><button key={r} type="button" onClick={()=>setStyle({font:r===textSlot.font?undefined:r})} className={chip(cur.font===r)}>{label}</button>)}</div></details><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Size & alignment</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}{(["left","center","right"] as Align[]).map(a=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} className={chip(cur.align===a)+" capitalize"}>{a}</button>)}</div><label className="block border-t border-stone-200 px-3 py-2 text-xs font-bold text-stone-600">Size {Math.round(sizeFactor(style)*100)}%<input type="range" min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="mt-2 w-full accent-rose-700"/></label><div className="border-t border-stone-200 px-3 py-2"><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></div></details></div><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Color</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{TEXT_COLORS.map(([k,name])=><button key={k} type="button" aria-label={name} onClick={()=>setStyle({color:k===textSlot.color?undefined:k})} className={"h-9 w-9 shrink-0 rounded-full border-2 "+(cur.color===k?"border-rose-700 ring-2 ring-rose-300":"border-stone-300")} style={{background:book.palette[k]}}/>)}</div></details></> : <p className="text-xs text-stone-500">Choose a text element above.</p>}
+                {activeTool === "Edit" && (
+                  <div className="space-y-4">
+                    <Group title="Choose what to edit">
+                      <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Page components">{slots.map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} aria-pressed={x.id===slotId} className={chip(x.id===slotId)+" flex shrink-0 items-center gap-1.5"}><Icon name={x.kind==="text"?"text":"photo"} size={14} />{slotName(layout,x)}</button>)}</div>
+                    </Group>
+                    <Group title="Actions">
+                      {confirmSlotDelete
+                        ? <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete this {slot.kind==="text"?"text":"photo"}? You cannot undo it.</span><button type="button" onClick={removeComp} className="min-h-[44px] rounded-md bg-red-700 px-4 text-xs font-bold text-white">Yes, delete</button><button type="button" onClick={()=>setConfirmSlotDelete(false)} className={chip(false)}>Keep</button></div>
+                        : <div className="grid grid-cols-4 gap-2" role="group" aria-label="Component actions">
+                          <button type="button" onClick={copyComp} disabled={!slot||!!copyWhy} aria-label="Duplicate this component" className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1 text-[11px] font-bold disabled:opacity-40 border-stone-300 bg-white text-stone-800"}><Icon name="duplicate" size={18} />Duplicate</button>
+                          <button type="button" onClick={()=>setConfirmSlotDelete(true)} disabled={!slot||!!deleteWhy} aria-label="Delete this component" className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1 text-[11px] font-bold disabled:opacity-40 border-stone-300 bg-white text-red-700"}><Icon name="trash" size={18} />Delete</button>
+                          <button type="button" onClick={()=>addComp("text")} disabled={!!addTextWhy} aria-label="Add a text box to this page" className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1 text-[11px] font-bold disabled:opacity-40 border-rose-700 bg-rose-700 text-white"}><Icon name="plus" size={18} />Add text</button>
+                          <button type="button" onClick={()=>addComp("photo")} disabled={!!addTextWhy} aria-label="Add a photo to this page" className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1 text-[11px] font-bold disabled:opacity-40 border-rose-700 bg-rose-700 text-white"}><Icon name="plus" size={18} />Add photo</button>
+                        </div>}
+                      {(slotNote||addTextWhy||deleteWhy||copyWhy)&&<p className="mt-2 text-xs text-stone-500" role="status">{slotNote??addTextWhy??deleteWhy??copyWhy}</p>}
+                    </Group>
+                    {textSlot && <>
+                      <Group title="Text">
+                        <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={3} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
+                      </Group>
+                      <Group title="Look">
+                        <Row label="Font">{([["display","Headline"],["body","Reading"]] as [FontRole,string][]).map(([r,label])=><button key={r} type="button" onClick={()=>setStyle({font:r===textSlot.font?undefined:r})} className={chip(cur.font===r)}>{label}</button>)}</Row>
+                        <Row label="Size">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}<input type="range" aria-label={`Size ${Math.round(sizeFactor(style)*100)}%`} min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="h-11 min-w-[96px] flex-1 accent-rose-700"/><span className="w-10 shrink-0 text-right text-xs text-stone-500">{Math.round(sizeFactor(style)*100)}%</span></Row>
+                        <Row label="Align">{(["left","center","right"] as Align[]).map(a=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} className={chip(cur.align===a)+" capitalize"}>{a}</button>)}</Row>
+                        <Row label="Colour">{TEXT_COLORS.map(([k,name])=><button key={k} type="button" aria-label={name} aria-pressed={cur.color===k} onClick={()=>setStyle({color:k===textSlot.color?undefined:k})} className="grid h-11 w-11 shrink-0 place-items-center"><span className={"block h-8 w-8 rounded-full border-2 "+(cur.color===k?"border-rose-700 ring-2 ring-rose-300":"border-stone-300")} style={{background:book.palette[k]}}/></button>)}</Row>
+                      </Group>
+                      <Group title="Position"><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>
+                    </>}
+                    {photoSlot && <>
+                      <Group title="Photo">
+                        <label className={"inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-800 "+(photoBusy?"opacity-40":"")}><Icon name="photo" size={16} />Replace photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={choosePhoto} disabled={!!photoBusy} className="sr-only"/></label>
+                        {photoBusy&&<p className="mt-2 text-xs text-stone-600" role="status">{photoBusy.label}{photoBusy.pct!==null&&` ${photoBusy.pct}%`}</p>}{photoError&&<p className="mt-2 text-xs font-bold text-red-700" role="alert">{photoError}</p>}
+                      </Group>
+                      <Group title="Look">
+                        <Row label="Shape">{([["fill","Fill"],["fit","Fit"]] as [PhotoFit,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({fit:f==="fill"?undefined:f})} className={chip((photo.fit??"fill")===f)}>{label}</button>)}</Row>
+                        <Row label="Frame">{([["none","None"],["border","Border"],["rounded","Rounded"]] as [PhotoFrame,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({frame:f===(photoSlot.frame??"none")?undefined:f})} className={chip((photo.frame??photoSlot.frame??"none")===f)}>{label}</button>)}</Row>
+                        <Row label="Filter">{([["none","Natural"],["warm","Warm"],["bw","B&W"]] as [PhotoFilter,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({filter:f==="none"?undefined:f})} className={chip((photo.filter??"none")===f)}>{label}</button>)}</Row>
+                        <Row label="Zoom"><input type="range" aria-label={`Zoom ${(photo.zoom??1).toFixed(1)}×`} min={1} max={3} step={0.1} value={photo.zoom??1} onChange={e=>setPhotoProps({zoom:Number(e.target.value)})} className="h-11 min-w-[96px] flex-1 accent-rose-700"/><span className="w-10 shrink-0 text-right text-xs text-stone-500">{(photo.zoom??1).toFixed(1)}×</span><button type="button" className={chip(false)} onClick={()=>setPhotoProps({zoom:1})}>Reset</button></Row>
+                      </Group>
+                    </>}
+                    {!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Tap a text or photo on the page, or choose one above.</p>}
                   </div>
                 )}
-                {activeTool === "Media" && (
-                  <div className="space-y-3">
-                    <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Photo elements">{slots.filter(x=>x.kind==="photo").map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} className={chip(x.id===slotId)}>{slotName(layout,x)}</button>)}</div>
-                    {photoSlot ? <><label className={"inline-block cursor-pointer rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-bold "+(photoBusy?"opacity-40":"")}>Choose photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={choosePhoto} disabled={!!photoBusy} className="sr-only"/></label><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Adjust</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{([["fill","Fill"],["fit","Fit"]] as [PhotoFit,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({fit:f==="fill"?undefined:f})} className={chip((photo.fit??"fill")===f)}>{label}</button>)}<button type="button" className={chip(false)} onClick={()=>setPhotoProps({zoom:1})}>Reset zoom</button></div><label className="block border-t border-stone-200 px-3 py-2 text-xs font-bold text-stone-600">Zoom {(photo.zoom??1).toFixed(1)}×<input type="range" min={1} max={3} step={0.1} value={photo.zoom??1} onChange={e=>setPhotoProps({zoom:Number(e.target.value)})} className="mt-2 w-full accent-rose-700"/></label></details><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Filter</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{([["none","Natural"],["warm","Warm"],["bw","B&W"]] as [PhotoFilter,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({filter:f==="none"?undefined:f})} className={chip((photo.filter??"none")===f)}>{label}</button>)}</div></details><details className="mt-2 rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Frame</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{([["none","No frame"],["border","Border"],["rounded","Rounded"]] as [PhotoFrame,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({frame:f===(photoSlot.frame??"none")?undefined:f})} className={chip((photo.frame??photoSlot.frame??"none")===f)}>{label}</button>)}</div></details></> : <p className="text-xs text-stone-500">Choose a photo element above.</p>}
-                    {photoBusy&&<p className="text-xs text-stone-600" role="status">{photoBusy.label}{photoBusy.pct!==null&&` ${photoBusy.pct}%`}</p>}{photoError&&<p className="text-xs font-bold text-red-700" role="alert">{photoError}</p>}
-                  </div>
-                )}
-                {(activeTool === "Audio" || activeTool === "Record") && (
-                  <div className="space-y-3">
-                    {!AUDIO_ENABLED&&!currentAudio?<p className="text-xs font-bold text-stone-600">{AUDIO_OFF_REASON}</p>:<>{currentAudio&&<div className="space-y-2"><audio controls preload="metadata" src={currentAudio.src} className="w-full"/><div className="flex items-center gap-2"><span className="text-xs text-stone-500">{currentAudio.duration}s</span><button type="button" onClick={removeAudio} disabled={!!audioBusy||recPhase==="recording"} className="text-xs font-bold text-red-700">Remove</button></div></div>}{activeTool==="Audio"&&recPhase==="idle"&&<div className="flex flex-wrap gap-2"><label className="cursor-pointer rounded-xl border border-stone-200 px-4 py-2 text-xs font-bold">Choose audio<input type="file" accept=".mp3,.m4a,.aac,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav" onChange={chooseAudio} disabled={!!audioBusy} className="sr-only"/></label>{canRecord&&<button type="button" onClick={()=>void startRecording()} disabled={!!audioBusy} className="rounded-xl bg-rose-700 px-4 py-2 text-xs font-bold text-white">Record</button>}</div>}{activeTool==="Record"&&recPhase==="idle"&&canRecord&&<button type="button" onClick={()=>void startRecording()} disabled={!!audioBusy} className="rounded-xl bg-rose-700 px-4 py-2 text-xs font-bold text-white">● Start recording</button>}{recPhase==="starting"&&<div className="flex items-center gap-2"><span className="text-xs text-stone-600">Waiting for microphone…</span><button type="button" onClick={dropRecording} className="text-xs font-bold">Cancel</button></div>}{recPhase==="recording"&&<div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold text-red-700">● {fmtClock(recSeconds)} / {fmtClock(RECORD_MAX_SECONDS)}</span><button type="button" onClick={stopRecording} className="rounded-xl bg-rose-700 px-4 py-2 text-xs font-bold text-white">Stop</button><button type="button" onClick={dropRecording} className="text-xs font-bold">Cancel</button></div>}{recPhase==="review"&&recTake&&<div className="space-y-2"><audio controls preload="metadata" src={recTake.url} className="w-full"/><div className="flex flex-wrap gap-2"><button type="button" onClick={useRecording} disabled={!!audioBusy} className="rounded-xl bg-rose-700 px-4 py-2 text-xs font-bold text-white">Use recording</button><button type="button" onClick={()=>{dropRecording();void startRecording(true)}} className={chip(false)}>Record again</button><button type="button" onClick={dropRecording} className={chip(false)}>Discard</button></div></div>}{audioBusy&&<p className="text-xs text-stone-600" role="status">{audioBusy.label}{audioBusy.pct!==null&&` ${audioBusy.pct}%`}</p>}{(recError||audioError)&&<p className="text-xs font-bold text-red-700" role="alert">{recError||audioError}</p>}</>}
+                {activeTool === "Audio" && (
+                  <div className="space-y-4">
+                    {!AUDIO_ENABLED&&!currentAudio?<p className="text-xs font-bold text-stone-600">{AUDIO_OFF_REASON}</p>:<>
+                      {currentAudio&&<Group title="On this page"><div className="space-y-2"><audio controls preload="metadata" src={currentAudio.src} className="w-full"/><div className="flex items-center gap-3"><span className="text-xs text-stone-500">{currentAudio.duration}s</span><button type="button" onClick={removeAudio} disabled={!!audioBusy||recPhase==="recording"} className="min-h-[44px] text-xs font-bold text-red-700 disabled:opacity-40">Remove</button></div></div></Group>}
+                      <Group title={currentAudio?"Replace with":"Add a voice note"}>
+                        {recPhase==="idle"&&<div className="grid grid-cols-2 gap-2"><label className={"flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-3 text-xs font-bold text-stone-800 "+(audioBusy?"opacity-40":"")}><Icon name="audio" size={16} />Choose file<input type="file" accept=".mp3,.m4a,.aac,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav" onChange={chooseAudio} disabled={!!audioBusy} className="sr-only"/></label>{canRecord&&<button type="button" onClick={()=>void startRecording()} disabled={!!audioBusy} className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-rose-700 px-3 text-xs font-bold text-white disabled:opacity-40"><Icon name="microphone" size={16} />Record</button>}</div>}
+                        {recPhase==="starting"&&<div className="flex items-center gap-3"><span className="text-xs text-stone-600">Waiting for microphone…</span><button type="button" onClick={dropRecording} className="min-h-[44px] px-2 text-xs font-bold">Cancel</button></div>}
+                        {recPhase==="recording"&&<div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold text-red-700">● Recording {fmtClock(recSeconds)} / {fmtClock(RECORD_MAX_SECONDS)}</span><button type="button" onClick={stopRecording} className="min-h-[44px] rounded-xl bg-rose-700 px-5 text-xs font-bold text-white">Stop</button><button type="button" onClick={dropRecording} className="min-h-[44px] px-2 text-xs font-bold">Cancel</button></div>}
+                        {recPhase==="review"&&recTake&&<div className="space-y-2"><audio controls preload="metadata" src={recTake.url} className="w-full"/><div className="flex flex-wrap gap-2"><button type="button" onClick={useRecording} disabled={!!audioBusy} className="min-h-[44px] rounded-xl bg-rose-700 px-4 text-xs font-bold text-white disabled:opacity-40">Use recording</button><button type="button" onClick={()=>{dropRecording();void startRecording(true)}} className={chip(false)}>Record again</button><button type="button" onClick={dropRecording} className={chip(false)}>Discard</button></div></div>}
+                        {audioBusy&&<p className="mt-2 text-xs text-stone-600" role="status">{audioBusy.label}{audioBusy.pct!==null&&` ${audioBusy.pct}%`}</p>}{(recError||audioError)&&<p className="mt-2 text-xs font-bold text-red-700" role="alert">{recError||audioError}</p>}
+                      </Group>
+                    </>}
                   </div>
                 )}
                 {activeTool === "Style" && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-4 rounded-xl border border-stone-200 bg-stone-50 p-3"><div className="grid h-16 w-16 shrink-0 place-items-center rounded-full" style={{background:"conic-gradient("+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent) ?? book.palette.accent)+" 0 25%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent2) ?? book.palette.accent2)+" 25% 50%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.soft) ?? book.palette.soft)+" 50% 75%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.ink) ?? book.palette.ink)+" 75% 100%)"}}><div className="h-9 w-9 rounded-full bg-white"/></div><div className="min-w-0 flex-1"><p className="mb-2 text-xs font-bold text-stone-500">Colour palette</p><div className="flex gap-2 overflow-x-auto">{PALETTE_PRESETS.map(p=><button key={p.id} type="button" onClick={()=>onStyle({paletteId:p.id})} className={chip(p.id===paletteId)}>{p.name}</button>)}</div></div></div>
-                    <details className="rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Fonts</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{template.fontPairs.map((fp,i)=><button key={i} type="button" onClick={()=>onStyle({fontPair:i as 0|1})} className={chip(fontPair===i)} style={{fontFamily:fp.display}}>{i===0?"Classic":"Modern"}</button>)}</div></details>
-                    <details className="rounded-xl border border-stone-200 bg-white"><summary className="cursor-pointer list-none px-3 py-2 text-xs font-bold text-stone-700">Background</summary><div className="flex gap-2 overflow-x-auto border-t border-stone-200 px-3 py-2">{bgChoices.map(([k,name])=><button key={k} type="button" aria-label={name} onClick={()=>setBg(k)} className={chip(rawPage.bg===k)}>{name}</button>)}</div></details>
+                    <Group title="Colours">
+                      <div className="flex items-center gap-4"><div className="grid h-14 w-14 shrink-0 place-items-center rounded-full" style={{background:"conic-gradient("+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent) ?? book.palette.accent)+" 0 25%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent2) ?? book.palette.accent2)+" 25% 50%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.soft) ?? book.palette.soft)+" 50% 75%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.ink) ?? book.palette.ink)+" 75% 100%)"}}><div className="h-8 w-8 rounded-full bg-white"/></div><div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">{PALETTE_PRESETS.map(p=><button key={p.id} type="button" onClick={()=>onStyle({paletteId:p.id})} aria-pressed={p.id===paletteId} className={chip(p.id===paletteId)+" shrink-0"}>{p.name}</button>)}</div></div>
+                    </Group>
+                    <Group title="Fonts"><div className="flex gap-2 overflow-x-auto">{template.fontPairs.map((fp,i)=><button key={i} type="button" onClick={()=>onStyle({fontPair:i as 0|1})} aria-pressed={fontPair===i} className={chip(fontPair===i)} style={{fontFamily:fp.display}}>{i===0?"Classic":"Modern"}</button>)}</div></Group>
+                    <Group title="This page's background"><div className="flex gap-2 overflow-x-auto">{bgChoices.map(([k,name])=><button key={k} type="button" aria-label={name} aria-pressed={rawPage.bg===k} onClick={()=>setBg(k)} className={chip(rawPage.bg===k)+" shrink-0"}>{name}</button>)}</div></Group>
                   </div>
                 )}
               </div>

@@ -37,7 +37,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           <span className="hidden text-[13px] text-[#7d838b] sm:block">Digital gifts that open like a letter.</span>
           <Link
-            href="/create"
+            href={`/create?t=${active.id}`}
             className="rounded-full bg-[#ff6900] px-4 py-2.5 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(255,105,0,.15)] transition hover:-translate-y-0.5 hover:bg-[#f25e00]"
           >
             Create a Gift
@@ -73,7 +73,7 @@ export default function Home() {
 
           <div className="relative flex items-center justify-between border-t border-[#f4ebe3] px-5 py-3 sm:px-7">
             <p className="max-w-[70%] truncate text-[12px] text-[#747b84]">{active.blurb}</p>
-            <Link href={`/create?t=${active.id}`} className="shrink-0 text-[12px] font-bold text-[#ff6900] hover:underline">
+            <Link href={`/create?t=${active.id}`} className="shrink-0 rounded-full bg-[#ff6900] px-4 py-2 text-[12px] font-bold text-white transition hover:bg-[#f25e00]">
               Use this template →
             </Link>
           </div>
@@ -158,10 +158,10 @@ export default function Home() {
           </div>
 
           <Link
-            href="/create"
+            href={`/create?t=${active.id}`}
             className="mt-4 flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#ff6900] text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(255,105,0,.14)] transition hover:bg-[#f25e00]"
           >
-            Start with a blank gift
+            Use “{active.name}”
           </Link>
         </section>
       </div>

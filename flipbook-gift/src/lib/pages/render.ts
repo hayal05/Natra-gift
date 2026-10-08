@@ -134,10 +134,18 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   return { x: minX, y: minY, w: Math.max(2, maxX - minX), h: Math.max(2, maxY - minY) };
 }
 
+/** What is drawn on a page, bottom to top: the layout's components minus the ones the creator deleted (`hidden`), then the ones added (`extras`) (task 10.4). */
+export function pageSlots(layout: Layout, page: Pick<PageData, "hidden" | "extras">): SlotDef[] {
+  const hidden = page.hidden;
+  const base = hidden?.length ? layout.slots.filter((s) => !hidden.includes(s.id)) : layout.slots;
+  return page.extras?.length ? [...base, ...page.extras] : base;
+}
+
 /** The slot under a point (px), topmost first; text and photo slots only. Rotation is ignored (good enough for taps). */
-export function slotAt(layout: Layout, w: number, h: number, px: number, py: number): SlotDef | null {
-  for (let i = layout.slots.length - 1; i >= 0; i--) {
-    const s = layout.slots[i];
+export function slotAt(layout: Layout, w: number, h: number, px: number, py: number, page?: Pick<PageData, "hidden" | "extras">): SlotDef | null {
+  const list = page ? pageSlots(layout, page) : layout.slots; // with a page: deleted components are skipped and added ones count (task 10.4b)
+  for (let i = list.length - 1; i >= 0; i--) {
+    const s = list[i];
     if (s.kind === "shape") continue;
     const r = s.kind === "text" ? textSlotRect(s, undefined, w, h) : slotRect(s, w, h);
     if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return s;
@@ -313,7 +321,7 @@ export function renderPage(
   c.save();
   c.fillStyle = color(book, page.bg ?? layout.bg);
   c.fillRect(0, 0, w, h);
-  for (const s of layout.slots) {
+  for (const s of pageSlots(layout, page)) {
     c.save();
     if (s.rot) {
       c.translate(s.rot.cx * w, s.rot.cy * h);

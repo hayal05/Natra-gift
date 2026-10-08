@@ -1,8 +1,8 @@
 // Pure helpers for the page editor (task 3.2): which slots a creator can select, their names, and tap hit-testing.
 // No React here, so it can be checked from the command line (scripts/test-editor.ts).
-import { photoSlotRect, slotRect, textSlotRect } from "./pages/render";
+import { pageSlots, photoSlotRect, slotRect, textSlotRect } from "./pages/render";
 import { SAMPLE_COUNT, isSample } from "./pages/sample";
-import type { ColorRef, Layout, PageData, Palette, PhotoContent, PhotoFrame, PhotoSlotDef, SlotDef, TextSlotDef, TextStyle } from "./pages/types";
+import type { ColorRef, ExtraSlotDef, Layout, PageData, Palette, PhotoContent, PhotoFrame, PhotoSlotDef, SlotDef, TextSlotDef, TextStyle } from "./pages/types";
 
 export type EditableSlot = TextSlotDef | PhotoSlotDef;
 
@@ -19,6 +19,7 @@ const TEXT_NAMES: Record<string, string> = {
 
 /** Plain-language name for a slot, for the selection bar and the slot buttons. */
 export function slotName(l: Layout, s: EditableSlot): string {
+  if (/^x[0-9]+$/.test(s.id)) return (s.kind === "text" ? "Added text " : "Added photo ") + s.id.slice(1); // components the creator added (task 10.4)
   if (s.kind === "text") return TEXT_NAMES[s.id] ?? s.id;
   const n = l.slots.filter((x) => x.kind === "photo").length;
   return n > 1 ? `Photo ${s.id.slice(1)}` : "Photo";
@@ -35,7 +36,7 @@ export function slotSummary(s: EditableSlot, page: PageData): string {
 
 /** The editable slot under a point given in page pixels (w x h), topmost first. Rotation is ignored, as in slotAt. */
 export function editableAt(l: Layout, page: PageData, w: number, h: number, px: number, py: number, styles?: Record<string, TextStyle>): EditableSlot | null {
-  const list = editableSlots(l);
+  const list = pageEditable(l, page); // deleted components are skipped, added ones count (task 10.4b)
   for (let i = list.length - 1; i >= 0; i--) {
     const s = list[i];
     const raw = page.slots[s.id];
@@ -45,11 +46,38 @@ export function editableAt(l: Layout, page: PageData, w: number, h: number, px: 
   return null;
 }
 
+/** A box in page pixels. */
+export interface Box { x: number; y: number; w: number; h: number }
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** The boxes of every editable component on the page except one, in page pixels (what a tap could select). */
+export function otherBoxes(l: Layout, page: PageData, w: number, h: number, exceptId: string): Box[] {
+  return pageEditable(l, page).filter((s) => s.id !== exceptId).map((s) => {
+    const raw = page.slots[s.id];
+    return s.kind === "text" ? textSlotRect(s, page.styles?.[s.id], w, h) : photoSlotRect(s, typeof raw === "object" && raw ? raw : undefined, w, h);
+  });
+}
+
+/**
+ * Where the small action bar (bw x bh, page pixels) goes for a selected box (10.8c): the first spot that stays on the page and covers no other
+ * component, tried above the selection, below it, inside its top, inside its bottom, and last just under the page, where nothing can be selected.
+ * `gap` keeps the bar clear of the selection's own handles. Returns the bar's top-left corner.
+ */
+export function actionBarSpot(sel: Box, others: Box[], w: number, h: number, bw: number, bh: number, gap = 18): Box {
+  const x = Math.round(Math.min(Math.max(0, sel.x + sel.w / 2 - bw / 2), Math.max(0, w - bw)));
+  const tries = [sel.y - bh - gap, sel.y + sel.h + gap, sel.y + gap, sel.y + sel.h - bh - gap];
+  for (const y0 of tries) {
+    const y = Math.round(y0), box = { x, y, w: bw, h: bh };
+    if (y >= 0 && y + bh <= h && !others.some((o) => overlaps(box, o))) return box;
+  }
+  return { x, y: Math.round(h + 6), w: bw, h: bh };
+}
+
 /**
  * Moves a page to another layout (task 3.3). Content carries over by slot id (p1..p3, title, body, ...).
- * Nothing is deleted: content for slots the new layout does not have stays in `slots` (the renderer ignores it),
- * so swapping back restores it. A photo slot with no photo yet gets a sample photo, so no page is ever bare.
- * The page background, text styles and tokens such as {to} are kept as they are.
+ * Content for slots the new layout does not have stays in `slots` (the renderer ignores it), so swapping back restores it;
+ * text in a slot the new layout does have is cut to that slot's limit (10.8e). A photo slot with no photo yet gets a sample photo, so no page is ever bare.
+ * The page background, text styles, added components (`extras`) and tokens such as {to} are kept as they are; `hidden` (deleted layout components) is cleared.
  */
 export function swapLayout(page: PageData, next: Layout, seed = 0): PageData {
   if (page.layout === next.id) return page;
@@ -61,7 +89,12 @@ export function swapLayout(page: PageData, next: Layout, seed = 0): PageData {
     if (!(typeof v === "object" && v.src)) slots[s.id] = { src: `sample:${((seed + k) % SAMPLE_COUNT) + 1}` };
     k++;
   }
-  return { ...page, layout: next.id, slots };
+  for (const s of editableSlots(next)) { // 10.8e: text longer than the new slot allows is cut, as typing would, so the server never refuses the gift
+    const v = slots[s.id];
+    if (s.kind === "text" && typeof v === "string" && v.length > textLimit(s)) slots[s.id] = v.slice(0, textLimit(s));
+  }
+  const { hidden: _hidden, ...keep } = page; // components deleted from the old layout come back; added components (extras) stay
+  return { ...keep, layout: next.id, slots };
 }
 
 /** Plain names for the layout groups, in picker order. */
@@ -315,4 +348,98 @@ export function bgProblem(page: PageData, layout: Layout, palette: Palette, bg: 
 /** The palette backgrounds that keep all text readable on this page. The current choice is never removed. */
 export function pageBgOptions(page: PageData, layout: Layout, palette: Palette): [keyof Palette, string][] {
   return PAGE_BG_CHOICES.filter(([k]) => k === page.bg || bgProblem(page, layout, palette, k) === null);
+}
+
+// ---------- Add, duplicate and delete components (task 10.4a) ----------
+// A component is a text box or a photo. Layouts stay data: the page records what the creator removed from the layout (`hidden`)
+// and what they added (`extras`, ids x1, x2, ...). Content and style of an extra live in `slots` and `styles` under its id.
+
+export const MAX_EXTRAS = 8;
+const OFFSET = 0.04; // a copy sits this far (page fraction) from the original so it is visible
+
+/** The result of an add, copy or delete. `reason` (plain words) is set when nothing was done and `page` is then the SAME object; `id` is the new component. */
+export interface SlotChange { page: PageData; reason?: string; id?: string }
+const refuse = (page: PageData, reason: string): SlotChange => ({ page, reason });
+const isExtraId = (id: string) => /^x[0-9]+$/.test(id);
+const round3 = (v: number) => Math.round(v * 1000) / 1000;
+
+/** Editable components on the page as drawn: layout components not deleted, then added ones. */
+export const pageEditable = (layout: Layout, page: PageData): EditableSlot[] => pageSlots(layout, page).filter(isEditable);
+
+const photoCount = (layout: Layout, page: PageData) => pageSlots(layout, page).filter((s) => s.kind === "photo").length;
+
+function newExtraId(page: PageData): string {
+  let n = 0;
+  for (const k of [...(page.extras ?? []).map((e) => e.id), ...Object.keys(page.slots), ...Object.keys(page.styles ?? {})]) {
+    const m = /^x([0-9]+)$/.exec(k);
+    if (m) n = Math.max(n, Number(m[1]));
+  }
+  return "x" + (n + 1);
+}
+
+/** Moves a position `v` (box size `size`) by OFFSET towards the page's far edge, or back if that would leave the page. */
+const nudge = (v: number, size: number) => round3(v + OFFSET + size <= 1 ? v + OFFSET : Math.max(0, v - OFFSET));
+
+const limitReason = `A page can hold up to ${MAX_EXTRAS} added items.`;
+
+const ADD_STEP = 0.05; // each new box sits this far from the one before (page fraction)
+
+/** Where an added box of this size goes: the centre for the first one, then one step further down and right for each already added, wrapping back to the start so the box stays on the page (10.8b). A spot that is already taken is skipped. */
+function addPosition(page: PageData, w: number, h: number, x0: number, y0: number): { x: number; y: number } {
+  const spots = (start: number, size: number) => Math.floor((1 - size - start) / ADD_STEP + 1e-9) + 1; // how many steps fit before the box would leave the page
+  const nx = spots(x0, w), ny = spots(y0, h);
+  const taken = (x: number, y: number) => (page.extras ?? []).some((e) => Math.abs(e.x - x) < 1e-6 && Math.abs(e.y - y) < 1e-6);
+  const first = page.extras?.length ?? 0;
+  for (let k = 0; k < nx * ny; k++) { // (n % nx, n % ny) differs for every n up to nx * ny, so a free spot exists
+    const n = first + k, x = round3(x0 + ADD_STEP * (n % nx)), y = round3(y0 + ADD_STEP * (n % ny));
+    if (!taken(x, y)) return { x, y };
+  }
+  return { x: x0, y: y0 };
+}
+
+/** Adds a text box or an empty photo: centred for the first one, then each further one is offset so boxes never pile up in one place. */
+export function addSlot(page: PageData, layout: Layout, kind: "text" | "photo"): SlotChange {
+  if ((page.extras?.length ?? 0) >= MAX_EXTRAS) return refuse(page, limitReason);
+  const id = newExtraId(page);
+  const bg = page.bg ?? layout.bg;
+  const light = bg === "dark" || bg === "accent" || bg === "accent2"; // ink would be hard to read on these
+  const def: ExtraSlotDef = kind === "text"
+    ? { id, kind: "text", ...addPosition(page, 0.6, 0.12, 0.2, 0.44), w: 0.6, h: 0.12, font: "body", size: 0.045, align: "center", valign: "middle", color: light ? "paper" : "ink", hint: "Your text" }
+    : { id, kind: "photo", ...addPosition(page, 0.5, 0.4, 0.25, 0.3), w: 0.5, h: 0.4 };
+  const content = kind === "text" ? "New text" : { src: "" };
+  return { page: { ...page, extras: [...(page.extras ?? []), def], slots: { ...page.slots, [id]: content } }, id };
+}
+
+/** Copies a component (definition, content and style) a little to the side, with a new id. Only text boxes and photos can be copied. */
+export function duplicateSlot(page: PageData, layout: Layout, slotId: string): SlotChange {
+  const def = pageEditable(layout, page).find((s) => s.id === slotId);
+  if (!def) return refuse(page, "That part cannot be copied.");
+  if ((page.extras?.length ?? 0) >= MAX_EXTRAS) return refuse(page, limitReason);
+  const id = newExtraId(page);
+  const x = nudge(def.x, def.w), y = nudge(def.y, def.h);
+  const copy = structuredClone(def) as ExtraSlotDef;
+  copy.id = id; copy.x = x; copy.y = y;
+  if (copy.rot) copy.rot = { ...copy.rot, cx: round3(copy.rot.cx + x - def.x), cy: round3(copy.rot.cy + y - def.y) }; // turn about the moved pivot
+  let content = structuredClone(page.slots[slotId] ?? (def.kind === "photo" ? { src: "" } : ""));
+  if (typeof content === "object") { // a photo the creator moved or resized keeps its own box: move that too
+    if (content.x !== undefined) content.x = nudge(content.x, content.w ?? def.w);
+    if (content.y !== undefined) content.y = nudge(content.y, content.h ?? def.h);
+  }
+  const styles = page.styles?.[slotId] ? { ...page.styles, [id]: structuredClone(page.styles[slotId]) } : page.styles;
+  return { page: { ...page, extras: [...(page.extras ?? []), copy], slots: { ...page.slots, [id]: content }, styles }, id };
+}
+
+/** Deletes a component. An added one is removed with its content and style; one from the layout goes into `hidden` (its content is kept, so the creator loses nothing by mistake). The last photo cannot be deleted. */
+export function deleteSlot(page: PageData, layout: Layout, slotId: string): SlotChange {
+  const def = pageEditable(layout, page).find((s) => s.id === slotId);
+  if (!def) return refuse(page, "That part cannot be deleted.");
+  if (def.kind === "photo" && photoCount(layout, page) <= 1) return refuse(page, "Every page keeps at least one photo.");
+  if (isExtraId(slotId) && page.extras?.some((e) => e.id === slotId)) {
+    const extras = page.extras.filter((e) => e.id !== slotId);
+    const { [slotId]: _content, ...slots } = page.slots;
+    let styles = page.styles;
+    if (styles && slotId in styles) { const { [slotId]: _style, ...rest } = styles; styles = Object.keys(rest).length ? rest : undefined; }
+    return { page: { ...page, extras: extras.length ? extras : undefined, slots, styles } };
+  }
+  return { page: { ...page, hidden: [...(page.hidden ?? []), slotId] } };
 }

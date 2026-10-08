@@ -136,6 +136,9 @@ export interface TextStyle {
   w?: number;
 }
 
+/** A component the creator added to one page (task 10.4): a text box or a photo, with an id like `x1`. Content and style live in `slots` and `styles` under that id. */
+export type ExtraSlotDef = TextSlotDef | PhotoSlotDef;
+
 export interface AudioContent {
   src: string;
   /** Rounded duration in seconds, capped by the editor and server. */
@@ -151,6 +154,10 @@ export interface PageData {
   styles?: Record<string, TextStyle>;
   /** Optional creator voice/audio note for this page. */
   audio?: AudioContent;
+  /** Components added to this page (at most 8), drawn after the layout's own. Kept when the layout changes. */
+  extras?: ExtraSlotDef[];
+  /** Ids of the layout's components the creator deleted. Cleared when the layout changes. */
+  hidden?: string[];
 }
 
 /** Decoded images by `src`. A missing entry draws the placeholder (still loading, or failed). */

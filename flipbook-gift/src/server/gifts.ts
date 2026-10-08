@@ -78,7 +78,7 @@ function checkExtra(e: unknown, layout: Layout, seen: Set<string>): ExtraSlotDef
   if (e.tracking !== undefined) { if (!inRange(e.tracking, -0.1, 0.5)) return bad; t.tracking = e.tracking; }
   if (e.lh !== undefined) { if (!inRange(e.lh, 0.5, 3)) return bad; t.lh = e.lh; }
   for (const k of ["italic", "upper"] as const) if (e[k] !== undefined) { if (typeof e[k] !== "boolean") return bad; t[k] = e[k] as boolean; }
-  if (e.align !== undefined) { if (!oneOf(e.align, ["left", "center", "right"])) return bad; t.align = e.align as "left" | "center" | "right"; }
+  if (e.align !== undefined) { if (!oneOf(e.align, ["left", "center", "right", "justify"])) return bad; t.align = e.align as "left" | "center" | "right" | "justify"; }
   if (e.valign !== undefined) { if (!oneOf(e.valign, ["top", "middle", "bottom"])) return bad; t.valign = e.valign as "top" | "middle" | "bottom"; }
   if (e.hint !== undefined) { if (typeof e.hint !== "string" || e.hint.length > 60) return bad; t.hint = clean(e.hint); }
   return t; // `auto` and fixed `text` are not accepted: an added box is always a plain editable text
@@ -106,7 +106,7 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
     if (v === undefined) continue;
     if (d.kind === "text") {
       if (typeof v !== "string") return bad("A text is not valid.");
-      if (v.length > Math.max(60, textLimit(d) * 2)) return bad("A text is too long.");
+      if (v.length > textLimit(d)) return bad("A text is too long.");
       slots[d.id] = clean(v);
     } else {
       const added = !!extras?.some((x) => x.id === d.id); // an added photo may still be empty (a placeholder), as the editor creates it
@@ -151,7 +151,8 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
       const o: TextStyle = {};
       if (st.font !== undefined) { if (!oneOf(st.font, ["display", "body"])) return bad("A text style is not valid."); o.font = st.font as TextStyle["font"]; }
       if (st.size !== undefined) { if (!oneOf(st.size, ["S", "M", "L"])) return bad("A text style is not valid."); o.size = st.size as TextStyle["size"]; }
-      if (st.align !== undefined) { if (!oneOf(st.align, ["left", "center", "right"])) return bad("A text style is not valid."); o.align = st.align as TextStyle["align"]; }
+      if (st.align !== undefined) { if (!oneOf(st.align, ["left", "center", "right", "justify"])) return bad("A text style is not valid."); o.align = st.align as TextStyle["align"]; }
+      for (const k of ["bold", "italic"] as const) { if (st[k] === undefined) continue; if (typeof st[k] !== "boolean") return bad("A text style is not valid."); o[k] = st[k] as boolean; }
       if (st.color !== undefined) { if (!oneOf(st.color, PALETTE_KEYS)) return bad("A text style is not valid."); o.color = st.color as TextStyle["color"]; }
       const num = (v: unknown, lo: number, hi: number) => (typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : undefined);
       for (const [k, lo, hi] of [["x", -0.45, 0.45], ["y", -0.45, 0.45], ["scale", 0.4, 4], ["w", 0.1, 1]] as const) {

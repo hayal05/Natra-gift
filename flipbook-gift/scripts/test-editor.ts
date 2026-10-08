@@ -21,16 +21,16 @@ for (const l of LAYOUT_LIST) {
   ok(`${l.id}: tap outside the page selects nothing`, editableAt(l, { layout: l.id, slots: {} }, 300, 400, -5, -5) === null);
 }
 
-// 10.8e: swapLayout cuts text to the new slot's limit, so the server never meets a text it refuses
+// Text boxes are flexible: swapping layouts never cuts a creator's text, and it stays under the server ceiling
 {
-  const tiny = LAYOUT_LIST.filter((l) => editableSlots(l).some((s) => s.kind === "text")).sort((a, b) => Math.min(...editableSlots(a).filter((s) => s.kind === "text").map((s) => textLimit(s as never))) - Math.min(...editableSlots(b).filter((s) => s.kind === "text").map((s) => textLimit(s as never))))[0];
+  const tiny = LAYOUT_LIST.find((l) => editableSlots(l).some((s) => s.kind === "text"))!;
   const ts = editableSlots(tiny).filter((s) => s.kind === "text") as TextSlotDef[];
   const longText = "x".repeat(2000);
   const from = LAYOUTS.letter ?? LAYOUT_LIST.find((l) => l.id !== tiny.id)!;
   const pgs = { layout: from.id, slots: Object.fromEntries(ts.map((s) => [s.id, longText])) } as PageData;
   const out = swapLayout(pgs, tiny);
-  ok("swapLayout: long text is cut to each slot's limit", ts.every((s) => (out.slots[s.id] as string).length === textLimit(s)));
-  ok("swapLayout: cut text stays under the server limit", ts.every((s) => (out.slots[s.id] as string).length <= Math.max(60, textLimit(s) * 2)));
+  ok("swapLayout: long text is kept whole", ts.every((s) => (out.slots[s.id] as string).length === longText.length));
+  ok("swapLayout: kept text stays under the server limit", ts.every((s) => (out.slots[s.id] as string).length <= textLimit(s)));
   ok("swapLayout: short text is not touched", (() => { const q = swapLayout({ layout: from.id, slots: Object.fromEntries(ts.map((s) => [s.id, "Hi"])) } as PageData, tiny); return ts.every((s) => q.slots[s.id] === "Hi"); })());
 }
 // 10.8e: empty added photos are counted for the Send popup
@@ -82,14 +82,14 @@ ok("every layout group has a picker name", LAYOUT_LIST.every((l) => GROUP_NAMES.
 
 // Text controls (task 3.4).
 const tx = (l: string, id: string) => LAYOUTS[l].slots.find((s) => s.id === id) as import("../src/lib/pages/types.ts").TextSlotDef;
-ok("letter body limit is about a letter (280 to 400)", textLimit(tx("letter", "body")) >= 280 && textLimit(tx("letter", "body")) <= 400);
+ok("letter body allows a long letter (at least 1,500 characters)", textLimit(tx("letter", "body")) >= 1500);
 ok("every text slot allows at least 24 characters", LAYOUT_LIST.every((l) => editableSlots(l).every((s) => s.kind !== "text" || textLimit(s) >= 24)));
 for (const t of TEMPLATE_LIST) for (const p of fillPages(t.pages, { to: "Alexandria", from: "Bartholomew" })) for (const s of editableSlots(LAYOUTS[p.layout])) {
   const v = p.slots[s.id];
   if (s.kind === "text" && typeof v === "string") ok(`${t.id}/${p.layout}.${s.id}: sample text fits its limit (${v.length}/${textLimit(s)})`, v.length <= textLimit(s));
 }
 const lt = setSlotText(base, tx("letter", "body"), "x".repeat(5000));
-ok("text is cut to the limit", (lt.slots.body as string).length === textLimit(tx("letter", "body")));
+ok("set text keeps what was typed (no per-box cut)", (lt.slots.body as string).length === 5000);
 ok("set text does not change the input", base.slots.body === "Long text" && lt !== base);
 ok("set text keeps other slots", lt.slots.title === "Dear {to}," && lt.layout === "letter");
 const s1 = setTextStyle(base, "body", { size: "S", align: "center" });

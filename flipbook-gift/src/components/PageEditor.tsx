@@ -418,8 +418,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                 lineHeight: 1.3,
               }}
             />
-          )}            </div>
-          )}        </div>
+          )}
+        </div>
         {activeTool && (
           <section className="fixed inset-x-0 bottom-[76px] z-20 mx-auto w-full max-w-2xl px-3" aria-label={`${activeTool} tools`}>
             <div className="max-h-[30vh] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]">

@@ -7,10 +7,7 @@ import type {
 } from "./types";
 
 const SIZE_STEP = { S: 0.85, M: 1, L: 1.2 } as const;
-const MIN_SHRINK = 0.6; // text that does not fit shrinks down to 60% of its size, then is clipped
-/** Text breaks onto a new line at the box width. A box may grow to this many lines (never past the page edges)
- *  before the font is shrunk, so a short title or caption wraps instead of turning tiny. */
-const WRAP_LINES = 3;
+const MIN_SHRINK = 0.6; // last resort: text that still does not fit once the box has grown to the page edge shrinks to 60%, then is clipped
 /** Limits for the free text scale and box width (fractions of the page) set by handles, pinch and slider. */
 export const TEXT_SCALE_MIN = 0.4, TEXT_SCALE_MAX = 4, TEXT_WIDTH_MIN = 0.12;
 /** Font size factor of a text style: the free scale if the creator set one, otherwise the S/M/L step. */
@@ -28,49 +25,62 @@ export const textSlotRect = (s: TextSlotDef, st: TextStyle | undefined, w: numbe
 });
 
 /**
+ * Weight and slant for a text: the creator's Bold / Italic buttons (`st.bold`, `st.italic`) win over the layout's own values.
+ * Bold asks for at least 700 (and never less than the layout's weight); "not bold" caps at 400. A display face that has no real
+ * bold is capped to its heaviest real weight (`displayMaxWeight`), so the browser never fakes a wider bold than was measured.
+ */
+export function textFace(s: TextSlotDef, st: TextStyle | undefined, book: BookStyle) {
+  const role = st?.font ?? s.font;
+  const base = s.weight ?? 400;
+  const want = st?.bold === undefined ? base : st.bold ? Math.max(700, base) : Math.min(400, base);
+  const weight = Math.min(want, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
+  return { role, family: book.fonts[role], weight, italic: st?.italic ?? !!s.italic };
+}
+
+/**
  * Single source of truth for how a text slot is typeset: font, shrink-to-fit size, line height and wrapped lines.
  * The page renderer (drawText), the selection outline (textFitRect) and the on-page text editor (textEditBox)
  * all call this, so what is edited is always exactly what is drawn. Leaves `c` set to the final font.
  */
 function typeset(c: CanvasRenderingContext2D, s: TextSlotDef, text: string, st: TextStyle | undefined, book: BookStyle, r: { y: number; w: number; h: number }, w: number, h: number) {
-  const role = st?.font ?? s.font;
-  const family = book.fonts[role];
-  const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
+  const { family, weight, italic } = textFace(s, st, book);
   const lh = s.lh ?? 1.3;
   const tracking = s.tracking ?? 0;
   const base = s.size * w * sizeFactor(st);
   const setFont = (px: number) => {
-    c.font = `${s.italic ? "italic " : ""}${weight} ${px}px ${family}`;
+    c.font = `${italic ? "italic " : ""}${weight} ${px}px ${family}`;
     // letterSpacing is missing in older Safari; the text is simply a little tighter there.
     (c as unknown as { letterSpacing: string }).letterSpacing = tracking ? `${tracking * px}px` : "0px";
   };
   // Room the box may grow into, in the direction its vertical alignment implies, without leaving the page.
   const lo = h * PAGE_MARGIN, hi = h * (1 - PAGE_MARGIN);
   const room = s.valign === "bottom" ? r.y + r.h - lo : s.valign === "middle" ? 2 * Math.min(r.y + r.h / 2 - lo, hi - (r.y + r.h / 2)) : hi - r.y;
-  const capAt = (px: number) => Math.max(r.h, Math.min(WRAP_LINES * px * lh, room));
-  // Wrap at the box width first. Shrink only if the lines still do not fit the (grown) box, or a word is wider than the box.
+  // Like a text box in Word or CapCut: text wraps at the box width and the box grows with it, as far as the page allows.
+  const capAt = (_px: number) => Math.max(r.h, room);
+  // Wrap at the box width first. Shrink only if the lines would run past the page edge (a word wider than the box is
+  // broken across lines by wrapLines, it never shrinks the text).
   let px = base;
   let lines: string[] = [];
+  let ends: boolean[] = []; // true where a line ends its paragraph (those lines are never stretched by Justify)
   // Size set by the creator (handle, pinch, slider): never shrink. Wrap at the box width and let the box grow as tall as the text needs.
   const manual = st?.scale !== undefined;
   if (manual) {
     setFont(px);
-    lines = wrapLines(c, text, r.w);
+    lines = wrapLines(c, text, r.w, (ends = []));
     const capH = Math.max(r.h, lines.length * px * lh);
     const regionY = s.valign === "bottom" ? r.y + r.h - capH : s.valign === "middle" ? r.y + (r.h - capH) / 2 : r.y;
-    return { family, weight, lh, tracking, px, lines, capH, regionY };
+    return { family, weight, italic, lh, tracking, px, lines, ends, capH, regionY };
   }
   for (;;) {
     setFont(px);
-    lines = wrapLines(c, text, r.w);
-    const wordFits = text.split(/\s+/).every((wd) => c.measureText(wd).width <= r.w);
-    if ((lines.length * px * lh <= capAt(px) && wordFits) || px <= base * MIN_SHRINK) break;
+    lines = wrapLines(c, text, r.w, (ends = []));
+    if (lines.length * px * lh <= capAt(px) || px <= base * MIN_SHRINK) break;
     px = Math.max(base * MIN_SHRINK, px * 0.93);
   }
   const capH = capAt(px);
   // The region text may occupy at this size (the slot, grown up/down/both ways), used for clipping and for the editor.
   const regionY = s.valign === "bottom" ? r.y + r.h - capH : s.valign === "middle" ? r.y + (r.h - capH) / 2 : r.y;
-  return { family, weight, lh, tracking, px, lines, capH, regionY };
+  return { family, weight, italic, lh, tracking, px, lines, ends, capH, regionY };
 }
 
 /**
@@ -84,9 +94,7 @@ export function textEditBox(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const align = st?.align ?? s.align ?? "left";
   const c = document.createElement("canvas").getContext("2d");
   let px = s.size * w * sizeFactor(st), lh = s.lh ?? 1.3, lines = 1;
-  const role = st?.font ?? s.font;
-  const family = book.fonts[role];
-  const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
+  const { family, weight, italic } = textFace(s, st, book);
   let capH = r.h;
   if (c && text.trim()) { const t = typeset(c, s, text, st, book, r, w, h); px = t.px; lh = t.lh; lines = t.lines.length; capH = t.capH; }
   const lineH = px * lh, total = lines * lineH;
@@ -96,7 +104,7 @@ export function textEditBox(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const padTop = s.valign === "bottom" ? Math.max(0, boxH - total) : s.valign === "middle" ? Math.max(0, (boxH - total) / 2) : 0;
   return {
     x: r.x, y: boxY, w: r.w, h: boxH, px, lineH, padTop, align, family, weight,
-    italic: !!s.italic, tracking: (s.tracking ?? 0) * px, upper: !!s.upper,
+    italic, tracking: (s.tracking ?? 0) * px, upper: !!s.upper,
   };
 }
 
@@ -109,13 +117,13 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   }
   const c = document.createElement("canvas").getContext("2d");
   if (!c) return r;
-  const { lh, tracking, px, lines } = typeset(c, s, text, st, book, r, w, h);
+  const { lh, tracking, px, lines, ends } = typeset(c, s, text, st, book, r, w, h);
 
   // Match drawText baseline math and measure actual glyph bounds, not the layout slot.
   const align = st?.align ?? s.align ?? "left";
   const widths = lines.map((line) => c.measureText(line).width + Math.max(0, line.length - 1) * tracking * px);
   const textW = Math.max(1, Math.min(r.w, ...widths));
-  const anchor = align === "center" ? r.x + r.w / 2 : align === "right" ? r.x + r.w : r.x;
+  const anchor = align === "center" ? r.x + r.w / 2 : align === "right" ? r.x + r.w : r.x; // Justify starts at the left edge like Left
   const metrics = lines.map((line, i) => {
     const m = c.measureText(line);
     const total = lines.length * px * lh;
@@ -123,8 +131,9 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
     const baseline = textTop + px * lh * i + px * (lh / 2 + 0.35);
     const ascent = m.actualBoundingBoxAscent || px * 0.78;
     const descent = m.actualBoundingBoxDescent || px * 0.22;
-    const width = m.width + Math.max(0, line.length - 1) * tracking * px;
-    const lineLeft = align === "left" ? anchor : align === "center" ? anchor - width / 2 : anchor - width;
+    const stretched = align === "justify" && ends[i] === false && line.includes(" "); // a justified line fills the whole box width
+    const width = stretched ? r.w : m.width + Math.max(0, line.length - 1) * tracking * px;
+    const lineLeft = align === "left" || align === "justify" ? anchor : align === "center" ? anchor - width / 2 : anchor - width;
     return { left: lineLeft, right: lineLeft + width, top: baseline - ascent, bottom: baseline + descent };
   });
   const minX = Math.max(0, Math.min(...metrics.map((m) => m.left)) - 2);
@@ -165,8 +174,9 @@ function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number,
 }
 
 /** Break text into lines that fit maxW. Paragraphs split on newlines; very long words are broken by character. */
-function wrapLines(c: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+function wrapLines(c: CanvasRenderingContext2D, text: string, maxW: number, ends?: boolean[]): string[] {
   const out: string[] = [];
+  const add = (ln: string, paragraphEnd: boolean) => { out.push(ln); ends?.push(paragraphEnd); }; // `ends[i]` = line i is the last of its paragraph
   for (const para of text.split("\n")) {
     let line = "";
     for (const word of para.split(" ")) {
@@ -176,17 +186,29 @@ function wrapLines(c: CanvasRenderingContext2D, text: string, maxW: number): str
         while (c.measureText(line).width > maxW && line.length > 1) {
           let cut = line.length - 1;
           while (cut > 1 && c.measureText(line.slice(0, cut)).width > maxW) cut--;
-          out.push(line.slice(0, cut));
+          add(line.slice(0, cut), false);
           line = line.slice(cut);
         }
       } else {
-        out.push(line);
+        add(line, false);
         line = word;
       }
     }
-    out.push(line);
+    add(line, true);
   }
   return out;
+}
+
+/** Draws one line with its words spread so it spans exactly `w`. Falls back to a plain left-aligned line when there is nothing to spread or the gaps would look broken. */
+function fillJustified(c: CanvasRenderingContext2D, line: string, x: number, y: number, w: number) {
+  const words = line.split(" ").filter(Boolean);
+  if (words.length < 2) { c.fillText(line, x, y); return; }
+  const widths = words.map((wd) => c.measureText(wd).width);
+  const gap = (w - widths.reduce((a, b) => a + b, 0)) / (words.length - 1);
+  const space = c.measureText(" ").width;
+  if (gap < space * 0.5 || gap > space * 4) { c.fillText(line, x, y); return; }
+  let cx = x;
+  words.forEach((wd, i) => { c.fillText(wd, cx, y); cx += widths[i] + gap; });
 }
 
 function drawText(c: CanvasRenderingContext2D, s: TextSlotDef, raw: string, st: TextStyle | undefined, book: BookStyle, w: number, h: number, pageNo: number) {
@@ -195,7 +217,7 @@ function drawText(c: CanvasRenderingContext2D, s: TextSlotDef, raw: string, st: 
   if (!text.trim()) return;
   if (s.upper) text = text.toUpperCase();
   const align = st?.align ?? s.align ?? "left";
-  const { lh, px, lines: wrapped, capH, regionY } = typeset(c, s, text, st, book, r, w, h);
+  const { lh, px, lines: wrapped, ends, capH, regionY } = typeset(c, s, text, st, book, r, w, h);
   let lines = wrapped;
 
   // Still too long at the smallest size: keep only the whole lines that fit and end with an ellipsis,
@@ -214,12 +236,17 @@ function drawText(c: CanvasRenderingContext2D, s: TextSlotDef, raw: string, st: 
   c.rect(r.x, regionY, r.w, capH);
   c.clip();
   c.fillStyle = color(book, st?.color ?? s.color);
-  c.textAlign = align;
+  c.textAlign = align === "justify" ? "left" : align;
   c.textBaseline = "alphabetic";
   const total = lines.length * px * lh;
   const top = overflow ? regionY : s.valign === "bottom" ? r.y + r.h - total : s.valign === "middle" ? r.y + (r.h - total) / 2 : r.y;
-  const x = align === "left" ? r.x : align === "center" ? r.x + r.w / 2 : r.x + r.w;
-  lines.forEach((ln, i) => c.fillText(ln, x, top + px * lh * i + px * (lh / 2 + 0.35)));
+  const x = align === "center" ? r.x + r.w / 2 : align === "right" ? r.x + r.w : r.x;
+  lines.forEach((ln, i) => {
+    const y = top + px * lh * i + px * (lh / 2 + 0.35);
+    // Justify stretches every line except the last of a paragraph (and the ellipsised last visible line) to the box width.
+    if (align === "justify" && ends[i] === false && !(overflow && i === lines.length - 1)) fillJustified(c, ln, r.x, y, r.w);
+    else c.fillText(ln, x, y);
+  });
   c.restore();
 }
 

@@ -30,7 +30,7 @@ export interface BookStyle {
 }
 
 export type SizeStep = "S" | "M" | "L";
-export type Align = "left" | "center" | "right";
+export type Align = "left" | "center" | "right" | "justify";
 export type PhotoFit = "fill" | "fit";
 export type PhotoFilter = "none" | "warm" | "bw";
 export type PhotoFrame = "none" | "border" | "rounded";
@@ -126,6 +126,10 @@ export interface TextStyle {
   font?: FontRole;
   size?: SizeStep;
   align?: Align;
+  /** Bold on or off for this text, overriding the layout's own weight. Unset = the layout decides. */
+  bold?: boolean;
+  /** Italic on or off for this text, overriding the layout. Unset = the layout decides. */
+  italic?: boolean;
   color?: ColorRef;
   /** Position offset from the layout slot, in page fractions. */
   x?: number;

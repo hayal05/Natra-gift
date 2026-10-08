@@ -11,6 +11,10 @@ const MIN_SHRINK = 0.6; // text that does not fit shrinks down to 60% of its siz
 /** Text breaks onto a new line at the box width. A box may grow to this many lines (never past the page edges)
  *  before the font is shrunk, so a short title or caption wraps instead of turning tiny. */
 const WRAP_LINES = 3;
+/** Limits for the free text scale and box width (fractions of the page) set by handles, pinch and slider. */
+export const TEXT_SCALE_MIN = 0.4, TEXT_SCALE_MAX = 4, TEXT_WIDTH_MIN = 0.12;
+/** Font size factor of a text style: the free scale if the creator set one, otherwise the S/M/L step. */
+export const sizeFactor = (st?: TextStyle): number => st?.scale ?? SIZE_STEP[st?.size ?? "M"];
 const PAGE_MARGIN = 0.03; // growing text stays this far (fraction of page height) from the top and bottom edges
 
 export const color = (book: BookStyle, ref: ColorRef): string =>
@@ -20,7 +24,7 @@ export const color = (book: BookStyle, ref: ColorRef): string =>
 export const slotRect = (s: SlotDef, w: number, h: number) => ({ x: s.x * w, y: s.y * h, w: s.w * w, h: s.h * h });
 export const photoSlotRect = (s: PhotoSlotDef, p: PhotoContent | undefined, w: number, h: number) => ({ x: (p?.x ?? s.x) * w, y: (p?.y ?? s.y) * h, w: (p?.w ?? s.w) * w, h: (p?.h ?? s.h) * h });
 export const textSlotRect = (s: TextSlotDef, st: TextStyle | undefined, w: number, h: number) => ({
-  x: (s.x + (st?.x ?? 0)) * w, y: (s.y + (st?.y ?? 0)) * h, w: s.w * w, h: s.h * h,
+  x: (s.x + (st?.x ?? 0)) * w, y: (s.y + (st?.y ?? 0)) * h, w: (st?.w ?? s.w) * w, h: s.h * h,
 });
 
 /**
@@ -34,7 +38,7 @@ function typeset(c: CanvasRenderingContext2D, s: TextSlotDef, text: string, st: 
   const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
   const lh = s.lh ?? 1.3;
   const tracking = s.tracking ?? 0;
-  const base = s.size * w * SIZE_STEP[st?.size ?? "M"];
+  const base = s.size * w * sizeFactor(st);
   const setFont = (px: number) => {
     c.font = `${s.italic ? "italic " : ""}${weight} ${px}px ${family}`;
     // letterSpacing is missing in older Safari; the text is simply a little tighter there.
@@ -47,6 +51,15 @@ function typeset(c: CanvasRenderingContext2D, s: TextSlotDef, text: string, st: 
   // Wrap at the box width first. Shrink only if the lines still do not fit the (grown) box, or a word is wider than the box.
   let px = base;
   let lines: string[] = [];
+  // Size set by the creator (handle, pinch, slider): never shrink. Wrap at the box width and let the box grow as tall as the text needs.
+  const manual = st?.scale !== undefined;
+  if (manual) {
+    setFont(px);
+    lines = wrapLines(c, text, r.w);
+    const capH = Math.max(r.h, lines.length * px * lh);
+    const regionY = s.valign === "bottom" ? r.y + r.h - capH : s.valign === "middle" ? r.y + (r.h - capH) / 2 : r.y;
+    return { family, weight, lh, tracking, px, lines, capH, regionY };
+  }
   for (;;) {
     setFont(px);
     lines = wrapLines(c, text, r.w);
@@ -70,7 +83,7 @@ export function textEditBox(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const text = s.upper ? raw.toUpperCase() : raw;
   const align = st?.align ?? s.align ?? "left";
   const c = document.createElement("canvas").getContext("2d");
-  let px = s.size * w * SIZE_STEP[st?.size ?? "M"], lh = s.lh ?? 1.3, lines = 1;
+  let px = s.size * w * sizeFactor(st), lh = s.lh ?? 1.3, lines = 1;
   const role = st?.font ?? s.font;
   const family = book.fonts[role];
   const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
@@ -91,7 +104,7 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const r = textSlotRect(s, st, w, h);
   const text = s.auto === "folio" ? raw : s.upper ? raw.toUpperCase() : raw;
   if (!text.trim()) {
-    const px = s.size * w * SIZE_STEP[st?.size ?? "M"];
+    const px = s.size * w * sizeFactor(st);
     return { x: r.x, y: r.y, w: Math.max(px, 12), h: Math.max(px * 1.15, 16) };
   }
   const c = document.createElement("canvas").getContext("2d");

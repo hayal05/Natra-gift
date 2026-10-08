@@ -130,6 +130,10 @@ export interface TextStyle {
   /** Position offset from the layout slot, in page fractions. */
   x?: number;
   y?: number;
+  /** Free font scale (1 = the layout's size). Set by the corner handle, pinch or slider; overrides `size`, and the text then never auto-shrinks. */
+  scale?: number;
+  /** Box width as a fraction of the page, overriding the layout slot's width (side handle). Text wraps at this width. */
+  w?: number;
 }
 
 export interface AudioContent {

@@ -110,6 +110,13 @@ export function setTextStyle(page: PageData, id: string, patch: Partial<TextStyl
   return { ...page, styles: Object.keys(styles).length ? styles : undefined };
 }
 
+/** Clears all creator overrides on a text box and restores its layout-defined position and size. */
+export function resetTextBox(page: PageData, id: string): PageData {
+  const styles = { ...page.styles };
+  delete styles[id];
+  return { ...page, styles: Object.keys(styles).length ? styles : undefined };
+}
+
 // ---------- Photo controls (task 3.5) ----------
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));

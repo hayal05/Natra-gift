@@ -4,7 +4,7 @@
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GROUP_NAMES, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, editableSlots, isAdjusted, movePage, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
-import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
+import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, textFitRect, slotRect, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
 import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS, audioFileProblem, readAudioDuration, recordingSupported, uploadAudio } from "../lib/audio";
@@ -37,9 +37,11 @@ interface Props {
 export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState(false);
   const [ready, setReady] = useState(false);
   const [images, setImages] = useState<ImageMap>(() => new Map());
   const main = useRef<HTMLCanvasElement>(null);
+  const textInput = useRef<HTMLTextAreaElement>(null);
   const thumbs = useRef<(HTMLCanvasElement | null)[]>([]);
   const strip = useRef<HTMLUListElement>(null);
   const picks = useRef<Record<string, HTMLCanvasElement | null>>({});
@@ -103,6 +105,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const textSlot = slot && slot.kind === "text" ? slot : null;
   const style: TextStyle = (textSlot && pages[at]?.styles?.[textSlot.id]) || {};
   const typed = textSlot ? (typeof page.slots[textSlot.id] === "string" ? (page.slots[textSlot.id] as string) : "") : "";
+  const textFit = textSlot ? textFitRect(textSlot, style, typed, book, W, H) : null;
   const pagesRef = useRef(pages);
   pagesRef.current = pages;
   const photoSlot = slot && slot.kind === "photo" ? slot : null;
@@ -121,6 +124,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const chip = (on: boolean) => "rounded-md border px-3 py-1.5 text-xs font-bold transition " + (on ? "border-rose-700 bg-rose-700 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500");
 
   useEffect(() => { setPhotoError(null); }, [slotId, index]);
+  useEffect(() => { if (!textSlot) setEditingText(false); }, [textSlot?.id]);
+  useEffect(() => { if (editingText) requestAnimationFrame(() => textInput.current?.focus()); }, [editingText, slotId]);
   useEffect(() => { setCanRecord(recordingSupported()); }, []);
   /** Throws away any recording (in progress or waiting for a decision) and releases the microphone. */
   const dropRecording = () => {
@@ -176,7 +181,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     else if (li.offsetLeft + li.offsetWidth > ul.scrollLeft + ul.clientWidth) ul.scrollLeft = li.offsetLeft + li.offsetWidth - ul.clientWidth + 4;
   }, [at, pages.length]);
 
-  const goto = (i: number) => { setIndex(i); setSlotId(null); };
+  const goto = (i: number) => { setIndex(i); setSlotId(null); setEditingText(false); };
   const selectedPhotoContent: PhotoContent | null = slot?.kind === "photo" && typeof pages[at]?.slots[slot.id] === "object" ? pages[at]?.slots[slot.id] as PhotoContent : null;
   const selectedPhotoRect = slot?.kind === "photo" ? photoSlotRect(slot, selectedPhotoContent ?? undefined, W, H) : null;
 
@@ -363,7 +368,14 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     if (wasTextDrag || wasPhotoDrag || wasResize) return;
     const r = e.currentTarget.getBoundingClientRect();
     const hit = editableAt(layout, pages[at], W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles);
-    setSlotId(hit && hit.id !== slotId ? hit.id : null);
+    if (hit?.kind === "text") {
+      setSlotId(hit.id);
+      setEditingText(true);
+      requestAnimationFrame(() => textInput.current?.focus());
+    } else {
+      setSlotId(hit && hit.id !== slotId ? hit.id : null);
+      setEditingText(false);
+    }
   };
 
   return (
@@ -378,21 +390,35 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               aria-hidden
               className="pointer-events-none absolute rounded-sm border-2 border-rose-600 bg-rose-600/10"
               style={{
-                left: `${((slot.kind === "photo" ? selectedPhotoRect?.x ?? slot.x * W : slot.x * W) / W + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.x ?? 0) : 0)) * 100}%`,
-                top: `${((slot.kind === "photo" ? selectedPhotoRect?.y ?? slot.y * H : slot.y * H) / H + (slot.kind === "text" ? (pages[at]?.styles?.[slot.id]?.y ?? 0) : 0)) * 100}%`,
-                width: `${(slot.kind === "photo" ? (selectedPhotoRect?.w ?? slot.w * W) / W : slot.w) * 100}%`,
-                height: `${(slot.kind === "photo" ? (selectedPhotoRect?.h ?? slot.h * H) / H : slot.h) * 100}%`,
+                left: `${((slot.kind === "photo" ? selectedPhotoRect?.x ?? slot.x * W : textFit?.x ?? slot.x * W) / W) * 100}%`,
+                top: `${((slot.kind === "photo" ? selectedPhotoRect?.y ?? slot.y * H : textFit?.y ?? slot.y * H) / H) * 100}%`,
+                width: `${(slot.kind === "photo" ? (selectedPhotoRect?.w ?? slot.w * W) / W : (textFit?.w ?? slot.w * W) / W) * 100}%`,
+                height: `${(slot.kind === "photo" ? (selectedPhotoRect?.h ?? slot.h * H) / H : (textFit?.h ?? slot.h * H) / H) * 100}%`,
                 ...(slot.rot ? { transform: `rotate(${slot.rot.deg}deg)`, transformOrigin: `${((slot.rot.cx - slot.x) / slot.w) * 100}% ${((slot.rot.cy - slot.y) / slot.h) * 100}%` } : {}),
               }}
             >
               {slot.kind === "photo" && (
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute h-4 w-4 rounded-sm border-2 border-white bg-rose-600 shadow"
-                  style={{ right: -8, bottom: -8 }}
-                />
+                <div aria-hidden className="pointer-events-none absolute h-4 w-4 rounded-sm border-2 border-white bg-rose-600 shadow" style={{ right: -8, bottom: -8 }} />
               )}
             </div>
+          )}
+          {editingText && textSlot && textFit && (
+            <textarea
+              ref={textInput}
+              value={typed}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setEditingText(false); textInput.current?.blur(); } }}
+              aria-label="Edit text on page"
+              className="pointer-events-none absolute resize-none overflow-hidden border-0 bg-transparent p-0 text-transparent caret-rose-700 outline-none"
+              style={{
+                left: `${textFit.x / W * 100}%`, top: `${textFit.y / H * 100}%`,
+                width: `${textFit.w / W * 100}%`, height: `${textFit.h / H * 100}%`,
+                fontFamily: style.font === "body" ? book.fonts.body : book.fonts.display,
+                fontSize: `${textFit.h * 0.7}px`,
+                lineHeight: 1.3,
+              }}
+            />
+          )}            </div>
           )}        </div>
         {activeTool && (
           <section className="fixed inset-x-0 bottom-[76px] z-20 mx-auto w-full max-w-2xl px-3" aria-label={`${activeTool} tools`}>

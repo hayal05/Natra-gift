@@ -19,6 +19,40 @@ export const textSlotRect = (s: TextSlotDef, st: TextStyle | undefined, w: numbe
   x: (s.x + (st?.x ?? 0)) * w, y: (s.y + (st?.y ?? 0)) * h, w: s.w * w, h: s.h * h,
 });
 
+export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: string, book: BookStyle, w: number, h: number) {
+  const r = textSlotRect(s, st, w, h);
+  const text = s.auto === "folio" ? raw : s.upper ? raw.toUpperCase() : raw;
+  if (!text.trim()) {
+    const px = s.size * w * SIZE_STEP[st?.size ?? "M"];
+    return { x: r.x, y: r.y, w: Math.max(px * 2, 24), h: Math.max(px * 1.35, 24) };
+  }
+  const c = document.createElement("canvas").getContext("2d");
+  if (!c) return r;
+  const role = st?.font ?? s.font;
+  const family = book.fonts[role];
+  const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
+  const lh = s.lh ?? 1.3;
+  const base = s.size * w * SIZE_STEP[st?.size ?? "M"];
+  const setFont = (px: number) => { c.font = (s.italic ? "italic " : "") + weight + " " + px + "px " + family; };
+  let px = base;
+  let lines: string[] = [];
+  for (;;) {
+    setFont(px);
+    lines = wrapLines(c, text, r.w);
+    const wordFits = text.split(/\s+/).every((wd) => c.measureText(wd).width <= r.w);
+    if ((lines.length * px * lh <= r.h && wordFits) || px <= base * MIN_SHRINK) break;
+    px = Math.max(base * MIN_SHRINK, px * 0.93);
+  }
+  const widths = lines.map((line) => c.measureText(line).width);
+  const textW = Math.max(12, Math.min(r.w, ...widths));
+  const textH = Math.max(px * lh, lines.length * px * lh);
+  const align = st?.align ?? s.align ?? "left";
+  const anchor = align === "center" ? r.x + r.w / 2 : align === "right" ? r.x + r.w : r.x;
+  const x = align === "left" ? anchor : anchor - textW;
+  const left = Math.max(0, x - 4), top = Math.max(0, r.y - 4);
+  return { x: left, y: top, w: Math.min(w - left, textW + 8), h: Math.min(h - top, textH + 8) };
+}
+
 /** The slot under a point (px), topmost first; text and photo slots only. Rotation is ignored (good enough for taps). */
 export function slotAt(layout: Layout, w: number, h: number, px: number, py: number): SlotDef | null {
   for (let i = layout.slots.length - 1; i >= 0; i--) {

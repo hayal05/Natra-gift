@@ -120,9 +120,9 @@ export function textLimit(s: TextSlotDef): number {
   return Math.max(24, Math.round(lines * perLine * (lines === 1 ? 2 : 1)));
 }
 
-/** Sets the text of a slot on a raw page (cut to the slot's limit). Typed text has no {to}/{from} tokens. */
+/** Sets the text of a slot on a raw page. Typed text has no {to}/{from} tokens and is not character-truncated. */
 export function setSlotText(page: PageData, s: TextSlotDef, text: string): PageData {
-  // Do not impose a character cap while typing. The renderer handles wrapping and fitting to the text box.
+  return { ...page, slots: { ...page.slots, [s.id]: text } };
 }
 
 /** Merges a style change into a raw page. A key set to undefined goes back to the layout's own look; an empty style is removed. */

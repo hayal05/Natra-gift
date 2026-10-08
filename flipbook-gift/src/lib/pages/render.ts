@@ -8,6 +8,10 @@ import type {
 
 const SIZE_STEP = { S: 0.85, M: 1, L: 1.2 } as const;
 const MIN_SHRINK = 0.6; // text that does not fit shrinks down to 60% of its size, then is clipped
+/** Text breaks onto a new line at the box width. A box may grow to this many lines (never past the page edges)
+ *  before the font is shrunk, so a short title or caption wraps instead of turning tiny. */
+const WRAP_LINES = 3;
+const PAGE_MARGIN = 0.03; // growing text stays this far (fraction of page height) from the top and bottom edges
 
 export const color = (book: BookStyle, ref: ColorRef): string =>
   ref in book.palette ? book.palette[ref as keyof BookStyle["palette"]] : ref;
@@ -24,7 +28,7 @@ export const textSlotRect = (s: TextSlotDef, st: TextStyle | undefined, w: numbe
  * The page renderer (drawText), the selection outline (textFitRect) and the on-page text editor (textEditBox)
  * all call this, so what is edited is always exactly what is drawn. Leaves `c` set to the final font.
  */
-function typeset(c: CanvasRenderingContext2D, s: TextSlotDef, text: string, st: TextStyle | undefined, book: BookStyle, r: { w: number; h: number }, w: number) {
+function typeset(c: CanvasRenderingContext2D, s: TextSlotDef, text: string, st: TextStyle | undefined, book: BookStyle, r: { y: number; w: number; h: number }, w: number, h: number) {
   const role = st?.font ?? s.font;
   const family = book.fonts[role];
   const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
@@ -36,17 +40,24 @@ function typeset(c: CanvasRenderingContext2D, s: TextSlotDef, text: string, st: 
     // letterSpacing is missing in older Safari; the text is simply a little tighter there.
     (c as unknown as { letterSpacing: string }).letterSpacing = tracking ? `${tracking * px}px` : "0px";
   };
-  // Shrink until the wrapped lines fit the box height AND the longest word fits the width (no mid-word breaks if avoidable).
+  // Room the box may grow into, in the direction its vertical alignment implies, without leaving the page.
+  const lo = h * PAGE_MARGIN, hi = h * (1 - PAGE_MARGIN);
+  const room = s.valign === "bottom" ? r.y + r.h - lo : s.valign === "middle" ? 2 * Math.min(r.y + r.h / 2 - lo, hi - (r.y + r.h / 2)) : hi - r.y;
+  const capAt = (px: number) => Math.max(r.h, Math.min(WRAP_LINES * px * lh, room));
+  // Wrap at the box width first. Shrink only if the lines still do not fit the (grown) box, or a word is wider than the box.
   let px = base;
   let lines: string[] = [];
   for (;;) {
     setFont(px);
     lines = wrapLines(c, text, r.w);
     const wordFits = text.split(/\s+/).every((wd) => c.measureText(wd).width <= r.w);
-    if ((lines.length * px * lh <= r.h && wordFits) || px <= base * MIN_SHRINK) break;
+    if ((lines.length * px * lh <= capAt(px) && wordFits) || px <= base * MIN_SHRINK) break;
     px = Math.max(base * MIN_SHRINK, px * 0.93);
   }
-  return { family, weight, lh, tracking, px, lines };
+  const capH = capAt(px);
+  // The region text may occupy at this size (the slot, grown up/down/both ways), used for clipping and for the editor.
+  const regionY = s.valign === "bottom" ? r.y + r.h - capH : s.valign === "middle" ? r.y + (r.h - capH) / 2 : r.y;
+  return { family, weight, lh, tracking, px, lines, capH, regionY };
 }
 
 /**
@@ -63,11 +74,15 @@ export function textEditBox(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const role = st?.font ?? s.font;
   const family = book.fonts[role];
   const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
-  if (c && text.trim()) { const t = typeset(c, s, text, st, book, r, w); px = t.px; lh = t.lh; lines = t.lines.length; }
+  let capH = r.h;
+  if (c && text.trim()) { const t = typeset(c, s, text, st, book, r, w, h); px = t.px; lh = t.lh; lines = t.lines.length; capH = t.capH; }
   const lineH = px * lh, total = lines * lineH;
-  const padTop = s.valign === "bottom" ? Math.max(0, r.h - total) : s.valign === "middle" ? Math.max(0, (r.h - total) / 2) : 0;
+  // The editor is the slot, grown only as far as the wrapped text needs (same rule the page is drawn with).
+  const boxH = Math.max(r.h, Math.min(total, capH));
+  const boxY = s.valign === "bottom" ? r.y + r.h - boxH : s.valign === "middle" ? r.y + (r.h - boxH) / 2 : r.y;
+  const padTop = s.valign === "bottom" ? Math.max(0, boxH - total) : s.valign === "middle" ? Math.max(0, (boxH - total) / 2) : 0;
   return {
-    x: r.x, y: r.y, w: r.w, h: r.h, px, lineH, padTop, align, family, weight,
+    x: r.x, y: boxY, w: r.w, h: boxH, px, lineH, padTop, align, family, weight,
     italic: !!s.italic, tracking: (s.tracking ?? 0) * px, upper: !!s.upper,
   };
 }
@@ -81,7 +96,7 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   }
   const c = document.createElement("canvas").getContext("2d");
   if (!c) return r;
-  const { lh, tracking, px, lines } = typeset(c, s, text, st, book, r, w);
+  const { lh, tracking, px, lines } = typeset(c, s, text, st, book, r, w, h);
 
   // Match drawText baseline math and measure actual glyph bounds, not the layout slot.
   const align = st?.align ?? s.align ?? "left";
@@ -159,12 +174,12 @@ function drawText(c: CanvasRenderingContext2D, s: TextSlotDef, raw: string, st: 
   if (!text.trim()) return;
   if (s.upper) text = text.toUpperCase();
   const align = st?.align ?? s.align ?? "left";
-  const { lh, px, lines: wrapped } = typeset(c, s, text, st, book, r, w);
+  const { lh, px, lines: wrapped, capH, regionY } = typeset(c, s, text, st, book, r, w, h);
   let lines = wrapped;
 
   // Still too long at the smallest size: keep only the whole lines that fit and end with an ellipsis,
   // anchored at the top so the start of the text is never the part that gets cut off.
-  const fits = Math.max(1, Math.floor(r.h / (px * lh)));
+  const fits = Math.max(1, Math.floor(capH / (px * lh)));
   const overflow = lines.length > fits;
   if (overflow) {
     lines = lines.slice(0, fits);
@@ -175,13 +190,13 @@ function drawText(c: CanvasRenderingContext2D, s: TextSlotDef, raw: string, st: 
 
   c.save();
   c.beginPath();
-  c.rect(r.x, r.y, r.w, r.h);
+  c.rect(r.x, regionY, r.w, capH);
   c.clip();
   c.fillStyle = color(book, st?.color ?? s.color);
   c.textAlign = align;
   c.textBaseline = "alphabetic";
   const total = lines.length * px * lh;
-  const top = overflow ? r.y : s.valign === "bottom" ? r.y + r.h - total : s.valign === "middle" ? r.y + (r.h - total) / 2 : r.y;
+  const top = overflow ? regionY : s.valign === "bottom" ? r.y + r.h - total : s.valign === "middle" ? r.y + (r.h - total) / 2 : r.y;
   const x = align === "left" ? r.x : align === "center" ? r.x + r.w / 2 : r.x + r.w;
   lines.forEach((ln, i) => c.fillText(ln, x, top + px * lh * i + px * (lh / 2 + 0.35)));
   c.restore();

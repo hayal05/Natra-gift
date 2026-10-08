@@ -23,13 +23,13 @@ export default function Home() {
   const active = TEMPLATE_LIST.find((template) => template.id === selected) ?? TEMPLATE_LIST[0];
 
   return (
-    <main className="h-[100dvh] overflow-hidden bg-[#fffaf5] text-[#202936]">
-      <header className="mx-auto flex h-[68px] max-w-[1320px] items-center justify-between px-5 lg:px-8">
+    <main className="min-h-screen bg-[#fffaf5] text-[#202936]">
+      <header className="mx-auto flex h-[72px] max-w-[1320px] items-center justify-between border-b border-[#f1e8df] px-5 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5" aria-label="NatraGift home">
-          <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-[#ff6900] text-white shadow-[0_8px_20px_rgba(255,105,0,.18)]">
+          <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-[#ff6900] text-white shadow-[0_8px_20px_rgba(255,105,0,.18)]">
             <GiftIcon />
           </span>
-          <span className="text-[20px] font-extrabold tracking-[-.04em]">
+          <span className="text-[22px] font-extrabold tracking-[-.04em]">
             Natra<span className="text-[#ff6900]">Gift</span>
           </span>
         </Link>
@@ -45,41 +45,41 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mx-auto grid h-[calc(100dvh-68px)] max-w-[1320px] gap-5 px-4 pb-4 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(430px,.85fr)] lg:px-8">
-        <section className="relative flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-[#f0e5da] bg-white shadow-[0_18px_55px_rgba(73,47,27,.08)]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,214,177,.42),transparent_34%),linear-gradient(145deg,#fff,#fff9f3)]" />
-          <div className="relative flex items-center justify-between px-5 py-4 sm:px-7">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#ff6900]">Featured gift</p>
-              <h1 className="mt-0.5 text-[21px] font-extrabold tracking-[-.035em] sm:text-[25px]">{active.name}</h1>
-            </div>
-            <span className="hidden rounded-full border border-[#eee4db] bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-[#7d838b] sm:block">
-              Live preview
-            </span>
-          </div>
-
-          <div className="relative min-h-0 flex-1 overflow-hidden px-3 pb-4 sm:px-8">
-            <div className="flex h-full items-center justify-center">
-              <div className="relative max-h-full w-full max-w-[690px]">
-                <div className="mx-auto w-[min(68%,560px)] min-w-[270px] max-w-full rounded-[24px] border-[7px] border-white bg-white p-1 shadow-[0_28px_65px_rgba(66,44,28,.22)] sm:w-[min(62%,600px)]">
-                  <div className="aspect-[3/4] overflow-hidden rounded-[15px] bg-[#f7eee5]">
-                    <LiveBook key={active.id} initial={active.id} />
-                  </div>
-                </div>
-                <div className="pointer-events-none absolute bottom-[-8px] left-1/2 h-8 w-[55%] -translate-x-1/2 rounded-full bg-[#7c563c]/15 blur-xl" />
-              </div>
-            </div>
-          </div>
-
-          <div className="relative flex items-center justify-between border-t border-[#f4ebe3] px-5 py-3 sm:px-7">
-            <p className="max-w-[70%] truncate text-[12px] text-[#747b84]">{active.blurb}</p>
-            <Link href={`/create?t=${active.id}`} className="shrink-0 rounded-full bg-[#ff6900] px-4 py-2 text-[12px] font-bold text-white transition hover:bg-[#f25e00]">
-              Use this template →
+      <section className="relative isolate overflow-hidden border-b border-[#f1e8df] bg-[radial-gradient(circle_at_75%_40%,rgba(255,218,186,.5),transparent_36%),linear-gradient(115deg,#fffaf5,#fff6ed)]">
+        <div className="mx-auto grid max-w-[1320px] items-center gap-5 px-5 py-7 sm:px-8 sm:py-10 lg:min-h-[620px] lg:grid-cols-[.82fr_1.18fr] lg:gap-10 lg:px-10 lg:py-8">
+          <div className="relative z-10 order-1 max-w-[520px] lg:py-8">
+            <p className="text-[10px] font-extrabold uppercase tracking-[.22em] text-[#ff6900] sm:text-[12px]">A gift that feels personal</p>
+            <h1 className="mt-3 max-w-[470px] font-serif text-[clamp(2.45rem,8vw,4.8rem)] font-bold leading-[.94] tracking-[-.055em] text-[#192a38]">Make it a moment.</h1>
+            <p className="mt-4 max-w-[390px] text-[15px] leading-[1.55] text-[#727b84] sm:text-[18px]">Turn your words and memories into a beautiful little gift.</p>
+            <Link href={`/create?t=${active.id}`} className="mt-5 inline-flex items-center gap-3 rounded-full bg-[#ff6900] px-6 py-3 text-[13px] font-bold text-white shadow-[0_10px_25px_rgba(255,105,0,.18)] transition hover:-translate-y-0.5 hover:bg-[#f25e00] sm:mt-7 sm:px-8 sm:py-3.5 sm:text-[14px]">
+              Use this template <span aria-hidden="true" className="text-lg leading-none">→</span>
             </Link>
+            <p className="mt-4 text-[11px] text-[#99918a]">Personalized by you · Made to be remembered</p>
           </div>
-        </section>
 
-        <section className="flex min-h-0 flex-col rounded-[28px] border border-[#f0e5da] bg-white p-4 shadow-[0_18px_55px_rgba(73,47,27,.06)] sm:p-5">
+          <div className="relative order-2 mx-auto w-full max-w-[470px] lg:max-w-[560px]">
+            <div className="pointer-events-none absolute -inset-4 rounded-[40%] bg-[#f7d8bb]/40 blur-3xl" />
+            <div className="relative mx-auto w-[min(76%,330px)] sm:w-[min(72%,390px)] lg:w-[min(88%,450px)]">
+              <div className="overflow-hidden rounded-[7px] border-[7px] border-white bg-white p-1 shadow-[0_24px_60px_rgba(75,49,29,.2)] sm:border-[9px]">
+                <div className="aspect-[3/4] overflow-hidden rounded-[3px] bg-[#f7eee5]">
+                  <LiveBook key={active.id} initial={active.id} />
+                </div>
+              </div>
+              <div className="pointer-events-none absolute -bottom-4 left-1/2 h-7 w-[72%] -translate-x-1/2 rounded-full bg-[#7c563c]/20 blur-xl" />
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-3 px-2 sm:px-5 lg:mt-0 lg:absolute lg:bottom-2 lg:left-0 lg:right-0">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[.17em] text-[#ff6900]">Featured template</p>
+                <p className="mt-1 truncate text-[14px] font-bold text-[#202936]">{active.name}</p>
+              </div>
+              <Link href={`/create?t=${active.id}`} className="shrink-0 text-[12px] font-bold text-[#ff6900] hover:text-[#df5600]">Make it yours ↗</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1320px] px-5 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+        <section className="flex flex-col">
           <div className="flex items-end justify-between px-1 pb-4">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#ff6900]">Templates</p>
@@ -88,8 +88,8 @@ export default function Home() {
             <span className="text-[11px] font-semibold text-[#9a9ea5]">{TEMPLATE_LIST.length} designs</span>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin]">
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <div className="pr-1">
+            <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:gap-x-5 sm:gap-y-7">
               {TEMPLATE_LIST.map((template) => {
                 const isActive = template.id === active.id;
                 const coverTitle =
@@ -111,7 +111,7 @@ export default function Home() {
                     aria-label={`Preview ${template.name}`}
                   >
                     <div
-                      className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-black/[.05] p-2.5 shadow-[0_6px_18px_rgba(50,35,25,.06)] transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_12px_25px_rgba(50,35,25,.11)]"
+                      className="relative aspect-[4/3] overflow-hidden rounded-[18px] border border-black/[.05] p-2 shadow-[0_6px_18px_rgba(50,35,25,.05)] transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_12px_25px_rgba(50,35,25,.11)] sm:rounded-[22px] sm:p-3"
                       style={{ background: template.palette.soft }}
                     >
                       <div className="relative h-full overflow-hidden rounded-[10px] border border-black/[.06] shadow-sm" style={{ color: template.palette.ink, background: template.palette.paper }}>
@@ -159,7 +159,7 @@ export default function Home() {
 
           <Link
             href={`/create?t=${active.id}`}
-            className="mt-4 flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#ff6900] text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(255,105,0,.14)] transition hover:bg-[#f25e00]"
+            className="mt-7 flex h-12 items-center justify-center rounded-full bg-[#ff6900] text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(255,105,0,.14)] transition hover:bg-[#f25e00] sm:mt-8"
           >
             Use “{active.name}”
           </Link>

@@ -55,7 +55,9 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const anchor = align === "center" ? r.x + r.w / 2 : align === "right" ? r.x + r.w : r.x;
   const metrics = lines.map((line, i) => {
     const m = c.measureText(line);
-    const baseline = r.y + px * lh * i + px * (lh / 2 + 0.35);
+    const total = lines.length * px * lh;
+    const textTop = s.valign === "bottom" ? r.y + r.h - total : s.valign === "middle" ? r.y + (r.h - total) / 2 : r.y;
+    const baseline = textTop + px * lh * i + px * (lh / 2 + 0.35);
     const ascent = m.actualBoundingBoxAscent || px * 0.78;
     const descent = m.actualBoundingBoxDescent || px * 0.22;
     const width = m.width + Math.max(0, line.length - 1) * tracking * px;

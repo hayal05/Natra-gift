@@ -24,7 +24,7 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const text = s.auto === "folio" ? raw : s.upper ? raw.toUpperCase() : raw;
   if (!text.trim()) {
     const px = s.size * w * SIZE_STEP[st?.size ?? "M"];
-    return { x: r.x, y: r.y, w: Math.max(px * 2, 24), h: Math.max(px * 1.35, 24) };
+    return { x: r.x, y: r.y, w: Math.max(px, 12), h: Math.max(px * 1.15, 16) };
   }
   const c = document.createElement("canvas").getContext("2d");
   if (!c) return r;
@@ -32,8 +32,12 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const family = book.fonts[role];
   const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
   const lh = s.lh ?? 1.3;
+  const tracking = s.tracking ?? 0;
   const base = s.size * w * SIZE_STEP[st?.size ?? "M"];
-  const setFont = (px: number) => { c.font = (s.italic ? "italic " : "") + weight + " " + px + "px " + family; };
+  const setFont = (px: number) => {
+    c.font = (s.italic ? "italic " : "") + weight + " " + px + "px " + family;
+    (c as unknown as { letterSpacing: string }).letterSpacing = `${tracking * px}px`;
+  };
   let px = base;
   let lines: string[] = [];
   for (;;) {
@@ -43,14 +47,26 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
     if ((lines.length * px * lh <= r.h && wordFits) || px <= base * MIN_SHRINK) break;
     px = Math.max(base * MIN_SHRINK, px * 0.93);
   }
-  const widths = lines.map((line) => c.measureText(line).width);
-  const textW = Math.max(12, Math.min(r.w, ...widths));
-  const textH = Math.max(px * lh, lines.length * px * lh);
+
+  // Match drawText baseline math and measure actual glyph bounds, not the layout slot.
   const align = st?.align ?? s.align ?? "left";
+  const widths = lines.map((line) => c.measureText(line).width + Math.max(0, line.length - 1) * tracking * px);
+  const textW = Math.max(1, Math.min(r.w, ...widths));
   const anchor = align === "center" ? r.x + r.w / 2 : align === "right" ? r.x + r.w : r.x;
-  const x = align === "left" ? anchor : anchor - textW;
-  const left = Math.max(0, x - 4), top = Math.max(0, r.y - 4);
-  return { x: left, y: top, w: Math.min(w - left, textW + 8), h: Math.min(h - top, textH + 8) };
+  const metrics = lines.map((line, i) => {
+    const m = c.measureText(line);
+    const baseline = r.y + px * lh * i + px * (lh / 2 + 0.35);
+    const ascent = m.actualBoundingBoxAscent || px * 0.78;
+    const descent = m.actualBoundingBoxDescent || px * 0.22;
+    const width = m.width + Math.max(0, line.length - 1) * tracking * px;
+    const lineLeft = align === "left" ? anchor : align === "center" ? anchor - width / 2 : anchor - width;
+    return { left: lineLeft, right: lineLeft + width, top: baseline - ascent, bottom: baseline + descent };
+  });
+  const minX = Math.max(0, Math.min(...metrics.map((m) => m.left)) - 2);
+  const maxX = Math.min(w, Math.max(...metrics.map((m) => m.right)) + 2);
+  const minY = Math.max(0, Math.min(...metrics.map((m) => m.top)) - 2);
+  const maxY = Math.min(h, Math.max(...metrics.map((m) => m.bottom)) + 2);
+  return { x: minX, y: minY, w: Math.max(2, maxX - minX), h: Math.max(2, maxY - minY) };
 }
 
 /** The slot under a point (px), topmost first; text and photo slots only. Rotation is ignored (good enough for taps). */

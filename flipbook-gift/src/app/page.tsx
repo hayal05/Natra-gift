@@ -154,7 +154,8 @@ export default function Home() {
                     </div>
                   </button>
                 );
-              })}            </div>
+              })}
+            </div>
           </div>
 
           <Link
@@ -164,7 +165,7 @@ export default function Home() {
             Use “{active.name}”
           </Link>
         </section>
-      </div>
+      </section>
     </main>
   );
 }

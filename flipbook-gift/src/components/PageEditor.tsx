@@ -125,7 +125,16 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
 
   useEffect(() => { setPhotoError(null); }, [slotId, index]);
   useEffect(() => { if (!textSlot) setEditingText(false); }, [textSlot?.id]);
-  useEffect(() => { if (editingText) requestAnimationFrame(() => textInput.current?.focus()); }, [editingText, slotId]);
+  useEffect(() => {
+    if (!editingText) return;
+    requestAnimationFrame(() => {
+      const input = textInput.current;
+      if (!input) return;
+      input.focus();
+      const end = input.value.length;
+      input.setSelectionRange(end, end);
+    });
+  }, [editingText, slotId]);
   useEffect(() => { setCanRecord(recordingSupported()); }, []);
   /** Throws away any recording (in progress or waiting for a decision) and releases the microphone. */
   const dropRecording = () => {
@@ -409,7 +418,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setEditingText(false); textInput.current?.blur(); } }}
               aria-label="Edit text on page"
-              className="pointer-events-none absolute resize-none overflow-hidden border-0 bg-transparent p-0 text-transparent caret-rose-700 outline-none"
+              className="pointer-events-auto absolute resize-none overflow-hidden border-0 bg-transparent p-0 text-transparent caret-rose-700 outline-none"
               style={{
                 left: `${textFit.x / W * 100}%`, top: `${textFit.y / H * 100}%`,
                 width: `${textFit.w / W * 100}%`, height: `${textFit.h / H * 100}%`,

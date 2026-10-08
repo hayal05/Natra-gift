@@ -296,7 +296,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const canPan = (() => {
     if (!photoSlot || !photo.src) return false;
     if (!isSample(photo.src) && !imgSize) return false; // still loading: nothing to measure
-    const o = photoOverflow(photoBox(photoSlot, photo.frame, W, H), imgSize, photo);
+    const o = photoOverflow(photoSlotRect(photoSlot, photo, W, H), imgSize, photo);
     return o.x > 0 || o.y > 0;
   })();
   const down = (e: React.PointerEvent<HTMLDivElement>) => {

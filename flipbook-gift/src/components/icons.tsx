@@ -16,6 +16,12 @@ const PATHS = {
   "arrow-right": <path d="M5 12h14M13 6l6 6-6 6" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   play: <path d="M8 5v14l11-7L8 5z" />,
+  "align-left": <path d="M4 5h16M4 9.5h10M4 14h16M4 18.5h10" strokeWidth={2.6} />,
+  "align-center": <path d="M4 5h16M7 9.5h10M4 14h16M7 18.5h10" strokeWidth={2.6} />,
+  "align-right": <path d="M4 5h16M10 9.5h10M4 14h16M10 18.5h10" strokeWidth={2.6} />,
+  "align-justify": <path d="M4 5h16M4 9.5h16M4 14h16M4 18.5h16" strokeWidth={2.6} />,
+  bold: <path d="M7 4.5h6a3.6 3.6 0 0 1 0 7.2H7zM7 11.7h7a3.9 3.9 0 0 1 0 7.8H7z" strokeWidth={2.6} strokeLinejoin="round" />,
+  italic: <path d="M14 5h5M5 19h5M15.5 5 8.5 19" strokeWidth={2.4} />,
 } satisfies Record<string, ReactElement>;
 
 export type IconName = keyof typeof PATHS;

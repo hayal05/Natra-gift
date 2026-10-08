@@ -11,6 +11,7 @@ import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS,
 import { createRecorder, type Recorder } from "../audio/recorder";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
+import VoiceNotePill, { type PillPos } from "./VoiceNotePill";
 import { LAYOUTS, LAYOUT_LIST, bookStyle, fillPages, type Template } from "../templates";
 
 // Panel layout helpers (10.5): a small heading over a block, and one row per control with its label on the left.
@@ -157,7 +158,11 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   // Picking the layout's own value clears the override, so "reset" is just choosing the default again.
   const cur = {
     font: style.font ?? textSlot?.font, size: style.size ?? "M", align: style.align ?? textSlot?.align ?? "left", color: style.color ?? textSlot?.color,
+    bold: style.bold ?? (textSlot?.weight ?? 400) >= 600, italic: style.italic ?? !!textSlot?.italic,
   };
+  // Bold / Italic toggle against what the layout already does; going back to the layout's own value clears the override.
+  const toggleBold = () => textSlot && setStyle({ bold: !cur.bold === ((textSlot.weight ?? 400) >= 600) ? undefined : !cur.bold });
+  const toggleItalic = () => textSlot && setStyle({ italic: !cur.italic === !!textSlot.italic ? undefined : !cur.italic });
   const chip = (on: boolean) => "min-h-[44px] rounded-md border px-3 py-1.5 text-xs font-bold transition " + (on ? "border-rose-700 bg-rose-700 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500");
 
   useEffect(() => { setPhotoError(null); }, [slotId, index]);
@@ -259,6 +264,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const copyPage = () => { if (!roomForPage) return; onChange(duplicatePage(pages, at)); goto(at + 1); };
 
   const currentAudio = pages[at]?.audio;
+  const [pillPos, setPillPos] = useState<Record<number, PillPos>>({}); // where the creator dragged each page's voice pill (editing only)
   const chooseAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -506,6 +512,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
           <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full rounded-lg" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
+          {currentAudio && !editingText && <VoiceNotePill key={`${at}:${currentAudio.src}`} src={currentAudio.src} duration={currentAudio.duration} pos={pillPos[at]} onMove={(p) => setPillPos((m) => ({ ...m, [at]: p }))} />}
           {slot && slot.kind === "photo" && (
             <div
               aria-hidden
@@ -629,12 +636,16 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                     </Group>
                     {textSlot && <>
                       <Group title="Text">
-                        <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={3} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
+                        <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={Math.min(10, Math.max(3, typed.split("\n").reduce((n, ln) => n + Math.max(1, Math.ceil(ln.length / 32)), 0)))} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
                       </Group>
                       <Group title="Look">
                         <Row label="Font">{([["display","Headline"],["body","Reading"]] as [FontRole,string][]).map(([r,label])=><button key={r} type="button" onClick={()=>setStyle({font:r===textSlot.font?undefined:r})} className={chip(cur.font===r)}>{label}</button>)}</Row>
                         <Row label="Size">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}<input type="range" aria-label={`Size ${Math.round(sizeFactor(style)*100)}%`} min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="h-11 min-w-[96px] flex-1 accent-rose-700"/><span className="w-10 shrink-0 text-right text-xs text-stone-500">{Math.round(sizeFactor(style)*100)}%</span></Row>
-                        <Row label="Align">{(["left","center","right"] as Align[]).map(a=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} className={chip(cur.align===a)+" capitalize"}>{a}</button>)}</Row>
+                        <Row label="Style">
+                          <button type="button" onClick={toggleBold} aria-pressed={cur.bold} aria-label="Bold" className={chip(cur.bold)+" grid w-11 place-items-center px-0"}><Icon name="bold" size={18} /></button>
+                          <button type="button" onClick={toggleItalic} aria-pressed={cur.italic} aria-label="Italic" className={chip(cur.italic)+" grid w-11 place-items-center px-0"}><Icon name="italic" size={18} /></button>
+                        </Row>
+                        <Row label="Align">{([["left","Align left","align-left"],["center","Align center","align-center"],["right","Align right","align-right"],["justify","Justify","align-justify"]] as [Align,string,IconName][]).map(([a,label,icon])=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} aria-pressed={cur.align===a} aria-label={label} className={chip(cur.align===a)+" grid w-11 place-items-center px-0"}><Icon name={icon} size={18} /></button>)}</Row>
                         <Row label="Colour">{TEXT_COLORS.map(([k,name])=><button key={k} type="button" aria-label={name} aria-pressed={cur.color===k} onClick={()=>setStyle({color:k===textSlot.color?undefined:k})} className="grid h-11 w-11 shrink-0 place-items-center"><span className={"block h-8 w-8 rounded-full border-2 "+(cur.color===k?"border-rose-700 ring-2 ring-rose-300":"border-stone-300")} style={{background:book.palette[k]}}/></button>)}</Row>
                       </Group>
                       <Group title="Position"><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>

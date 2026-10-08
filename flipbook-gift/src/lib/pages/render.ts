@@ -19,15 +19,12 @@ export const textSlotRect = (s: TextSlotDef, st: TextStyle | undefined, w: numbe
   x: (s.x + (st?.x ?? 0)) * w, y: (s.y + (st?.y ?? 0)) * h, w: s.w * w, h: s.h * h,
 });
 
-export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: string, book: BookStyle, w: number, h: number) {
-  const r = textSlotRect(s, st, w, h);
-  const text = s.auto === "folio" ? raw : s.upper ? raw.toUpperCase() : raw;
-  if (!text.trim()) {
-    const px = s.size * w * SIZE_STEP[st?.size ?? "M"];
-    return { x: r.x, y: r.y, w: Math.max(px, 12), h: Math.max(px * 1.15, 16) };
-  }
-  const c = document.createElement("canvas").getContext("2d");
-  if (!c) return r;
+/**
+ * Single source of truth for how a text slot is typeset: font, shrink-to-fit size, line height and wrapped lines.
+ * The page renderer (drawText), the selection outline (textFitRect) and the on-page text editor (textEditBox)
+ * all call this, so what is edited is always exactly what is drawn. Leaves `c` set to the final font.
+ */
+function typeset(c: CanvasRenderingContext2D, s: TextSlotDef, text: string, st: TextStyle | undefined, book: BookStyle, r: { w: number; h: number }, w: number) {
   const role = st?.font ?? s.font;
   const family = book.fonts[role];
   const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
@@ -35,9 +32,11 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
   const tracking = s.tracking ?? 0;
   const base = s.size * w * SIZE_STEP[st?.size ?? "M"];
   const setFont = (px: number) => {
-    c.font = (s.italic ? "italic " : "") + weight + " " + px + "px " + family;
-    (c as unknown as { letterSpacing: string }).letterSpacing = `${tracking * px}px`;
+    c.font = `${s.italic ? "italic " : ""}${weight} ${px}px ${family}`;
+    // letterSpacing is missing in older Safari; the text is simply a little tighter there.
+    (c as unknown as { letterSpacing: string }).letterSpacing = tracking ? `${tracking * px}px` : "0px";
   };
+  // Shrink until the wrapped lines fit the box height AND the longest word fits the width (no mid-word breaks if avoidable).
   let px = base;
   let lines: string[] = [];
   for (;;) {
@@ -47,6 +46,42 @@ export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: stri
     if ((lines.length * px * lh <= r.h && wordFits) || px <= base * MIN_SHRINK) break;
     px = Math.max(base * MIN_SHRINK, px * 0.93);
   }
+  return { family, weight, lh, tracking, px, lines };
+}
+
+/**
+ * Geometry for the on-page text editor (page px, same space as the slot rectangle).
+ * The editor box is the whole slot; font size and line height are the exact values the page is drawn with, and
+ * `padTop` reproduces the slot's vertical alignment, so the caret is as tall as the letters and sits on the drawn line.
+ */
+export function textEditBox(s: TextSlotDef, st: TextStyle | undefined, raw: string, book: BookStyle, w: number, h: number) {
+  const r = textSlotRect(s, st, w, h);
+  const text = s.upper ? raw.toUpperCase() : raw;
+  const align = st?.align ?? s.align ?? "left";
+  const c = document.createElement("canvas").getContext("2d");
+  let px = s.size * w * SIZE_STEP[st?.size ?? "M"], lh = s.lh ?? 1.3, lines = 1;
+  const role = st?.font ?? s.font;
+  const family = book.fonts[role];
+  const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
+  if (c && text.trim()) { const t = typeset(c, s, text, st, book, r, w); px = t.px; lh = t.lh; lines = t.lines.length; }
+  const lineH = px * lh, total = lines * lineH;
+  const padTop = s.valign === "bottom" ? Math.max(0, r.h - total) : s.valign === "middle" ? Math.max(0, (r.h - total) / 2) : 0;
+  return {
+    x: r.x, y: r.y, w: r.w, h: r.h, px, lineH, padTop, align, family, weight,
+    italic: !!s.italic, tracking: (s.tracking ?? 0) * px, upper: !!s.upper,
+  };
+}
+
+export function textFitRect(s: TextSlotDef, st: TextStyle | undefined, raw: string, book: BookStyle, w: number, h: number) {
+  const r = textSlotRect(s, st, w, h);
+  const text = s.auto === "folio" ? raw : s.upper ? raw.toUpperCase() : raw;
+  if (!text.trim()) {
+    const px = s.size * w * SIZE_STEP[st?.size ?? "M"];
+    return { x: r.x, y: r.y, w: Math.max(px, 12), h: Math.max(px * 1.15, 16) };
+  }
+  const c = document.createElement("canvas").getContext("2d");
+  if (!c) return r;
+  const { lh, tracking, px, lines } = typeset(c, s, text, st, book, r, w);
 
   // Match drawText baseline math and measure actual glyph bounds, not the layout slot.
   const align = st?.align ?? s.align ?? "left";
@@ -123,29 +158,9 @@ function drawText(c: CanvasRenderingContext2D, s: TextSlotDef, raw: string, st: 
   let text = s.auto === "folio" ? `${String(pageNo + 1).padStart(2, "0")}  ·  ${book.masthead}` : s.text ?? raw;
   if (!text.trim()) return;
   if (s.upper) text = text.toUpperCase();
-  const role = st?.font ?? s.font;
-  const family = book.fonts[role];
-  const weight = Math.min(s.weight ?? 400, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
-  const base = s.size * w * SIZE_STEP[st?.size ?? "M"];
   const align = st?.align ?? s.align ?? "left";
-  const lh = s.lh ?? 1.3;
-  const setFont = (px: number) => {
-    c.font = `${s.italic ? "italic " : ""}${weight} ${px}px ${family}`;
-    // letterSpacing is missing in older Safari; the text is simply a little tighter there.
-    (c as unknown as { letterSpacing: string }).letterSpacing = s.tracking ? `${s.tracking * px}px` : "0px";
-  };
-
-  // Shrink until the wrapped text fits the box height.
-  let px = base;
-  let lines: string[] = [];
-  for (;;) {
-    setFont(px);
-    lines = wrapLines(c, text, r.w);
-    // Shrink until the lines fit the height AND the longest word fits the width (no mid-word breaks if avoidable).
-    const wordFits = text.split(/\s+/).every((wd) => c.measureText(wd).width <= r.w);
-    if ((lines.length * px * lh <= r.h && wordFits) || px <= base * MIN_SHRINK) break;
-    px = Math.max(base * MIN_SHRINK, px * 0.93);
-  }
+  const { lh, px, lines: wrapped } = typeset(c, s, text, st, book, r, w);
+  let lines = wrapped;
 
   // Still too long at the smallest size: keep only the whole lines that fit and end with an ellipsis,
   // anchored at the top so the start of the text is never the part that gets cut off.

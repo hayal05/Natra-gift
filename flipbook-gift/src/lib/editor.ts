@@ -91,7 +91,7 @@ export function swapLayout(page: PageData, next: Layout, seed = 0): PageData {
   }
   for (const s of editableSlots(next)) { // 10.8e: text longer than the new slot allows is cut, as typing would, so the server never refuses the gift
     const v = slots[s.id];
-    if (s.kind === "text" && typeof v === "string" && v.length > textLimit(s)) slots[s.id] = v.slice(0, textLimit(s));
+    // Text is intentionally not truncated when changing layouts; creators can keep longer messages.
   }
   const { hidden: _hidden, ...keep } = page; // components deleted from the old layout come back; added components (extras) stay
   return { ...keep, layout: next.id, slots };
@@ -122,7 +122,7 @@ export function textLimit(s: TextSlotDef): number {
 
 /** Sets the text of a slot on a raw page (cut to the slot's limit). Typed text has no {to}/{from} tokens. */
 export function setSlotText(page: PageData, s: TextSlotDef, text: string): PageData {
-  return { ...page, slots: { ...page.slots, [s.id]: text.slice(0, textLimit(s)) } };
+  // Do not impose a character cap while typing. The renderer handles wrapping and fitting to the text box.
 }
 
 /** Merges a style change into a raw page. A key set to undefined goes back to the layout's own look; an empty style is removed. */

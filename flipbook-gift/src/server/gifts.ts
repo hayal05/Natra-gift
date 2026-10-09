@@ -157,12 +157,13 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
       if (st.align !== undefined) { if (!oneOf(st.align, ["left", "center", "right", "justify"])) return bad("A text style is not valid."); o.align = st.align as TextStyle["align"]; }
       for (const k of ["bold", "italic"] as const) { if (st[k] === undefined) continue; if (typeof st[k] !== "boolean") return bad("A text style is not valid."); o[k] = st[k] as boolean; }
       if (st.color !== undefined) { if (!oneOf(st.color, PALETTE_KEYS)) return bad("A text style is not valid."); o.color = st.color as TextStyle["color"]; }
-      const num = (v: unknown, lo: number, hi: number) => (typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : undefined);
+      // Numbers are clamped into range instead of refused: a box dragged near the page edge and then resized can land a hair outside
+      // (for example scale 0.389), and refusing it blocked the whole publish. Only a non-number (null, NaN, text) is dropped.
       for (const [k, lo, hi] of [["x", -0.45, 0.45], ["y", -0.45, 0.45], ["scale", 0.4, 4], ["w", 0.1, 1]] as const) {
-        if (st[k] === undefined) continue;
-        const v = num(st[k], lo, hi);
-        if (v === undefined) return bad("A text style is not valid.");
-        o[k] = v;
+        const v = st[k];
+        if (v === undefined || v === null) continue;
+        if (typeof v !== "number" || !Number.isFinite(v)) continue;
+        o[k] = Math.min(hi, Math.max(lo, v));
       }
       styles[d.id] = o;
     }

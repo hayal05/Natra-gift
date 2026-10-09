@@ -7,7 +7,9 @@ import { LAYOUTS, bookStyle, fillPages, type Template } from "../templates";
 
 const W = 300, H = 400, DPR = 2;
 
-export default function CoverPreview({ template, to, from, fontPair, palette }: { template: Template; to: string; from: string; fontPair: 0 | 1; palette?: Palette }) {
+const DEFAULT_CLASS = "block aspect-[3/4] w-full rounded-xl shadow-lg ring-1 ring-black/5";
+
+export default function CoverPreview({ template, to, from, fontPair, palette, className = DEFAULT_CLASS }: { template: Template; to: string; from: string; fontPair: 0 | 1; palette?: Palette; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -23,5 +25,5 @@ export default function CoverPreview({ template, to, from, fontPair, palette }: 
     return () => { alive = false; };
   }, [template, to, from, fontPair, palette]);
 
-  return <canvas ref={ref} width={W * DPR} height={H * DPR} className="block aspect-[3/4] w-full rounded-xl shadow-lg ring-1 ring-black/5" role="img" aria-label={`${template.name} cover`} />;
+  return <canvas ref={ref} width={W * DPR} height={H * DPR} className={className} role="img" aria-label={`${template.name} cover`} />;
 }

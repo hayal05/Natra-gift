@@ -2,10 +2,10 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LIMITS, draftPalette, loadDraft, newDraft, saveDraft, type Draft } from "../lib/draft";
+import { draftPalette, loadDraft, newDraft, saveDraft, type Draft } from "../lib/draft";
 import { TEMPLATES, fill } from "../templates";
-import CoverPreview from "./CoverPreview";
 import { publishGift } from "../lib/publish";
+import NamesStep, { Shell } from "./NamesStep";
 import PageEditor from "./PageEditor";
 import PreviewBook from "./PreviewBook";
 import PublishDialog from "./PublishDialog";
@@ -13,8 +13,6 @@ import { Icon, type IconName } from "./icons";
 
 type EditorTool = "Pages" | "Edit" | "Audio" | "Style";
 const TOOLS: [EditorTool, IconName][] = [["Pages", "pages"], ["Edit", "text"], ["Audio", "audio"], ["Style", "style"]];
-
-const input = "mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-base text-stone-900 shadow-sm focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900";
 
 export default function CreateScreen() {
   const wanted = useSearchParams().get("t");
@@ -40,12 +38,12 @@ export default function CreateScreen() {
   if (unknown) {
     return (
       <Shell>
-        <p className="text-lg text-stone-700">{wanted ? "We could not find that template." : "You have not started a gift yet."}</p>
-        <Link href="/#templates" className="mt-5 inline-block rounded-full bg-rose-700 px-6 py-3 font-bold text-white hover:bg-rose-800">Choose a template</Link>
+        <p className="text-lg text-[#4a525b]">{wanted ? "We could not find that template." : "You have not started a gift yet."}</p>
+        <Link href="/#templates" className="mt-5 inline-block rounded-full bg-[#ff6900] px-6 py-3 font-semibold text-white hover:bg-[#f25e00]">Choose a template</Link>
       </Shell>
     );
   }
-  if (!draft) return <Shell><p className="text-stone-500" role="status">Loading your draft…</p></Shell>;
+  if (!draft) return <Shell><p className="text-[#8b8279]" role="status">Loading your draft…</p></Shell>;
 
   const t = TEMPLATES[draft.templateId];
   const names = { to: draft.to.trim() || "them", from: draft.from.trim() || "me" };
@@ -99,59 +97,5 @@ export default function CreateScreen() {
     );
   }
 
-  return (
-    <Shell wide>
-      <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_300px] md:items-start">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-rose-700">{t.name}</p>
-          <h1 className="mt-1 font-display text-3xl font-bold">Who is this gift for?</h1>
-          <p className="mt-2 text-stone-600">Two names are all you need. Everything else is already written, and you can change it later.</p>
-
-          <div className="mt-8 space-y-6">
-            <label className="block text-sm font-bold text-stone-800">Their name
-              <input className={input} value={draft.to} maxLength={LIMITS.name} autoComplete="off" placeholder="Maya"
-                onChange={(e) => set({ to: e.target.value })} />
-            </label>
-            <label className="block text-sm font-bold text-stone-800">Your name
-              <input className={input} value={draft.from} maxLength={LIMITS.name} autoComplete="name" placeholder="Daniel"
-                onChange={(e) => set({ from: e.target.value })} />
-            </label>
-            <div>
-              <label htmlFor="inv" className="block text-sm font-bold text-stone-800">Message on the envelope</label>
-              <textarea id="inv" rows={3} className={input} maxLength={LIMITS.invitation} value={draft.invitation ?? suggested}
-                onChange={(e) => set({ invitation: e.target.value })} />
-              <div className="mt-1 flex items-center justify-between text-xs text-stone-500">
-                <span>{(draft.invitation ?? suggested).length} / {LIMITS.invitation}</span>
-                {draft.invitation !== null && (
-                  <button type="button" className="font-bold text-rose-700 hover:underline" onClick={() => set({ invitation: null })}>Use the suggested message</button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <button type="button" onClick={() => setStep("pages")} className="mt-8 rounded-full bg-rose-700 px-6 py-3 font-bold text-white hover:bg-rose-800">Continue to the pages →</button>
-
-          <p className="mt-6 text-sm text-stone-500" role="status">
-            {saveFailed ? "Your browser would not save this draft, so it will be lost if you close the page." : "Draft saved on this device."}
-          </p>
-          <p className="mt-4 text-sm"><Link href="/#templates" className="font-bold text-stone-700 underline">Choose a different template</Link></p>
-        </div>
-
-        <div className="mx-auto w-full max-w-[300px]">
-          <CoverPreview template={t} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} />
-          <p className="mt-3 text-center text-sm text-stone-500">Your cover</p>
-        </div>
-      </div>
-    </Shell>
-  );
-}
-
-
-function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
-  return (
-    <main className={"mx-auto px-5 py-10 md:py-14 " + (wide ? "max-w-4xl" : "max-w-xl text-center")}>
-      <Link href="/" className="mb-8 inline-block text-sm font-bold text-stone-600 hover:underline">← Digital Gift Flipbook</Link>
-      {children}
-    </main>
-  );
+  return <NamesStep template={t} draft={draft} suggested={suggested} saveFailed={saveFailed} set={set} onContinue={() => setStep("pages")} />;
 }

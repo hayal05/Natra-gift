@@ -6,6 +6,7 @@ import type { Draft } from "../lib/draft";
 import { MAX_EXTRAS, editableSlots, textLimit } from "../lib/editor";
 import type { EditableSlot } from "../lib/editor";
 import { pageSlots } from "../lib/pages/render";
+import { isFontId } from "../lib/pages/fontlist";
 import type { ExtraSlotDef, Layout, PageData, PhotoContent, Rot, TextStyle } from "../lib/pages";
 import { LIMITS } from "../lib/draft";
 import { LAYOUTS, TEMPLATES } from "../templates";
@@ -74,6 +75,7 @@ function checkExtra(e: unknown, layout: Layout, seen: Set<string>): ExtraSlotDef
   if (!oneOf(e.font, ["display", "body"]) || !inRange(e.size, 0.01, 0.4) || !colorOk(e.color)) return bad;
   const t: ExtraSlotDef = { ...base, kind: "text", font: e.font as "display" | "body", size: e.size as number, color: e.color as string };
   if (rot) t.rot = rot;
+  if (e.family !== undefined) { if (!isFontId(e.family)) return bad; t.family = e.family; } // a registry id only (task 11.2f)
   if (e.weight !== undefined) { if (!inRange(e.weight, 100, 900)) return bad; t.weight = e.weight; }
   if (e.tracking !== undefined) { if (!inRange(e.tracking, -0.1, 0.5)) return bad; t.tracking = e.tracking; }
   if (e.lh !== undefined) { if (!inRange(e.lh, 0.5, 3)) return bad; t.lh = e.lh; }
@@ -150,6 +152,7 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
       if (!isObj(st)) return bad("A text style is not valid.");
       const o: TextStyle = {};
       if (st.font !== undefined) { if (!oneOf(st.font, ["display", "body"])) return bad("A text style is not valid."); o.font = st.font as TextStyle["font"]; }
+      if (st.family !== undefined) { if (!isFontId(st.family)) return bad("A text style is not valid."); o.family = st.family; } // a registry id only (task 11.2f)
       if (st.size !== undefined) { if (!oneOf(st.size, ["S", "M", "L"])) return bad("A text style is not valid."); o.size = st.size as TextStyle["size"]; }
       if (st.align !== undefined) { if (!oneOf(st.align, ["left", "center", "right", "justify"])) return bad("A text style is not valid."); o.align = st.align as TextStyle["align"]; }
       for (const k of ["bold", "italic"] as const) { if (st[k] === undefined) continue; if (typeof st[k] !== "boolean") return bad("A text style is not valid."); o[k] = st[k] as boolean; }

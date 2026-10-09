@@ -61,7 +61,7 @@ export default function GiftView({ token }: { token: string }) {
       const pages = fillPages(draft.pages, names);
       const message = draft.invitation ?? fill(template.invitation, names);
 
-      await loadFonts(style.fonts); // the envelope and the pages must not draw in a fallback face
+      await loadFonts(style.fonts, pages); // the envelope and the pages must not draw in a fallback face
       if (cancelled || !host.current) return;
       setPhase("ready");
 

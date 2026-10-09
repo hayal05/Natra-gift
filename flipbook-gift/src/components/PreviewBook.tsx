@@ -19,7 +19,7 @@ export default function PreviewBook({ template, pages, to, from, fontPair, palet
     if (!host.current || !frame.current) return;
     setFailed(false);
     // Photos that fail to load draw as a placeholder instead of stopping the whole book.
-    const ready = Promise.all([loadFonts(book.fonts), loadImages(filled)]).then(([, images]) => filled.map((p) => pageDrawFn(p, LAYOUTS, book, images)));
+    const ready = Promise.all([loadFonts(book.fonts, filled), loadImages(filled)]).then(([, images]) => filled.map((p) => pageDrawFn(p, LAYOUTS, book, images)));
     // Voice notes (task 8.4): the same player and rules as the recipient page, so the creator hears what they will hear.
     // `pages` and `filled` have the same order; the note shows only while the current page owns one.
     let layer: ReturnType<typeof createPageLayer> | undefined = createPageLayer(frame.current);

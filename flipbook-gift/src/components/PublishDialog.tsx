@@ -3,7 +3,7 @@
 // Nothing here claims success unless the publisher returned it. Download offline (6.1) builds the self-contained file from the draft, so it works without publishing.
 import { useEffect, useRef, useState } from "react";
 import type { Draft } from "../lib/draft";
-import { OfflineError, audioCount, downloadOffline } from "../lib/offline";
+import { OfflineError, audioCount, downloadOffline, offlineFontBytes, offlineFontFamilies } from "../lib/offline";
 import { PUBLISH_ENABLED, countSamples, countEmptyPhotos, type Publisher } from "../lib/publish";
 
 type Done = { giftUrl: string; editUrl: string; copied: boolean; shared: boolean };
@@ -17,6 +17,9 @@ export default function PublishDialog({ draft, publish, enabled = PUBLISH_ENABLE
   const close = useRef<HTMLButtonElement>(null);
   const [offline, setOffline] = useState<"idle" | "busy" | "done">("idle");
   const [offlineSize, setOfflineSize] = useState<number | null>(null);
+  const [fontBytes, setFontBytes] = useState<number | null>(null);
+  const fontCount = offlineFontFamilies(draft).length;
+  useEffect(() => { let live = true; setFontBytes(null); void offlineFontBytes(draft).then((b) => { if (live) setFontBytes(b); }); return () => { live = false; }; }, [draft]);
   const notes = audioCount(draft);
   const [offlineError, setOfflineError] = useState<string | null>(null);
   const samples = countSamples(draft.pages);
@@ -44,6 +47,7 @@ export default function PublishDialog({ draft, publish, enabled = PUBLISH_ENABLE
       <button type="button" onClick={saveOffline} disabled={offline === "busy" || busy} className={btn + " border border-stone-300 text-stone-800 hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-50"}>{offline === "busy" ? "Preparing the file…" : "Download offline"}</button>
       <p className="mt-1 text-sm text-stone-500" role="status">{offline === "done" ? `The file was made${offlineSize ? ` (${(offlineSize / 1e6).toFixed(1)} MB)` : ""}. Open it from your downloads: it works without internet.` : "One file that opens without internet, for a phone or a laptop."}</p>
       {notes > 0 && offline !== "done" && <p className="mt-1 text-sm text-stone-500">Your {notes === 1 ? "voice note is" : `${notes} voice notes are`} saved inside, so the file will be bigger (up to about 7 MB more for each).</p>}
+      {offline !== "done" && fontBytes !== null && <p className="mt-1 text-sm text-stone-500">The {fontCount === 1 ? "font is" : `${fontCount} fonts are`} saved inside too: about {fontBytes >= 1e6 ? (fontBytes / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(fontBytes / 1e3)) + " KB"}.</p>}
       {offlineError && <p role="alert" className="mt-1 rounded-lg bg-red-50 p-3 text-sm text-red-800">{offlineError}</p>}
     </div>
   );

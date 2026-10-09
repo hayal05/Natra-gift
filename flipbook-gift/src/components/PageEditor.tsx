@@ -4,7 +4,7 @@
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { GROUP_NAMES, actionBarSpot, otherBoxes, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, addSlot, deleteSlot, duplicateSlot, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, isAdjusted, pageEditable, movePage, resetTextBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
-import { isSample, loadFonts, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, textSlotRect, sizeFactor, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_WIDTH_MIN, type Align, type ColorRef, type FontRole, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextSlotDef, type TextStyle } from "../lib/pages";
+import { isSample, loadFonts, usedFontIds, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, textSlotRect, sizeFactor, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_WIDTH_MIN, type Align, type ColorRef, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextSlotDef, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
 import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS, audioFileProblem, readAudioDuration, recordingSupported, uploadAudio } from "../lib/audio";
@@ -12,6 +12,7 @@ import { createRecorder, type Recorder } from "../audio/recorder";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
 import VoiceNotePill, { type PillPos } from "./VoiceNotePill";
+import FontPicker from "./FontPicker";
 import { LAYOUTS, LAYOUT_LIST, bookStyle, fillPages, type Template } from "../templates";
 
 // Panel layout helpers (10.5): a small heading over a block, and one row per control with its label on the left.
@@ -47,6 +48,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const [slotId, setSlotId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
   const [ready, setReady] = useState(false);
+  const [fontTick, setFontTick] = useState(0); // bumps when a newly picked font has loaded, so the page and thumbnails redraw in it
   const [images, setImages] = useState<ImageMap>(() => new Map());
   const main = useRef<HTMLCanvasElement>(null);
   const textInput = useRef<HTMLTextAreaElement>(null);
@@ -77,7 +79,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const slots = pageEditable(layout, page);
   const slot = slots.find((s) => s.id === slotId) ?? null;
 
-  useEffect(() => { let alive = true; loadFonts(book.fonts).then(() => alive && setReady(true)); return () => { alive = false; }; }, [book]);
+  const fontKey = usedFontIds(pages).join(",");
+  useEffect(() => { let alive = true; loadFonts(book.fonts, pages).then(() => { if (alive) { setReady(true); setFontTick((t) => t + 1); } }); return () => { alive = false; }; }, [book, fontKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { let alive = true; loadImages(filled, new Map(images)).then((m) => alive && setImages(m)); return () => { alive = false; }; }, [filled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Redraw the big page and every thumbnail whenever anything they show changes.
@@ -91,7 +94,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     };
     draw(main.current, page, at, W, H);
     filled.forEach((p, i) => draw(thumbs.current[i], p, i, W, H)); // thumbnails draw at full size and are scaled down by CSS
-  }, [ready, book, filled, images, page, at]);
+  }, [ready, fontTick, book, filled, images, page, at]);
 
   // Layout picker previews: every layout drawn with this page's content. Only while the Pages tab is open.
   const panelOpen = activeTool === "Pages";
@@ -103,7 +106,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       c.setTransform(1, 0, 0, 1, 0, 0);
       renderPage(c, LW, LH, swapLayout(page, l, at), l, book, images, at);
     }
-  }, [ready, panelOpen, book, page, at, images]);
+  }, [ready, fontTick, panelOpen, book, page, at, images]);
 
   const chooseLayout = (id: string) => {
     const next = LAYOUTS[id];
@@ -639,7 +642,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                         <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={Math.min(10, Math.max(3, typed.split("\n").reduce((n, ln) => n + Math.max(1, Math.ceil(ln.length / 32)), 0)))} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
                       </Group>
                       <Group title="Look">
-                        <Row label="Font">{([["display","Headline"],["body","Reading"]] as [FontRole,string][]).map(([r,label])=><button key={r} type="button" onClick={()=>setStyle({font:r===textSlot.font?undefined:r})} className={chip(cur.font===r)}>{label}</button>)}</Row>
+                        <div className="flex items-center gap-3 border-t border-stone-100 first:border-t-0"><span className="w-12 shrink-0 text-xs font-bold text-stone-500">Font</span><div className="relative min-w-0 flex-1 py-1"><FontPicker family={style.family} role={cur.font ?? "body"} fonts={book.fonts} onChange={(c)=>c.family?setStyle({family:c.family}):setStyle({family:undefined,font:c.font===textSlot.font?undefined:c.font})}/></div></div>
                         <Row label="Size">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}<input type="range" aria-label={`Size ${Math.round(sizeFactor(style)*100)}%`} min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="h-11 min-w-[96px] flex-1 accent-rose-700"/><span className="w-10 shrink-0 text-right text-xs text-stone-500">{Math.round(sizeFactor(style)*100)}%</span></Row>
                         <Row label="Style">
                           <button type="button" onClick={toggleBold} aria-pressed={cur.bold} aria-label="Bold" className={chip(cur.bold)+" grid w-11 place-items-center px-0"}><Icon name="bold" size={18} /></button>

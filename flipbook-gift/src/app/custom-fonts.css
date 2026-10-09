@@ -1,0 +1,52 @@
+/* Owner-supplied fonts (task 11.3), generated from src/lib/pages/custom-fonts.ts. Files live in public/fonts and are
+   cached for a year (next.config.mjs), so a font that changes gets a new file name (v1 -> v2). font-display: swap; the
+   browser downloads a file only when text uses it. The "Name" faces are tiny subsets (the letters of the font's own
+   name) for the picker rows. Keep in step with custom-fonts.ts. */
+@font-face { font-family: "Agbalumo"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/agbalumo.v1.woff2") format("woff2"); }
+@font-face { font-family: "Agbalumo Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/agbalumo-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Nokia Light"; font-style: normal; font-weight: 200; font-display: swap; src: url("/fonts/nokia-light.v1.woff2") format("woff2"); }
+@font-face { font-family: "Nokia Light Name"; font-style: normal; font-weight: 200; font-display: swap; src: url("/fonts/nokia-light-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Nokia Bold"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/nokia-bold.v1.woff2") format("woff2"); }
+@font-face { font-family: "Nokia Bold Name"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/nokia-bold-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Goffer"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/goffer.v1.woff2") format("woff2"); }
+@font-face { font-family: "Goffer Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/goffer-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Zemenay"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/zemenay.v1.woff2") format("woff2"); }
+@font-face { font-family: "Zemenay Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/zemenay-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Kiros"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/kiros.v1.woff2") format("woff2"); }
+@font-face { font-family: "Kiros Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/kiros-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "SurGraphics"; font-style: normal; font-weight: 900; font-display: swap; src: url("/fonts/surgraphics.v1.woff2") format("woff2"); }
+@font-face { font-family: "SurGraphics Name"; font-style: normal; font-weight: 900; font-display: swap; src: url("/fonts/surgraphics-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Loga"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/loga.v1.woff2") format("woff2"); }
+@font-face { font-family: "Loga Medium"; font-style: normal; font-weight: 500; font-display: swap; src: url("/fonts/loga-medium.v1.woff2") format("woff2"); }
+@font-face { font-family: "Loga Light"; font-style: normal; font-weight: 300; font-display: swap; src: url("/fonts/loga-light.v1.woff2") format("woff2"); }
+@font-face { font-family: "Loga Thin"; font-style: normal; font-weight: 100; font-display: swap; src: url("/fonts/loga-thin.v1.woff2") format("woff2"); }
+@font-face { font-family: "Dire Dawa"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/dire-dawa.v1.woff2") format("woff2"); }
+@font-face { font-family: "Dire Dawa Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/dire-dawa-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Chiret"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/chiret.v1.woff2") format("woff2"); }
+@font-face { font-family: "Chiret Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/chiret-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Shiromeda"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/shiromeda.v1.woff2") format("woff2"); }
+@font-face { font-family: "Shiromeda Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/shiromeda-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Shiromeda Bold"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/shiromeda-bold.v1.woff2") format("woff2"); }
+@font-face { font-family: "Shiromeda Bold Name"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/shiromeda-bold-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Benaiah"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/benaiah.v1.woff2") format("woff2"); }
+@font-face { font-family: "Benaiah Name"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/benaiah-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Yebse"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/yebse.v1.woff2") format("woff2"); }
+@font-face { font-family: "Yebse Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/yebse-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Wahsrab"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/wahsrab.v1.woff2") format("woff2"); }
+@font-face { font-family: "Wahsrab Name"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/wahsrab-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Abinet"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/abinet.v1.woff2") format("woff2"); }
+@font-face { font-family: "Abinet Name"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/abinet-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Addis"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/addis.v1.woff2") format("woff2"); }
+@font-face { font-family: "Addis Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/addis-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Meaza"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/meaza.v1.woff2") format("woff2"); }
+@font-face { font-family: "Meaza Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/meaza-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Adwa Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/adwa-sans.v1.woff2") format("woff2"); }
+@font-face { font-family: "Adwa Sans Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/adwa-sans-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Adwa Sans Bold"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/adwa-sans-bold.v1.woff2") format("woff2"); }
+@font-face { font-family: "Adwa Sans Bold Name"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/adwa-sans-bold-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Adwa"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/adwa.v1.woff2") format("woff2"); }
+@font-face { font-family: "Adwa Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/adwa-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "Adwa Bold"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/adwa-bold.v1.woff2") format("woff2"); }
+@font-face { font-family: "Adwa Bold Name"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/adwa-bold-name.v1.woff2") format("woff2"); }
+@font-face { font-family: "ASTRA"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/astra.v1.woff2") format("woff2"); }
+@font-face { font-family: "ASTRA Name"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/astra-name.v1.woff2") format("woff2"); }

@@ -1,5 +1,6 @@
 // Loads the theme fonts (task 2.5). @font-face rules only download a file when a canvas or element actually uses it.
 // Weights are the ones the layouts ask for (400, 600, 700, 800, 900) where the family has them; italic 400 for quotes.
+import "./custom-fonts.css";
 import "@fontsource/abril-fatface/latin-400.css";
 import "@fontsource/archivo-black/latin-400.css";
 import "@fontsource/cormorant-garamond/latin-400.css";

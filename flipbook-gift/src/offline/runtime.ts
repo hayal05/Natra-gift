@@ -35,7 +35,7 @@ async function main() {
   catch { message("This gift could not be opened", "The file looks damaged. Ask the sender for a new copy."); return; }
 
   for (const p of g.pages) if (p.audio) p.audio = { ...p.audio, src: noteUrl(p.audio.src) };
-  await loadFonts(g.style.fonts);
+  await loadFonts(g.style.fonts, g.pages);
   const root = el("div", "fbo-root", undefined, app);
   const stage = el("div", "fbo-stage", undefined, root);
   const drawFns = loadImages(g.pages).then((images) => g.pages.map((p) => pageDrawFn(p, LAYOUTS, g.style, images)));

@@ -59,8 +59,8 @@ export default function Home() {
   const createHref = `/create?t=${active.id}`;
 
   return (
-    <main className="natra-landing min-h-screen bg-[#fbf7f2] text-[#192a38]">
-      <header className="mx-auto flex h-[64px] max-w-[1320px] items-center justify-between px-[6vw] sm:h-[76px] sm:px-8 lg:px-10">
+    <main className="natra-landing flex h-[100dvh] flex-col overflow-hidden bg-[#fbf7f2] text-[#192a38] [--hero-h:max(40dvh,300px)] lg:[--hero-h:calc(100dvh-76px)]">
+      <header className="mx-auto flex h-[64px] w-full max-w-[1320px] shrink-0 items-center justify-between px-[6vw] sm:h-[76px] sm:px-8 lg:px-10">
         <Link href="/" className="flex items-center gap-2.5 sm:gap-3" aria-label="NatraGift home">
           <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-[#ff6900] text-white shadow-[0_8px_20px_rgba(255,105,0,.2)] sm:h-11 sm:w-11 sm:rounded-[14px]">
             <GiftIcon />
@@ -71,7 +71,7 @@ export default function Home() {
         </Link>
 
         <div className="flex items-center gap-4">
-          <span className="hidden text-[13px] text-[#7d838b] md:block">Digital gifts that open like a letter.</span>
+          <span className="hidden text-[13px] text-[#77706a] md:block">Digital gifts that open like a letter.</span>
           <Link
             href={createHref}
             className="rounded-full bg-[#ff6900] px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(255,105,0,.2)] transition hover:-translate-y-0.5 hover:bg-[#f25e00] sm:px-7 sm:py-3 sm:text-[15px]"
@@ -81,117 +81,127 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero: copy on the left, the live book resting on linen on the right. */}
-      <section
-        className="relative isolate overflow-hidden"
-        style={{
-          background:
-            "radial-gradient(70% 60% at 85% 22%, rgba(255,255,255,.6), transparent 60%)," +
-            "radial-gradient(60% 50% at 62% 95%, rgba(214,186,154,.5), transparent 65%)," +
-            "linear-gradient(160deg,#f4e8d9,#ecdac4 55%,#f2e4d2)",
-        }}
-      >
-        {/* soft cloth folds */}
-        <div aria-hidden="true" className="pointer-events-none absolute -right-[10%] top-[8%] -z-10 h-[40%] w-[80%] -rotate-[18deg] rounded-full bg-white/40 blur-2xl" />
-        <div aria-hidden="true" className="pointer-events-none absolute -bottom-[12%] left-[20%] -z-10 h-[34%] w-[90%] -rotate-[12deg] rounded-full bg-[#d8bf9f]/30 blur-2xl" />
-        {/* fade into the page colour behind the copy */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 -z-10 w-[55%] bg-gradient-to-r from-[#fbf7f2] via-[#fbf7f2]/70 to-transparent" />
+      {/* Everything below the header fits the screen: the hero keeps its size, the templates scroll on their own. */}
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        {/* Hero: copy on the left, the live book resting on linen on the right. */}
+        <section
+          className="relative isolate h-[var(--hero-h)] shrink-0 overflow-hidden lg:h-auto lg:w-[54%]"
+          style={{
+            background:
+              "radial-gradient(70% 60% at 85% 22%, rgba(255,255,255,.6), transparent 60%)," +
+              "radial-gradient(60% 50% at 62% 95%, rgba(214,186,154,.5), transparent 65%)," +
+              "linear-gradient(160deg,#f4e8d9,#ecdac4 55%,#f2e4d2)",
+          }}
+        >
+          <div aria-hidden="true" className="pointer-events-none absolute -right-[10%] top-[8%] -z-10 h-[40%] w-[80%] -rotate-[18deg] rounded-full bg-white/40 blur-2xl" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-[12%] left-[20%] -z-10 h-[34%] w-[90%] -rotate-[12deg] rounded-full bg-[#d8bf9f]/30 blur-2xl" />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 -z-10 w-[55%] bg-gradient-to-r from-[#fbf7f2] via-[#fbf7f2]/70 to-transparent" />
 
-        <Leaves />
-        <Petals />
+          <Leaves />
+          <Petals />
 
-        <div className="relative mx-auto flex min-h-[92vw] max-w-[1320px] items-center sm:min-h-[480px] lg:min-h-[640px]">
-          <div className="relative z-10 w-[46%] py-8 pl-[5vw] sm:w-[44%] sm:pl-8 lg:pl-10">
-            <p className="text-[2.6vw] font-semibold uppercase tracking-[.2em] text-[#ff6900] sm:text-[12px] lg:text-[13px]">A gift that feels personal</p>
-            <h1
-              className="mt-[3vw] text-[8vw] font-bold leading-[.98] tracking-[-.045em] text-[#192a38] sm:mt-4 sm:text-[clamp(2.8rem,6vw,4.2rem)] lg:text-[clamp(3.4rem,5.2vw,4.9rem)]"
-              style={{ fontFamily: SERIF }}
-            >
-              Make it a moment.
-            </h1>
-            <p className="mt-[3vw] max-w-[420px] text-[3.4vw] leading-[1.5] text-[#77706a] sm:mt-5 sm:text-[17px] lg:text-[19px]">
-              Turn your words and memories into a beautiful little gift.
-            </p>
-            <Link
-              href={createHref}
-              className="mt-[4vw] inline-flex items-center gap-[1.4vw] whitespace-nowrap rounded-full bg-[#ff6900] px-[3.2vw] py-[2.6vw] text-[2.9vw] font-semibold text-white shadow-[0_10px_25px_rgba(255,105,0,.22)] transition hover:-translate-y-0.5 hover:bg-[#f25e00] sm:mt-7 sm:gap-3 sm:px-8 sm:py-3.5 sm:text-[15px]"
-            >
-              Use this template <span aria-hidden="true" className="text-[1.2em] leading-none">→</span>
-            </Link>
-          </div>
+          <div className="relative mx-auto flex h-full max-w-[1320px] items-center">
+            <div className="relative z-10 w-[46%] py-4 pl-[5vw] sm:w-[44%] sm:pl-8 lg:pl-10">
+              <p className="text-[2.6vw] font-semibold uppercase tracking-[.2em] text-[#ff6900] sm:text-[12px] lg:text-[11px] lg:tracking-[.16em]">A gift that feels personal</p>
+              <h1
+                className="mt-[2.4vw] text-[8vw] font-bold leading-[.98] tracking-[-.045em] text-[#192a38] sm:mt-4 sm:text-[clamp(2.6rem,5.4vw,3.8rem)] lg:text-[clamp(2.4rem,3.6vw,3.6rem)]"
+                style={{ fontFamily: SERIF }}
+              >
+                Make it a moment.
+              </h1>
+              <p className="mt-[2.4vw] max-w-[420px] text-[3.3vw] leading-[1.45] text-[#77706a] sm:mt-4 sm:text-[16px] lg:text-[17px]">
+                Turn your words and memories into a beautiful little gift.
+              </p>
+              <Link
+                href={createHref}
+                className="mt-[3.4vw] inline-flex items-center gap-[1.4vw] whitespace-nowrap rounded-full bg-[#ff6900] px-[3.2vw] py-[2.6vw] text-[2.9vw] font-semibold text-white shadow-[0_10px_25px_rgba(255,105,0,.22)] transition hover:-translate-y-0.5 hover:bg-[#f25e00] sm:mt-6 sm:gap-3 sm:px-8 sm:py-3.5 sm:text-[15px]"
+              >
+                Use this template <span aria-hidden="true" className="text-[1.2em] leading-none">→</span>
+              </Link>
+            </div>
 
-          <div className="relative z-10 min-w-0 flex-1 py-8 pr-[4vw] sm:pr-8 lg:pr-12">
-            <div className="mx-auto w-full max-w-[420px] lg:max-w-[440px]">
-              <LiveBook key={active.id} initial={active.id} />
+            <div className="relative z-10 flex min-w-0 flex-1 justify-center py-4 pr-[4vw] sm:pr-8 lg:pr-10">
+              {/* The book is sized from the hero's height so book and hint always fit inside it. */}
+              <div className="w-full max-w-[440px]" style={{ width: "min(100%, calc((var(--hero-h) - 104px) * .75))" }}>
+                <LiveBook key={active.id} initial={active.id} />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="templates" className="mx-auto max-w-[1320px] px-[6vw] pb-12 pt-8 sm:px-8 sm:pt-10 lg:px-10 lg:pt-14">
-        <div className="flex items-end justify-between gap-3 pb-5">
-          <div>
-            <p className="text-[2.6vw] font-semibold uppercase tracking-[.2em] text-[#ff6900] sm:text-[12px]">Find your feeling</p>
-            <h2 className="mt-1.5 text-[6.2vw] font-bold leading-tight tracking-[-.03em] sm:text-[30px] lg:text-[36px]" style={{ fontFamily: SERIF }}>
-              Choose your moment
-            </h2>
+        {/* Templates: the only part of the page that scrolls. */}
+        <section id="templates" className="flex min-h-0 flex-1 flex-col px-[6vw] pt-4 sm:px-8 lg:px-10 lg:pt-8">
+          <div className="flex shrink-0 items-end justify-between gap-3 pb-3">
+            <div>
+              <p className="text-[2.6vw] font-semibold uppercase tracking-[.2em] text-[#ff6900] sm:text-[12px]">Find your feeling</p>
+              <h2 className="mt-1 text-[6vw] font-bold leading-tight tracking-[-.03em] sm:text-[26px] lg:text-[30px]" style={{ fontFamily: SERIF }}>
+                Choose your moment
+              </h2>
+            </div>
+            <span className="shrink-0 pb-1 text-[3vw] font-semibold text-[#8b8f96] sm:text-[14px]">{TEMPLATE_LIST.length} templates</span>
           </div>
-          <span className="shrink-0 pb-1 text-[3vw] font-semibold text-[#8b8f96] sm:text-[14px]">{TEMPLATE_LIST.length} templates</span>
-        </div>
 
-        <div className="grid grid-cols-3 gap-x-[3vw] gap-y-[5vw] sm:gap-x-5 sm:gap-y-8 lg:grid-cols-5">
-          {TEMPLATE_LIST.map((template) => {
-            const card = CARDS[template.id];
-            const isActive = template.id === active.id;
-            return (
-              <button
-                key={template.id}
-                type="button"
-                onClick={() => setSelected(template.id)}
-                aria-label={`Preview ${template.name}`}
-                aria-pressed={isActive}
-                className={`group flex flex-col items-stretch justify-start self-start text-left ${isActive ? "rounded-[20px] ring-2 ring-[#ff6900] ring-offset-[3px] ring-offset-[#fbf7f2]" : ""}`}
-              >
-                <div
-                  className="rounded-[18px] p-[1.6vw] shadow-[0_6px_18px_rgba(50,35,25,.05)] transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_12px_26px_rgba(50,35,25,.12)] sm:p-3"
-                  style={{ background: template.palette.soft }}
-                >
-                  <div
-                    className="relative aspect-[10/9] overflow-hidden rounded-[11px] border border-white/60 sm:rounded-[14px]"
-                    style={{ background: `linear-gradient(180deg, ${card.scene.sky[0]}, ${card.scene.sky[1]})`, color: template.palette.ink }}
-                  >
-                    <TemplateScene id={template.id} {...card.scene} className="absolute inset-x-0 bottom-0 h-[64%] w-full" />
-                    <div className="absolute inset-x-1 top-[9%] text-center">
-                      {card.script ? (
-                        <p className="text-[5.8vw] italic leading-[.86] sm:text-[30px]" style={{ fontFamily: SCRIPT, color: template.palette.accent }}>
-                          {card.title}
-                        </p>
-                      ) : (
-                        <p className="mx-auto max-w-[90%] text-[2.7vw] leading-[1.25] tracking-[.12em] sm:text-[13px]" style={{ fontFamily: SERIF }}>
-                          {card.title}
-                        </p>
-                      )}
-                      <div className="mt-[1.4vw] flex items-center justify-center gap-1 sm:mt-2" style={{ color: template.palette.accent }}>
-                        <span className="h-px w-[16%] bg-current opacity-50" />
-                        <HeartIcon />
-                        <span className="h-px w-[16%] bg-current opacity-50" />
+          <div className="relative min-h-0 flex-1">
+            <div className="h-full overflow-y-auto overscroll-contain p-1 pb-8 [scrollbar-width:thin]" tabIndex={0} aria-label="Templates">
+              <div className="grid grid-cols-3 gap-x-[3vw] gap-y-[4.5vw] sm:grid-cols-4 sm:gap-x-5 sm:gap-y-6 md:grid-cols-5 lg:grid-cols-3">
+                {TEMPLATE_LIST.map((template) => {
+                  const card = CARDS[template.id];
+                  const isActive = template.id === active.id;
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => setSelected(template.id)}
+                      aria-label={`Preview ${template.name}`}
+                      aria-pressed={isActive}
+                      className={`group flex flex-col items-stretch justify-start self-start text-left ${isActive ? "rounded-[20px] ring-2 ring-[#ff6900] ring-offset-[3px] ring-offset-[#fbf7f2]" : ""}`}
+                    >
+                      <div
+                        className="rounded-[18px] p-[1.6vw] shadow-[0_6px_18px_rgba(50,35,25,.05)] transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_12px_26px_rgba(50,35,25,.12)] sm:p-2.5"
+                        style={{ background: template.palette.soft }}
+                      >
+                        <div
+                          className="relative aspect-[10/9] overflow-hidden rounded-[11px] border border-white/60 sm:rounded-[14px]"
+                          style={{ background: `linear-gradient(180deg, ${card.scene.sky[0]}, ${card.scene.sky[1]})`, color: template.palette.ink }}
+                        >
+                          <TemplateScene id={template.id} {...card.scene} className="absolute inset-x-0 bottom-0 h-[64%] w-full" />
+                          <div className="absolute inset-x-1 top-[9%] text-center">
+                            {card.script ? (
+                              <p className="text-[5.8vw] italic leading-[.86] sm:text-[26px]" style={{ fontFamily: SCRIPT, color: template.palette.accent }}>
+                                {card.title}
+                              </p>
+                            ) : (
+                              <p className="mx-auto max-w-[90%] text-[2.7vw] leading-[1.25] tracking-[.12em] sm:text-[12px]" style={{ fontFamily: SERIF }}>
+                                {card.title}
+                              </p>
+                            )}
+                            <div className="mt-[1.4vw] flex items-center justify-center gap-1 sm:mt-1.5" style={{ color: template.palette.accent }}>
+                              <span className="h-px w-[16%] bg-current opacity-50" />
+                              <HeartIcon />
+                              <span className="h-px w-[16%] bg-current opacity-50" />
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-                <p className="px-1 pt-2 text-[3.2vw] font-semibold text-[#192a38] sm:text-[14px]">{template.name}</p>
-              </button>
-            );
-          })}
-        </div>
+                      <p className="px-1 pt-1.5 text-[3.2vw] font-semibold text-[#192a38] sm:text-[13px]">{template.name}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#fbf7f2] to-transparent" />
+          </div>
 
-        <Link
-          href={createHref}
-          className="mx-auto mt-9 flex h-12 items-center justify-center rounded-full bg-[#ff6900] text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(255,105,0,.2)] transition hover:bg-[#f25e00] sm:mt-12 sm:h-14 sm:max-w-sm sm:text-[15px]"
-        >
-          Use “{active.name}”
-        </Link>
-      </section>
+          <div className="shrink-0 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-2">
+            <Link
+              href={createHref}
+              className="flex h-12 items-center justify-center rounded-full bg-[#ff6900] text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(255,105,0,.2)] transition hover:bg-[#f25e00] sm:text-[15px]"
+            >
+              Use “{active.name}”
+            </Link>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

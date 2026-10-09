@@ -44,3 +44,31 @@ body {
 .hover\\:border-rose-700:hover { border-color: var(--natra-primary-hover) !important; }
 .focus\\:border-rose-700:focus { border-color: var(--natra-primary) !important; }
 .focus\\:ring-rose-700:focus { --tw-ring-color: var(--natra-primary) !important; }
+
+/* Names step: one-screen layout. Phones: cover beside the names; wider screens: form left, cover right. */
+.names-grid {
+  display: grid;
+  align-items: start;
+  gap: 12px 16px;
+  grid-template-columns: 34vw minmax(0, 1fr);
+  grid-template-areas: "s s" "a b" "a c" "d d" "e e";
+}
+.names-grid > .g-s { grid-area: s; }
+.names-grid > .g-a { grid-area: a; align-self: center; }
+.names-grid > .g-b { grid-area: b; }
+.names-grid > .g-c { grid-area: c; }
+.names-grid > .g-d { grid-area: d; }
+.names-grid > .g-e { grid-area: e; }
+@media (min-width: 768px) {
+  .names-grid {
+    gap: 16px 56px;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-rows: auto auto auto auto 1fr;
+    grid-template-areas: "s a" "b a" "c a" "d a" "e a";
+  }
+  .names-cover-panel {
+    border-radius: 28px;
+    padding: 32px 16%;
+    background: radial-gradient(70% 60% at 80% 20%, rgba(255,255,255,.6), transparent 60%), linear-gradient(160deg, #f4e8d9, #ecdac4 60%, #f2e4d2);
+  }
+}

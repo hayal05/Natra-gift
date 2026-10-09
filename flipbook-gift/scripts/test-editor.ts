@@ -379,5 +379,35 @@ ok("fitWithin shrinks the long side and keeps the shape", JSON.stringify(fitWith
 ok("fitWithin never enlarges", JSON.stringify(fitWithin(800, 600, 1600)) === '{"w":800,"h":600}');
 ok("fitWithin never returns 0", fitWithin(10000, 1, 1600).h === 1);
 
+// ---- 11.2c: per-component font family ----
+import { textFace } from "../src/lib/pages/render.ts";
+import { usedFontIds } from "../src/lib/pages/fonts.ts";
+import { capWeight, fontById } from "../src/lib/pages/fontlist.ts";
+{
+  const bs = { palette: { paper: "#fff", ink: "#000", accent: "#f00", accent2: "#0f0", soft: "#eee", dark: "#111" }, fonts: { display: "'Abril Fatface', serif", body: "'Lora', serif", displayMaxWeight: 400 }, masthead: "X" };
+  const slot = { id: "t", kind: "text", x: 0, y: 0, w: 1, h: 1, font: "display", size: 0.05, weight: 700, color: "ink" } as TextSlotDef;
+  ok("no family: role font and displayMaxWeight cap as before", textFace(slot, undefined, bs).family === bs.fonts.display && textFace(slot, undefined, bs).weight === 400);
+  ok("family wins over the role font", textFace(slot, { family: "inter" }, bs).family.startsWith("'Inter'"));
+  ok("family: weight capped to the font's real weights (Lora has no 900)", textFace({ ...slot, weight: 900 }, { family: "lora" }, bs).weight === 700);
+  ok("family: bold on a regular-only font stays 400", textFace(slot, { family: "abril-fatface", bold: true }, bs).weight === 400);
+  ok("family: not-bold caps at 400", textFace({ ...slot, weight: 700 }, { family: "inter", bold: false }, bs).weight === 400);
+  ok("style family wins over the slot's own family", textFace({ ...slot, family: "lora" }, { family: "inter" }, bs).family.startsWith("'Inter'"));
+  ok("slot's own family (added text) is used when no style", textFace({ ...slot, family: "lora" }, undefined, bs).family.startsWith("'Lora'"));
+  ok("unknown family falls back to the role font and its cap", textFace(slot, { family: "nope" }, bs).family === bs.fonts.display && textFace(slot, { family: "nope" }, bs).weight === 400);
+  ok("every registry weight survives capWeight", ["lora", "inter", "lato"].every((id) => fontById(id)!.weights.every((w) => capWeight(fontById(id)!, w) === w)));
+  // setTextStyle sets and clears family like any other key
+  const pg: PageData = { layout: "x", slots: {} };
+  const withF = setTextStyle(pg, "t", { family: "lora" });
+  ok("setTextStyle stores family", withF.styles?.t?.family === "lora");
+  ok("setTextStyle clears family with undefined", setTextStyle(withF, "t", { family: undefined }).styles === undefined);
+  // loadFonts input: ids from styles and added text, unknown ids dropped, no duplicates
+  const used = usedFontIds([
+    { layout: "x", slots: {}, styles: { a: { family: "lora" }, b: { family: "ghost" }, c: { size: "L" } }, extras: [{ ...slot, id: "x1", family: "inter" }, { ...slot, id: "x2", family: "lora" }] },
+    { layout: "x", slots: {}, styles: { a: { family: "inter" } } },
+  ]);
+  ok("usedFontIds: styles + added text, unknown dropped, no duplicates", JSON.stringify(used) === '["lora","inter"]');
+  ok("usedFontIds: nothing picked = nothing extra to load", usedFontIds([{ layout: "x", slots: {} }]).length === 0 && usedFontIds().length === 0);
+}
+
 console.log(fails ? `${fails} failed` : "editor helpers: all checks passed");
 process.exit(fails ? 1 : 0);

@@ -127,6 +127,16 @@ const L1 = (d: any) => LAYOUTS[d.pages[1].layout];
   for (const [why, list] of refused) assert(!ext(list as any).ok, why);
   assert(ext(Array.from({ length: MAX_EXTRAS }, (_, i) => bx({ id: "x" + (i + 1) }))).ok); assert(ext([bx({ color: "#fff" })]).ok); assert(ext([bx({ rot: { deg: -5, cx: 0.5, cy: 0.5 } })]).ok); ok("added items: bad ids, kinds, geometry, presets, rotation and more than 8 refused"); }
 
+{ // task 11.2f: a font family is accepted only as a registry id, for styles and for added text
+  const bx = (e: any) => ({ id: "x1", kind: "text", x: 0.2, y: 0.4, w: 0.6, h: 0.1, font: "body", size: 0.04, color: "ink", ...e });
+  const ext = (e: any) => withPage((pg) => { pg.extras = [bx(e)]; pg.slots.x1 = "hi"; });
+  assert(ext({ family: "lora" }).ok && ext({}).ok); assert((ext({ family: "lora" }) as any).draft.pages[1].extras[0].family === "lora");
+  for (const v of ["comic-sans", "Lora", "", 5, null, "lora;x", "<script>"]) assert(!ext({ family: v }).ok, "extra family " + String(v));
+  const sty = (family: unknown) => withPage((pg, d) => { const id = Object.keys(pg.slots).find((k) => typeof pg.slots[k] === "string")!; pg.styles = { [id]: { family } }; });
+  assert(sty("playfair-display").ok); assert((sty("playfair-display") as any).draft.pages[1].styles); 
+  for (const v of ["nope", "Lora", 3, null, ""]) assert(!sty(v).ok, "style family " + String(v));
+  ok("font family: registry ids accepted for styles and added text; unknown, wrong-case and non-string values refused"); }
+
 { const r = withPage((pg) => { pg.extras = [{ id: "x1", kind: "text", x: 0.2, y: 0.4, w: 0.6, h: 0.1, font: "body", size: 0.04, color: "ink", auto: "folio", text: "fixed", evil: "<x>", onclick: "a()" }]; pg.slots.x1 = "hi"; });
   assert(r.ok); const e: any = (r as any).draft.pages[1].extras[0]; assert(!("auto" in e) && !("text" in e) && !("evil" in e) && !("onclick" in e)); ok("an added text cannot carry `auto`, fixed text or unknown fields"); }
 

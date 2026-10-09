@@ -1,7 +1,7 @@
 // Prepares what the offline export (task 6.1) inlines into the downloaded file; run automatically before `dev` and `build`.
 //  public/offline/runtime.js   engine + envelope + renderer + layouts + the page flow, one minified script
 //  public/offline/fonts/*.woff2 + manifest.json   latin subsets of every theme font, only the weights the renderer asks for
-import { build } from "esbuild";
+import { build, transform } from "esbuild";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const OUT = "public/offline";
@@ -28,6 +28,13 @@ for (const slug of readdirSync("node_modules/@fontsource")) {
     files.push({ weight: w, style, file: name });
   }
   if (files.length) manifest[family] = files;
+}
+// Custom fonts (11.3): the list in src/lib/pages/custom-fonts.ts (data only, no imports) is the one source for the app and this file.
+const { CUSTOM_FONTS } = await import("data:text/javascript;base64," + Buffer.from((await transform(readFileSync("src/lib/pages/custom-fonts.ts", "utf8"), { loader: "ts", format: "esm" })).code).toString("base64"));
+for (const c of CUSTOM_FONTS) {
+  if (!existsSync(`public/fonts/${c.file}`)) throw new Error(`custom font ${c.id}: public/fonts/${c.file} is missing`);
+  copyFileSync(`public/fonts/${c.file}`, `${OUT}/fonts/${c.file}`);
+  manifest[c.label] = [{ weight: c.weight, style: "normal", file: c.file }];
 }
 writeFileSync(`${OUT}/fonts/manifest.json`, JSON.stringify(manifest));
 console.log(`offline runtime and ${Object.keys(manifest).length} font families written to ${OUT}`);

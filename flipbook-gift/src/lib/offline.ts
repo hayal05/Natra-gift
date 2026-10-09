@@ -4,6 +4,8 @@
 import type { Draft } from "./draft";
 import { draftPalette } from "./draft";
 import type { PageData, PhotoContent } from "./pages/types";
+import { fontById } from "./pages/fontlist";
+import { usedFontIds } from "./pages/fonts";
 import { TEMPLATES, bookStyle, fill, fillPages } from "../templates";
 import type { OfflineGift } from "../offline/types";
 
@@ -85,6 +87,30 @@ export async function inlinePhotos(pages: PageData[]): Promise<PageData[]> {
   }));
 }
 
+/** Font families the file must carry (task 11.2g): the book's display and body faces, then every extra registry family the pages use, nothing else. */
+export function offlineFontFamilies(draft: Draft): string[] {
+  const template = TEMPLATES[draft.templateId];
+  if (!template) return [];
+  const st = bookStyle(template, draft.fontPair, draftPalette(draft));
+  const out = new Set<string>([family(st.fonts.display), family(st.fonts.body)]);
+  for (const id of usedFontIds(draft.pages)) out.add(fontById(id)!.family);
+  return [...out];
+}
+
+/** Bytes the fonts add to the file (base64 is a third bigger), by asking the server for each file's size. Null when it cannot be told; never throws. */
+export async function offlineFontBytes(draft: Draft): Promise<number | null> {
+  try {
+    const manifest: Record<string, FontFile[]> = await (await getOk("/offline/fonts/manifest.json", "The font list")).json();
+    let total = 0;
+    for (const fam of offlineFontFamilies(draft)) for (const f of manifest[fam] ?? []) {
+      const len = Number((await getOk(`/offline/fonts/${f.file}`, "A font", { method: "HEAD" })).headers.get("content-length"));
+      if (!Number.isFinite(len) || len <= 0) return null;
+      total += len;
+    }
+    return Math.ceil(total * 4 / 3);
+  } catch { return null; }
+}
+
 async function fontCss(families: string[]): Promise<string> {
   const manifest: Record<string, FontFile[]> = await (await getOk("/offline/fonts/manifest.json", "The font list")).json();
   const css: string[] = [];
@@ -119,7 +145,7 @@ export async function buildOfflineHtml(draft: Draft): Promise<string> {
     style, pages: await inlineAudio(await inlinePhotos(fillPages(draft.pages, names))),
   };
   const runtime = await (await getOk("/offline/runtime.js", "The player")).text();
-  const fonts = await fontCss([family(style.fonts.display), family(style.fonts.body)]);
+  const fonts = await fontCss(offlineFontFamilies(draft));
   const json = JSON.stringify(gift).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
   const js = runtime.replace(/<\/script/gi, "<\\/script").replace(/<!--/g, "<\\!--");
   return `<!doctype html>

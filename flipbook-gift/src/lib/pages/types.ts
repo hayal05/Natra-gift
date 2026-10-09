@@ -54,6 +54,8 @@ interface SlotBase {
 export interface TextSlotDef extends SlotBase {
   kind: "text";
   font: FontRole;
+  /** Optional registry id: the font this component starts with (added text boxes). A creator's `TextStyle.family` wins over it; it wins over `font`. */
+  family?: string;
   /** Base font size as a fraction of page width (before the S/M/L step). */
   size: number;
   weight?: number;
@@ -124,6 +126,8 @@ export interface PhotoContent {
 /** Creator overrides for a text slot, all chosen from presets. */
 export interface TextStyle {
   font?: FontRole;
+  /** A font registry id (`fontlist.ts`). Wins over `font` and over the slot's own `family`. An id the app does not know is ignored and the role font draws. */
+  family?: string;
   size?: SizeStep;
   align?: Align;
   /** Bold on or off for this text, overriding the layout's own weight. Unset = the layout decides. */

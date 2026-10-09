@@ -1,5 +1,6 @@
 // Generic page renderer (task 2.1): draws any layout + page content into a w x h canvas context.
 // Used for the editor, the real fold engine (as PageDrawFn) and the offline export.
+import { capWeight, cssFamily, fontById } from "./fontlist";
 import { drawSample, isSample, sampleNumber } from "./sample";
 import type {
   BookStyle, ColorRef, ImageMap, Layout, PageData, PhotoContent, PhotoSlotDef, ShapeSlotDef, SlotDef,
@@ -33,8 +34,12 @@ export function textFace(s: TextSlotDef, st: TextStyle | undefined, book: BookSt
   const role = st?.font ?? s.font;
   const base = s.weight ?? 400;
   const want = st?.bold === undefined ? base : st.bold ? Math.max(700, base) : Math.min(400, base);
+  const italic = st?.italic ?? !!s.italic;
+  // A registry font (11.2c) wins over the theme role; an unknown id is ignored. Its weight is capped to a weight it really has.
+  const entry = fontById(st?.family) ?? fontById(s.family);
+  if (entry) return { role, family: cssFamily(entry), weight: capWeight(entry, want), italic };
   const weight = Math.min(want, role === "display" ? book.fonts.displayMaxWeight ?? 1000 : 1000);
-  return { role, family: book.fonts[role], weight, italic: st?.italic ?? !!s.italic };
+  return { role, family: book.fonts[role], weight, italic };
 }
 
 /**

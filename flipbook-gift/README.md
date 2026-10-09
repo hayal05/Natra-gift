@@ -71,6 +71,37 @@ One optional note per page, set in the editor. Formats: MP3, M4A, AAC, WAV. At m
 In the editor's "Audio note" block, "Record" lets the creator speak instead of choosing a file: Record, Stop, listen, then "Use this recording" (or Record again / Discard). The browser encodes it as a WAV file (16 kHz, mono, 16-bit, 32 KB per second), so it follows the same format rules and goes through the same upload, Preview, gift link and offline file as any note. Recording stops by itself at 2:30 (about 4.8 MB, just under the 5 MB limit; 5 MB would be reached at about 2:36). Rules: needs `NEXT_PUBLIC_UPLOADS=1`; needs HTTPS (works on `localhost` and on Render, not on a plain `http://` address; the Record button is hidden with a reason otherwise); the microphone is released on stop, cancel, error, page change and when Preview opens; if the upload fails the recording is kept so it can be retried. Nothing extra runs on the server.
 Check by hand: on an iPhone (Safari) and Android (Chrome) record, listen, use, publish, and play it from the gift link on that page only; deny the microphone permission, see the message, allow it again; record to the 2:30 stop and confirm the upload passes your Cloudinary file-size limit; play it in the offline file in airplane mode.
 
+## Custom fonts
+
+Besides the 20 theme families (from `@fontsource`), 26 owner-supplied fonts can be picked per text box from the Word-style font list. Creators pick from this fixed list; they cannot upload fonts.
+
+- **Where they live:** the compressed files are in `public/fonts/` (WOFF2, Latin + Latin-1 + Ethiopic `U+1200-137F`, 1.3 MB for all 26; each file also has a tiny `-name` file used only for its row in the list). They are static files: the browser downloads one only when a text box uses it (`font-display: swap`), so the first load of `/create` and `/g/<token>` does not grow. `next.config.mjs` caches `/fonts/*` for a year, so a changed font must get a new file name (`.v1` to `.v2`).
+- **The list:** `src/lib/pages/custom-fonts.ts` (id, label, CSS family, real weight, files, licence note) is the one source. The app registry (`fontlist.ts`), the server check (a gift may only name a registry id) and `scripts/build-offline.mjs` (which copies the fonts into the offline file) all read it. `src/app/custom-fonts.css` holds the `@font-face` rules.
+- **Offline file:** it embeds the book's two theme fonts plus only the custom fonts the book uses, as base64 (a third larger than the file). The Send popup shows the size before download. The heaviest single font is Agbalumo (276 KB, about 368 KB inside the file; its Ethiopic part is most of that).
+- **Size budget:** keep each font under about 150 KB (Agbalumo is the one exception, kept on purpose for its Ethiopic) and a display + body pair under about 400 KB.
+
+### Add a font later
+
+1. Put the TTF/OTF in `fonts-src/` (git-ignored) on your own machine and run `pip install fonttools brotli`, then `python scripts/compress-fonts.py`. This is a developer tool: it is not part of `npm run build` and adds nothing to `package.json`.
+2. Copy the new `.woff2` files from `public/fonts/` and add one line to `custom-fonts.ts` (give the real weight of the file: a font that has only Regular or only Bold must say so, otherwise the browser fakes a wider bold than the text was measured with and text clips).
+3. Add its `@font-face` lines to `src/app/custom-fonts.css` (copy a neighbour).
+4. Run `npx tsx scripts/test-fontlist.ts` (checks the files, the CSS and the list agree), then `npm run build:offline`.
+5. Never rename an id that has shipped: gifts store it. If a font changes, change the file name, not the id. A gift that names an id the app no longer knows still opens, in the theme font.
+
+### Licence note (read this)
+
+The owner decided to attach all 26 fonts, including ones whose files do not grant a clear right to embed or redistribute them. This is only what the font files themselves say (not legal advice), kept as `licence` in `custom-fonts.ts`:
+
+- **`ok`** (1): Agbalumo, SIL Open Font License.
+- **`ask`** (14): licence unclear or permission needed: Nokia Light and Bold, Goffer, Zemenay, Loga (4 weights), Dire Dawa, Benaiah, Yebse, Wahsrab, Addis, Astra.
+- **`no`** (11): the file itself restricts embedding or redistribution: Kiros and Abinet (Microsoft EULA text), SurGraphics, Shiromeda (2), Meaza, Adwa and Adwa Sans (4) (embedding flag "preview and print only"), Chiret ("display and print only").
+
+Serving a font to visitors and putting it inside a downloadable offline file is redistribution. Before the app goes public, get written permission or a licence for every `ask` and `no` font, or delete its line from `custom-fonts.ts` and its `@font-face` lines (gifts that already used it fall back to the theme font).
+
+### Known gaps in the fonts
+
+English text in some fonts falls back to another font where a letter is missing: Loga (4) has no Latin letters at all, Chiret has 22 of 95 basic Latin glyphs and the four Adwa files 40 of 95. Some fonts lack accents, curly quotes or the euro sign (details in `project-status.md`, session 56 and 57). Loga has no name-only file, so its picker row shows in the normal list font.
+
 ## Known limits
 
 No accounts, one voice note per page (an uploaded file or a recording up to 2:30), up to 8 added text or photo components per page, no undo (deleting a component or page asks first), no rate limiting (size caps and signed uploads only), no way yet to reopen a gift from `/create?edit=<token>` (the API exists: `GET`/`PUT /api/gifts/mine` with the edit token as a `Bearer` header), no undo. See `tasks.md` (deferred list) and `project-status.md`.

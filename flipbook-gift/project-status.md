@@ -10,7 +10,7 @@
 |---|---|
 | Current phase | Phase 3: Create screen (3.1 to 3.4 done; 3.5 photo controls written, 3.5f awaits a phone test) |
 | State | Phase 0 done; 1.1 to 1.5 done; 1.6 done (user confirmed the fold works perfectly by finger); 2.1 slot model and renderer, 2.2 layout library, 2.3 ten templates, 2.4 sample photos, 2.5 landing page, 3.1 draft + names + envelope message done (built with `next build`, checked in headless Chromium); 3.2 page editor done; 3.3 layout picker done, 3.4 text controls done (session 11: text box in the selection card, style controls in Customize; helpers `setSlotText`, `setTextStyle`, `textLimit`, `TEXT_COLORS` in `src/lib/editor.ts`; `scripts/test-editor.ts` passes; checked in headless Chromium; `npm install` is blocked by a 403 in this sandbox, so `next build` was NOT run; typecheck done with a react shim) (earlier ones tested in headless Chromium via an esbuild bundle; `next build` NOT run since session 8, see sessions 9 and 10) |
-| Last updated | 2026-10-07 (session 33) |
+| Last updated | 2026-10-09 (session 64) |
 | Next action | All tasks are built. What remains is on the owner's side: (1) create Neon and Cloudinary accounts, fill `.env`, run `npm run dev`, publish a test gift, check `/api/health` (this is the first time the Neon store, the routes with a database and real Cloudinary run; expect small fixes) and tick 3.9c; (2) finger-test on a real phone: the engine in the full book, envelope, recipient page, full-screen mode, Preview, Send popup, page editor photo drag (3.5f), and the offline file in airplane mode (then tick 3.5f, 6.2 and the quality gates); (3) deploy with `render.yaml` and set up UptimeRobot (README). Unbuilt by decision: `/create?edit=<token>` reopening (the API exists), see the deferred list. Suggested next build task if wanted: `/create?edit=` reopening. Phase 8 (voice notes): the owner's checks in 8.8 (real Cloudinary upload of MP3/M4A/AAC/WAV with `NEXT_PUBLIC_UPLOADS=1`, publish, gift link on a real iPhone and Android phone, the offline file in airplane mode) are what remain. |
 
 ## Phase tracker
@@ -28,6 +28,7 @@
 | 8 | Audio notes | 9 | 8.1 to 8.7 and 8.9 done; 8.8 verified in the sandbox, owner's real-phone and real-Cloudinary checks open |
 | 9 | Voice recording in the browser | 7 | 9.1 to 9.5 done in code; 9.6 recorder verified in headless Chromium, editor screen never rendered; 9.7 housekeeping done, owner phone checks open; no server or Render impact |
 | 10 | Fixes round 2 | 7 | 10.1 code done (owner browser check open); rest scheduled 2026-10-08, not started: landing templates, offline voice note, 4-tab icon editor, add/duplicate/delete components |
+| 11 | Custom fonts | 3 | Scheduled 2026-10-09, not started: 11.1 compress the owner's ~13 MB of fonts to WOFF2 (waiting for the zip), 11.2 Word-style font dropdown (can start with the existing 20 families), 11.3 attach the fonts (after 11.1) |
 
 ## Top priorities (from prompt.md)
 
@@ -449,6 +450,115 @@ Scaffold only: Next.js 15 + TS + Tailwind 3 config, folders, `.env.example`, pla
 - Task 10.8f done. No answer from the owner, so the lower-risk option was taken: move the buttons, keep the panel height (a taller panel would also shrink the page canvas, which uses `--tool-panel-h`). In the Edit tab, "This component" and "Add to this page" became one "Actions" row under the component chips: Duplicate, Delete, Add text, Add photo as four icon-and-label buttons (44 px high). Same helpers, limits, reasons and delete confirm ("Delete this ...? Yes / Keep"); Duplicate and Delete are disabled when nothing is selected.
 - Checked: the file parses (esbuild) and `tsc` shows 278 errors against 282 before, all missing-React-types noise. NOT seen in a browser or on a phone. Easy to reverse: change `--tool-panel-h` in `CreateScreen.tsx` for a taller panel instead.
 - Left for the owner: phone checks (10.1c, 10.2c, 10.7), `npm ci`, `tsc`, `npm run build`.
+
+### 2026-10-09 (session 55)
+- Planning only, no code changed. Added Phase 11 (11.1 to 11.3) to `tasks.md`. The owner will send about 13 MB of TTF/OTF fonts as a zip; before attaching them: (1) compress them (WOFF2, Latin subset, only the weights the renderer uses; developer-side script, not part of the Render build, no new package), (2) redesign font selection as an expandable Word-style dropdown.
+- Findings from reading the code (not run): a text component's font is only a role (`TextStyle.font` = `display` or `body`, chips \"Headline\"/\"Reading\" in the Edit tab); the book has two pairs (Classic/Modern) in the Style tab; the server whitelists exactly `display`/`body` and `fontPair` 0 or 1; the offline build embeds only the chosen pair. So the dropdown needs a new optional `family` field (registry id) on text styles, renderer and server changes, and offline embedding of used families.
+- Rule change recorded: old rule 6 \"no custom fonts\" now reads: fonts come from one fixed owner-chosen list; user-uploaded fonts stay deferred. Quality gate and Deferred list updated.
+- Render free tier: fonts are static files loaded by the visitor's browser only when used; a 13 MB set is not a server bottleneck, the costs are phone download size and the offline file (base64 adds 33%), hence the size budget in 11.1d.
+- Decisions to confirm with the owner (listed in 11.2a, 11.1b): picker per text box; first entries stay the theme roles; whether Ethiopic or other scripts are needed; size budget per font and per pair.
+- Next: the owner sends the zip (starts 11.1a) and says go-ahead; 11.2 can start in parallel with the existing fonts.
+
+### 2026-10-09 (session 56)
+- Task 11.1a done (inventory only; no code and no font file added to the app). The owner's zip has 28 files, 8.1 MB (not 13 MB): 27 static TTF and 1 OTF (`Astra`), no variable fonts, no `.ttc`. Read with fontTools 4.62.1 (name table, OS/2 `fsType`, cmap coverage).
+- Table (KB; Lat = ASCII glyphs present of 95; Eth = Ethiopic glyphs; fsType 0 installable, 4 preview and print only, 8 editable, 260 = 4 + no subsetting):
+
+| File | Family / style | KB | Lat | Eth | fsType | Licence text in file |
+|---|---|---|---|---|---|---|
+| Agbalumo_Regular | Agbalumo Regular | 1665 | 95 | 495 | 0 | SIL OFL |
+| Nokia (Ultra Light) | Nokia Pure Headline, wt 250 | 650 | 95 | 481 | 0 | Nokia, all rights reserved |
+| NokiaPureHeadline | Nokia Pure Headline Bold | 582 | 95 | 481 | 0 | Nokia, all rights reserved |
+| Goffer | Ethiopic Yigezu Bisrat Goffer | 426 | 95 | 345 | 0 | Senamirmir Project |
+| Goffersl | same family, 2008 version | 407 | 95 | 345 | 0 | Senamirmir Project |
+| Zemenay_Regular | Zemenay (wt says 700) | 383 | 95 | 371 | 0 | "ETHL", placeholder copyright |
+| Kiros | Kiros, wt 200 | 361 | 95 | 461 | 8 | Microsoft EULA text |
+| SurGraphics ExtraBold | SurGraphics Black | 284 | 95 | 339 | 4 | All rights reserved |
+| Loga_Regular | Loga | 255 | 1 | 292 | 0 | All rights reserved |
+| Loga_Medium | Loga Med | 251 | 1 | 292 | 0 | All rights reserved |
+| Loga_Thin | Loga Thin | 243 | 1 | 292 | 0 | All rights reserved |
+| Loga_Light | Loga Light | 219 | 1 | 292 | 0 | All rights reserved |
+| Dire Dawa | Ethiopic Dire Dawa | 216 | 95 | 345 | 0 | none (Road to Ethiopia) |
+| Chiret-Regular | Chiret | 201 | 22 | 384 | 0 | display and print only |
+| Shiromeda-Bold | Shiromeda Bold | 192 | 93 | 358 | 4 | none |
+| Benaiah | Benaiah Bold | 188 | 94 | 273 | 0 | none |
+| Yebse | Ethiopic Yebse | 188 | 95 | 342 | 0 | Senamirmir Project |
+| Shiromeda-Regular | Shiromeda | 183 | 93 | 358 | 4 | none |
+| Wahsrab | Ethiopic WashRa SemiBold (Bold) | 178 | 95 | 345 | 0 | Senamirmir Project |
+| Abinet | AbnetZethion (says Bold, wt 400) | 176 | 95 | 355 | 8 | Microsoft EULA, Tiro Typeworks |
+| Addis | Ethiopic Addis | 152 | 95 | 345 | 0 | none (Road to Ethiopia) |
+| Meaza | Meaza | 150 | 92 | 358 | 4 | none |
+| AdwaSansSerif-Regular | Adwa Sans Serif | 128 | 40 | 354 | 4 | none |
+| AdwaSansSerif-Bold | Adwa Sans Serif Bold | 126 | 40 | 354 | 4 | none |
+| Adwa-Regular | Adwa (2020) | 122 | 40 | 354 | 4 | none |
+| Adwa-Bold | Adwa Bold (2020) | 119 | 40 | 354 | 4 | none |
+| Adwa (plain) | Adwa (2018, other author) | 104 | 1 | 324 | 260 | none |
+| Astra | ASTRA (OTF/CFF) | 22 | 91 | 0 | 0 | none |
+
+- Licence findings (NOT legal advice; only the text inside the files): only Agbalumo is clearly open (SIL OFL). Do not attach: fsType 4 (SurGraphics, Shiromeda, Meaza, the Adwa family), fsType 260 (plain Adwa), Microsoft EULA (Abinet, Kiros), Chiret (display and print only). Unclear, the owner must show a licence or permission: Nokia Pure, Loga, Zemenay, Astra, Senamirmir fonts (Goffer, Goffersl, Yebse, Wahsrab), Road to Ethiopia fonts (Addis, Dire Dawa), Benaiah.
+- Other findings: Goffer and Goffersl are the same family (2006 and 2008); the plain Adwa and Adwa-Regular share a family name but come from different authors and years. No Latin letters at all in Loga and the plain Adwa (1 of 95); only 40 of 95 in the other Adwa files and 22 of 95 in Chiret, so English text would fall back to another font. Curly quotes missing in Abinet, Astra, Chiret, Loga, plain Adwa; euro missing in 10 files; most files have few or no Latin-1 accents. Weight metadata is unreliable (Zemenay, Abinet, Kiros); real weights are to be set in 11.3. Only Agbalumo (1.6 MB), Nokia (about 600 KB each) and Goffer/Goffersl (about 400 KB) exceed the 150 KB per file budget before subsetting.
+- Questions open for 11.1b (owner): settle licences first or flag at the end; scripts to keep (Latin, Latin-1 and Ethiopic `U+1200-137F` is assumed); which duplicate to keep (Goffer or Goffersl, Adwa 2018 or 2020).
+- Next: 11.1b once the owner answers.
+
+### 2026-10-09 (session 57)
+- Tasks 11.1b, 11.1c, 11.1d done; 11.1e is this entry. Owner answers: continue with licences flagged at the end; keep Latin + Latin-1 + Ethiopic; keep the 2020 Adwa. Goffer: not answered, kept `Goffersl` (2008, newer and smaller) and dropped `Goffer` (2006). Nothing attached to the app (no registry, no `@font-face`, no change to `src`).
+- New: `scripts/compress-fonts.py` (fonttools `pyftsubset` API, WOFF2, all layout features, no hinting, desubroutinized, name table kept so copyright and licence text stay in the file; `fonts-src/` in, `public/fonts/` out, versioned names `<slug>.v1.woff2`, `<slug>-name.v1.woff2`, `manifest.json`), `scripts/verify-fonts.py` (FontFace load and draw in headless Chromium, coverage of the text in `templates.ts`), `.gitignore` entry `fonts-src/`. Developer tools only: not in `package.json`, not in `npm run build`. Needs `pip install fonttools brotli playwright` on the developer machine; this sandbox had no `brotli`, so a throwaway stand-in using Node's real brotli was used (outside the project) and its output loads in Chromium.
+- Result: 26 fonts, 7654 KB -> 1304 KB of WOFF2 (public/fonts, 1.5 MB with 22 name subsets of 0.8 to 2.4 KB each). 25 of 26 are at most 60 KB. Over the 150 KB budget: Agbalumo 276 KB (its Ethiopic part is about 220 KB; Latin only would be 55 KB). Decision for the owner: keep Agbalumo's Ethiopic, or Latin only (the other Ethiopic-capable Latin fonts, Nokia Pure, Kiros, Zemenay, are small).
+- Offline file estimate: heaviest likely pair, Agbalumo + Nokia Bold = 338 KB, about 451 KB as base64 (over the 400 KB pair budget by raw size only if both are Agbalumo-class; with Latin-only Agbalumo the pair is 117 KB). Every extra family a book uses adds its own size.
+- Licence (only what the files say; the owner decides): clearly open: Agbalumo. Embedding forbidden by the file itself: Kiros, Abinet (Microsoft EULA), SurGraphics, Shiromeda (x2), Meaza, Adwa and Adwa Sans (x4) (fsType 4), Chiret (display and print only). Permission needed: Nokia (x2), Goffer, Zemenay, Loga (x4), Dire Dawa, Benaiah, Yebse, Wahsrab, Addis, Astra. The manifest field `licence` is `ok`, `no` or `ask` per font; 11.3 must attach only fonts the owner clears.
+- Glyph gaps (what 11.2c and the picker must handle): Loga (x4) has no Latin at all (Ethiopic only), Chiret has 22 of 95 and the four Adwa files 40 of 95 Latin glyphs, so English text in them falls back to another font; the picker row for these shows the normal face (Loga has no name subset). No font lacks anything used by the template text except `·` in SurGraphics and Meaza. Missing outside templates: accents in SurGraphics, Shiromeda, Benaiah, Abinet, Astra; euro in Goffer, Dire Dawa, Yebse, Wahsrab; curly quotes and dashes in Abinet and Astra.
+- Not checked: how each font looks on the real template pages (a visual pass belongs to 11.3), a real phone, `fonts-src/` is local only and not in the zip.
+- Next: owner decides Agbalumo (Ethiopic or Latin only) and which `ask` and `no` fonts are cleared; then 11.2 (dropdown, can start now) and 11.3.
+
+### 2026-10-09 (session 58)
+- Owner confirmed all four 11.2a decisions (per-component picker; first two entries stay Headline/Reading font; Style tab chips unchanged; phone list is a sheet, desktop a dropdown). 11.1e ticked (its report is the session 57 entry). 11.2a, 11.2b done.
+- New: `src/lib/pages/fontlist.ts` (registry of the 20 shipped families as placeholders: id, label, family, category Serif/Sans/Display, real weights, italic; helpers `fontById`, `isFontId`, `cssFamily`, `resolveFamily` (unknown id falls back to the role family), `capWeight` (never a weight the font lacks), `fontGroups`, `searchFonts`, `SEARCH_MIN` 12, `ROLE_LABEL`) and `scripts/test-fontlist.ts` (checks ids, weights and italic against `src/app/fonts.ts`, fallbacks, caps, search). Test passes; the new file type-checks alone; full `tsc` and `npm run build` not run (no node_modules here). Nothing imports the registry yet, so the app is unchanged.
+- Note: no Handwriting or Script category yet (none of the 20 are); add them with the custom fonts in 11.3. Registry ids are what the server will accept in 11.2f.
+- Next: 11.2c (optional `family` on `TextStyle` and `ExtraSlotDef`, renderer resolves it and caps weight, `loadFonts` loads used families).
+
+### 2026-10-09 (session 59)
+- Task 11.2c done in code. `family?: string` (registry id) added to `TextStyle` and `TextSlotDef` (added text boxes). `textFace` (`render.ts`) picks style family, then the slot's own family, then the role font; a registry font's weight is capped with `capWeight`, an unknown id falls back to the role font and its `displayMaxWeight` cap. `loadFonts(fonts, pages?)` also loads the families the pages use (only their real weights); new `usedFontIds(pages)`. `src/lib/pages/index.ts` now re-exports `fontlist`. Callers updated: PreviewBook, GiftView, offline runtime, PageEditor (reloads when the set of used fonts changes and redraws via `fontTick`). Not passed: CoverPreview, TemplateCover, LiveBook (template pages never carry a family).
+- Tests: 15 new checks in `scripts/test-editor.ts`; `test-editor` and `test-fontlist` pass. `tsc` shows no errors in the changed files (the rest is missing-module noise, no node_modules: npm install fails here). Not done: headless Chromium render and `npm run build`.
+- Found, not caused by this task, not fixed: `scripts/test-layouts.ts` fails 8 checks (`birthday-number.circle` and `birthday-cover.circle` not inside the page; `contact-sheet.p4-p6` and `friends-grid.p4-p5` photo ids not p1..p3; "covers: 4") and `scripts/test-templates.ts` fails "landing page links carry the template id". Either the tests are stale or the layout data has drifted; needs a look.
+- Next: 11.2d (`FontPicker` component).
+
+### 2026-10-09 (session 60)
+- Task 11.2d written. `src/components/FontPicker.tsx`: closed box showing the current name in its own face + chevron; opens a bottom sheet on phones and a dropdown from `sm` up; groups "Theme fonts" (Headline/Reading, tagged "Follows the book") then Serif/Sans/Display; tick on the current row; rows at least 44 px; list scrolls (max 70vh sheet, 18 rem dropdown); search box only when the list has more than `SEARCH_MIN` (12) fonts (20 now, so it shows); closes on pick, Esc, outside tap, backdrop tap, Tab; keyboard: up/down/Home/End/Enter/Esc, type-to-jump when there is no search box; roles combobox, listbox, option, group with `aria-activedescendant`. Reports `{ family }` or `{ font }` (back to a theme role) through `onChange`. No package added.
+- Checked: `tsc` shows no errors for the file beyond the sandbox's missing-react noise. NOT checked: rendering, keyboard, phone sheet (needs 11.2e wiring and headless Chromium, 11.2h). Rows draw in the full faces for now; the name-only subsets arrive with 11.3.
+- Next: 11.2e (replace the Headline/Reading chips in `PageEditor.tsx` with the picker; choosing a font sets `family` and clears `font`, "Follows the book" clears `family`).
+
+### 2026-10-09 (session 61)
+- Task 11.2e done in code (`src/components/PageEditor.tsx` only). In Edit > Look, the "Font" row's Headline/Reading chips are replaced by `FontPicker`. Mapping: a registry font -> `setStyle({ family })` (the role `font` stays as the fallback if the id is ever unknown); a "Theme fonts" row -> `setStyle({ family: undefined, font })`, and `font` is cleared when it equals the layout's own, as the chips did. The picker shows `style.family`, else the theme role in effect (`cur.font`, default `body`). The page and thumbnails redraw in the new font through the existing `usedFontIds` -> `loadFonts` -> `fontTick` path from 11.2c. The picker is in its own row (not inside `Row`, whose `overflow-x-auto` would clip the desktop dropdown). Removed the now-unused `FontRole` import.
+- Checked: `test-editor` and `test-fontlist` pass; project `tsc` shows only the missing-React/Next noise (implicit `any`, unresolved modules), nothing pointing at the new lines. NOT checked: rendering, the phone sheet over the 236 px panel, keyboard use, live redraw (needs React; that is 11.2h).
+- Known edge, not changed: an added text box that already carries its own `family` (none are created that way today) could not be sent back to a theme font by the picker, because `textFace` looks at the slot's `family` after the style's.
+- Next: 11.2f (server accepts `family` only if it is a registry id, for styles and added text, with tests).
+
+### 2026-10-09 (session 62)
+- Task 11.2f done in code (`src/server/gifts.ts` only). `family` is accepted on an added text (`checkExtra`) and in a text style only if `isFontId` (the registry in `src/lib/pages/fontlist.ts`) knows it; unknown, wrong-case, empty and non-string values are refused with the existing plain errors. No database change, route or environment variable. A stored gift whose font id the app no longer knows still opens: the renderer falls back to the role font (11.2c).
+- Tests: new block in `scripts/test-gifts.ts` (7 refused values for added text, 5 for styles, accepted ids and the stored value checked); it passes when run on its own with the file's own helpers. `test-editor`, `test-fontlist` pass; `test-templates` still has the one failure noted in session 59.
+- Found, not caused by this task, not fixed (the zip as uploaded already does this): `scripts/test-gifts.ts` stops at line 34 (`title` of 1001 characters is no longer refused) and, with that line skipped, again at line 53 (900 characters in a text slot is accepted). The text caps in `textLimit` have grown since those cases were written, so either the cases are stale or the caps are too loose; every case after line 34 does not run in the full file until this is settled. Needs the owner's call.
+- Next: 11.2g (offline file embeds the book's pair plus every extra family the book uses, and shows the size before download).
+
+### 2026-10-09 (session 63)
+- Task 11.2g done in code. `offlineFontFamilies(draft)` (`src/lib/offline.ts`) returns the book's display and body families plus each registry family the pages use (styles and added text), once each; unknown ids add nothing. `buildOfflineHtml` embeds exactly those. New `offlineFontBytes(draft)` sums the sizes of the chosen fonts' files (HEAD requests, base64 adds a third) and returns null if it cannot tell. `PublishDialog.tsx` shows a line such as "3 fonts are saved inside too: about 240 KB" while the file is not yet made.
+- Tests: new `scripts/test-offline-fonts.ts` (6 groups) passes; `test-editor`, `test-fontlist`, `test-offline-audio` pass; `tsc` shows nothing new in the changed files beyond the missing-module noise.
+- Not checked: the Send popup in a browser, a real download, and that every registry family name matches a key in `public/offline/fonts/manifest.json` (needs `npm run build:offline` with `node_modules/@fontsource`). A family missing from the manifest would be silently left out of the file and draw in the fallback face: check this first when the app is run. Custom fonts (11.3) must also be added to that manifest or to this path.
+- Phase 11.2 is complete in code; 11.2h (headless Chromium check of the picker) is still the one thing nobody has rendered. Next: 11.3 only after the owner clears the font licences; until then, the picker can be rendered and checked where React is installed.
+
+### 2026-10-09 (session 64)
+- Task 11.2h started, not finished. This sandbox still cannot reach the npm registry (`ENOTFOUND`); `npm install` crashed and left empty package folders, so I removed `node_modules` again. Not possible here: `tsc --noEmit` with real types, `npm run build`, rendering `FontPicker` in headless Chromium.
+- Ran every `scripts/test-*.ts`: pass: audio, editor, fontlist, geometry, offline-audio, offline-fonts, recorder, upload. Fail (all three failed in the zip as uploaded, none touched by Phase 11 work): `test-gifts` (stops at line 34, and again at line 53 when that is skipped: text length caps vs cases, see session 62), `test-layouts` (8 checks: `birthday-number.circle` and `birthday-cover.circle` outside the page; `contact-sheet` and `friends-grid` photo ids; "covers: 4"), `test-templates` (1 check: "landing page links carry the template id").
+- Next: on a machine with network, `npm install`, `npx tsc --noEmit`, `npm run build`, `npm run build:offline` (also confirms the registry names match the font manifest keys, see session 63), then the Chromium check of the picker (open, pick, close, search, keyboard, panel not blocked) and the owner's phone check. Then the three stale test failures need a decision.
+
+### 2026-10-09 (session 65)
+- Task 11.3 first pass: attached Agbalumo only (the one clear licence). Superseded by session 66.
+
+### 2026-10-09 (session 66)
+- Owner decisions: (1) import ALL fonts even without a licence; (2) keep Agbalumo's Ethiopic; (3) write it in the README. Done in code. Licence risk is the owner's and is written in the README ("Licence note": 1 `ok`, 14 `ask`, 11 `no` as the files say; get permission or delete the lines before going public).
+- All 26 fonts are attached. `src/lib/pages/custom-fonts.ts` (generated from `public/fonts/manifest.json`; adds `family` in ASCII, optional `nameFile`, `licence`), `src/app/custom-fonts.css` (48 `@font-face`: 26 fonts + 22 name faces), registry `fontlist.ts` (46 entries; new category "Ethiopic" for the 25 Ethiopic-script fonts, Agbalumo is "Display"; `nameCss`; fonts without a name file, the four Loga, draw their picker row in the fallback face and download nothing), `FontPicker.tsx` (rows use `nameCss`), `next.config.mjs` (one-year immutable cache for `/fonts/*`), `scripts/build-offline.mjs` (copies every custom font into the offline font set, manifest key = family), tests.
+- Real weights come from the manifest (Nokia Light 200, Loga Thin 100, Loga Light 300, Loga Medium 500, SurGraphics 900, Nokia/Benaiah/Wahsrab/Abinet/Shiromeda Bold/Adwa Bold/Adwa Sans Bold 700, rest 400), so `capWeight` never asks for a weight a file lacks. The server accepts any registry id, so all 26 are accepted without a server change.
+- Checked: `test-fontlist` (now also checks files, CSS, weights, names for all 26), `test-editor`, `test-offline-fonts` pass. NOT run: `npm run build:offline` (no esbuild here; the data-URL import of `custom-fonts.ts` is untested), `npm run build`, `tsc`, first-load size, Chromium render of a book in each font, offline file with network off, phone.
+- Known, not fixed: Loga (no Latin), Chiret (22 of 95) and the four Adwa files (40 of 95) cannot draw most English text, so a creator picking them sees the fallback face for the missing letters; the "Ethiopic" group could carry a hint. Offline file with the heaviest single font (Agbalumo): about 368 KB.
+- Next: on a machine with network: `npm install`, `npx tsc --noEmit`, `npm run build:offline`, `npm run build`, then Chromium and phone checks (11.2h, 11.3).
 
 ## How to resume
 

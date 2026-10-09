@@ -362,7 +362,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   /** Scales font size and box width together (so wrapping stays the same), keeping the box inside the page. */
   const scaleText = (startScale: number, startW: number, left: number, factor: number) => {
     const maxW = Math.max(TEXT_WIDTH_MIN, 1 - left);
-    const f = Math.min(Math.max(factor, TEXT_SCALE_MIN / startScale, TEXT_WIDTH_MIN / startW), TEXT_SCALE_MAX / startScale, maxW / startW);
+    const f = Math.max(Math.min(Math.max(factor, TEXT_SCALE_MIN / startScale, TEXT_WIDTH_MIN / startW), TEXT_SCALE_MAX / startScale, maxW / startW), TEXT_SCALE_MIN / startScale); // the minimum size always wins, even next to the page edge
     setStyle({ scale: Math.round(startScale * f * 1000) / 1000, w: Math.round(startW * f * 10000) / 10000 });
   };
   const FRAME_PAD = 5; // page px between the text and its selection frame

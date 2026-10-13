@@ -31,6 +31,8 @@ export default function CreateScreen() {
   const [sending, setSending] = useState(false);
   const [activeTool, setActiveTool] = useState<EditorTool | null>(null);
   const [selectedKind, setSelectedKind] = useState<"text" | "photo" | null>(null);
+  const [pagesMenu, setPagesMenu] = useState(false);
+  const [pageControl, setPageControl] = useState<"navigate" | "manage" | "layout" | null>(null);
   const [textMenu, setTextMenu] = useState(false);
   const [photoMenu, setPhotoMenu] = useState(false);
   const [photoControl, setPhotoControl] = useState<"replace" | "fit" | "frame" | "filter" | "zoom" | null>(null);
@@ -71,6 +73,11 @@ export default function CreateScreen() {
     else if (action === "clear") setActiveTool(null);
   };
   const toolbar = MAIN_TOOLS;
+  const PAGE_TOOLS = ["Navigate", "Manage", "Layout"] as const;
+  const choosePageTool = (label: typeof PAGE_TOOLS[number]) => {
+    setPageControl(label.toLowerCase() as "navigate" | "manage" | "layout");
+    setActiveTool("Pages");
+  };
   const TEXT_TOOLS = ["Add text", "Font", "Size", "Align", "Color", "Style"] as const;
   const PHOTO_TOOLS = ["Add photo", "Replace", "Fit", "Frame", "Filter", "Zoom"] as const;
   const choosePhotoTool = (tool: typeof PHOTO_TOOLS[number]) => {
@@ -84,17 +91,20 @@ export default function CreateScreen() {
     setActiveTool("Edit");
   };
   const openMainTool = (label: string, tool?: EditorTool, action?: EditorAction) => {
-    if (label === "Text") {
+    if (label === "Pages") {
+      setPagesMenu(current => !current); setPageControl(null);
+      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setActiveTool(null);
+    } else if (label === "Text") {
       setTextMenu(current => !current);
-      setPhotoMenu(false); setPhotoControl(null);
+      setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null);
       setTextControl(null);
       setActiveTool(null);
     } else if (label === "Photo") {
       setPhotoMenu(current => !current);
-      setTextMenu(false); setTextControl(null);
+      setTextMenu(false); setTextControl(null); setPagesMenu(false); setPageControl(null);
       setPhotoControl(null); setActiveTool(null);
     } else {
-      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null);
+      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null);
       if (tool) activateEditorTool(tool);
       else if (action) runEditorAction(action);
     }
@@ -114,9 +124,9 @@ export default function CreateScreen() {
         </header>
         <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {view === "edit" ? (
-            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? (textControl || photoControl ? "calc(var(--nav-h) + 162px)" : "calc(var(--nav-h) + 280px)") : textMenu || photoMenu ? "calc(var(--nav-h) + 48px)" : "calc(var(--nav-h) + 16px)" }}>
+            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? (textControl || photoControl || pageControl ? "calc(var(--nav-h) + 162px)" : "calc(var(--nav-h) + 280px)") : textMenu || photoMenu || pagesMenu ? "calc(var(--nav-h) + 48px)" : "calc(var(--nav-h) + 16px)" }}>
               <div data-natragift-editor>
-                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} textControl={textMenu ? textControl : null} photoControl={photoMenu ? photoControl : null} onClose={() => { setActiveTool(null); setTextControl(null); setPhotoControl(null); }} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); }}
+                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} pageControl={pagesMenu ? pageControl : null} textControl={textMenu ? textControl : null} photoControl={photoMenu ? photoControl : null} onClose={() => { setActiveTool(null); setTextControl(null); setPhotoControl(null); setPageControl(null); }} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); }}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
                   onChange={(pages) => set({ pages })} />
               </div>
@@ -128,6 +138,11 @@ export default function CreateScreen() {
         {view === "edit" && (
           <>
             
+            {pagesMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
+              <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto" role="toolbar" aria-label="Page tools">
+                {PAGE_TOOLS.map(label => <button key={label} type="button" onClick={() => choosePageTool(label)} aria-pressed={pageControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (pageControl === label.toLowerCase() ? "border-rose-500 bg-rose-700" : "border-stone-700 bg-stone-900")}>{label}</button>)}
+              </div>
+            </div>}
             {textMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
               <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto overscroll-x-contain" role="toolbar" aria-label="Text tools">
                 {TEXT_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseTextTool(label)} aria-pressed={textControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (textControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
@@ -141,9 +156,9 @@ export default function CreateScreen() {
             <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
               <div className="mx-auto grid max-w-2xl grid-cols-5 gap-1">
                 {toolbar.map(({ label, icon, tool, action }) => (
-                  <button key={label} type="button" aria-label={label} aria-pressed={label === "Text" ? textMenu : label === "Photo" ? photoMenu : !!tool && activeTool === tool}
+                  <button key={label} type="button" aria-label={label} aria-pressed={label === "Pages" ? pagesMenu : label === "Text" ? textMenu : label === "Photo" ? photoMenu : !!tool && activeTool === tool}
                     onClick={() => openMainTool(label, tool, action)}
-                    className={"relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 " + ((label === "Text" && textMenu) || (label === "Photo" && photoMenu) || (tool && activeTool === tool) ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
+                    className={"relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 " + ((label === "Pages" && pagesMenu) || (label === "Text" && textMenu) || (label === "Photo" && photoMenu) || (tool && activeTool === tool) ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
                     {((label === "Text" && textMenu) || (tool && activeTool === tool)) && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
                     <Icon name={icon} size={21} />
                     <span className="text-[11px] font-semibold">{label}</span>

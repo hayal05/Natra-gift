@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { draftPalette, loadDraft, newDraft, saveDraft, type Draft } from "../lib/draft";
 import { TEMPLATES, fill } from "../templates";
 import { publishGift } from "../lib/publish";
@@ -12,11 +12,13 @@ import PublishDialog from "./PublishDialog";
 import { Icon, type IconName } from "./icons";
 
 type EditorTool = "Pages" | "Edit" | "Audio" | "Style";
-const TOOLS: { id: EditorTool; icon: IconName; hint: string }[] = [
-  { id: "Pages", icon: "pages", hint: "Arrange & layout" },
-  { id: "Edit", icon: "text", hint: "Text & photos" },
-  { id: "Style", icon: "style", hint: "Colours & fonts" },
-  { id: "Audio", icon: "audio", hint: "Voice notes" },
+type EditorAction = "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic";
+const MAIN_TOOLS: { label: string; icon: IconName; tool?: EditorTool; action?: EditorAction }[] = [
+  { label: "Pages", icon: "pages", tool: "Pages" },
+  { label: "Text", icon: "text", action: "add-text" },
+  { label: "Photo", icon: "photo", action: "add-photo" },
+  { label: "Audio", icon: "audio", tool: "Audio" },
+  { label: "Design", icon: "style", tool: "Style" },
 ];
 
 export default function CreateScreen() {
@@ -28,6 +30,9 @@ export default function CreateScreen() {
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [sending, setSending] = useState(false);
   const [activeTool, setActiveTool] = useState<EditorTool | null>(null);
+  const [selectedKind, setSelectedKind] = useState<"text" | "photo" | null>(null);
+  const [editorCommand, setEditorCommand] = useState<{ id: number; action: EditorAction } | null>(null);
+  const commandId = useRef(0);
 
   // Decide which draft to show: ?t=<id> that differs from the saved draft starts a fresh one (names carry over); otherwise resume.
   useEffect(() => {
@@ -56,6 +61,16 @@ export default function CreateScreen() {
   const set = (p: Partial<Draft>) => setDraft({ ...draft, ...p });
 
   const activateEditorTool = (tool: EditorTool) => setActiveTool((current) => current === tool ? null : tool);
+  const runEditorAction = (action: EditorAction) => {
+    setEditorCommand({ id: ++commandId.current, action });
+    if (action === "delete") setActiveTool("Edit");
+    else if (action === "clear") setActiveTool(null);
+  };
+  const toolbar = selectedKind === "text"
+    ? [{ label: "Back", icon: "arrow-left" as IconName, action: "clear" as EditorAction }, { label: "Edit", icon: "text" as IconName, tool: "Edit" as EditorTool }, { label: "Bold", icon: "bold" as IconName, action: "bold" as EditorAction }, { label: "Italic", icon: "italic" as IconName, action: "italic" as EditorAction }, { label: "More", icon: "style" as IconName, tool: "Edit" as EditorTool }]
+    : selectedKind === "photo"
+      ? [{ label: "Back", icon: "arrow-left" as IconName, action: "clear" as EditorAction }, { label: "Edit", icon: "photo" as IconName, tool: "Edit" as EditorTool }, { label: "Duplicate", icon: "duplicate" as IconName, action: "duplicate" as EditorAction }, { label: "Delete", icon: "trash" as IconName, action: "delete" as EditorAction }, { label: "More", icon: "style" as IconName, tool: "Edit" as EditorTool }]
+      : MAIN_TOOLS;
 
   if (step === "pages") {
     return (
@@ -73,7 +88,7 @@ export default function CreateScreen() {
           {view === "edit" ? (
             <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? "calc(var(--nav-h) + var(--tool-panel-h) + 16px)" : "calc(var(--nav-h) + 16px)" }}>
               <div data-natragift-editor>
-                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} onClose={() => setActiveTool(null)}
+                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} onClose={() => setActiveTool(null)} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); setActiveTool(null); }}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
                   onChange={(pages) => set({ pages })} />
               </div>
@@ -86,13 +101,14 @@ export default function CreateScreen() {
           <>
             
             <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
-              <div className="mx-auto grid max-w-2xl grid-cols-4 gap-1.5">
-                {TOOLS.map(({ id, icon, hint }) => (
-                  <button key={id} type="button" aria-label={`${id}: ${hint}`} aria-pressed={activeTool === id} onClick={() => activateEditorTool(id)}
-                    className={"relative flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-rose-700 " + (activeTool === id ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
-                    {activeTool === id && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
+              <div className="mx-auto grid max-w-2xl grid-cols-5 gap-1">
+                {toolbar.map(({ label, icon, tool, action }) => (
+                  <button key={label} type="button" aria-label={label} aria-pressed={!!tool && activeTool === tool}
+                    onClick={() => tool ? activateEditorTool(tool) : action && runEditorAction(action)}
+                    className={"relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 " + (tool && activeTool === tool ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
+                    {tool && activeTool === tool && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
                     <Icon name={icon} size={21} />
-                    <span className="text-[11px] font-semibold">{id}</span>
+                    <span className="text-[11px] font-semibold">{label}</span>
                   </button>
                 ))}
               </div>

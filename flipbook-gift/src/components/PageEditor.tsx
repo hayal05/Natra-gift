@@ -626,19 +626,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                     <Group title="Select text or photo">
                       <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Page components">{slots.map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} aria-pressed={x.id===slotId} className={chip(x.id===slotId)+" flex shrink-0 items-center gap-1.5"}><Icon name={x.kind==="text"?"text":"photo"} size={14} />{slotName(layout,x)}</button>)}</div>
                     </Group>
-                    <Group title="Add, duplicate or remove">
-                      {confirmSlotDelete
-                        ? <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete this {slot?.kind==="text"?"text":"photo"}? You cannot undo it.</span><button type="button" onClick={removeComp} className="min-h-[44px] rounded-md bg-red-700 px-4 text-xs font-bold text-white">Yes, delete</button><button type="button" onClick={()=>setConfirmSlotDelete(false)} className={chip(false)}>Keep</button></div>
-                        : <div className="grid grid-cols-4 gap-2" role="group" aria-label="Component actions">
-                          <button type="button" onClick={copyComp} disabled={!slot||!!copyWhy} aria-label="Duplicate this component" className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1 text-[11px] font-bold disabled:opacity-40 border-stone-300 bg-white text-stone-800"}><Icon name="duplicate" size={18} />Duplicate</button>
-                          <button type="button" onClick={()=>setConfirmSlotDelete(true)} disabled={!slot||!!deleteWhy} aria-label="Delete this component" className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1 text-[11px] font-bold disabled:opacity-40 border-stone-300 bg-white text-red-700"}><Icon name="trash" size={18} />Delete</button>
-                          <button type="button" onClick={()=>addComp("text")} disabled={!!addTextWhy} aria-label="Add a text box to this page" className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1 text-[11px] font-bold disabled:opacity-40 border-rose-700 bg-rose-700 text-white"}><Icon name="plus" size={18} />Add text</button>
-                          <button type="button" onClick={()=>addComp("photo")} disabled={!!addTextWhy} aria-label="Add a photo to this page" className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-1 text-[11px] font-bold disabled:opacity-40 border-rose-700 bg-rose-700 text-white"}><Icon name="plus" size={18} />Add photo</button>
-                        </div>}
-                      {(slotNote||addTextWhy||deleteWhy||copyWhy)&&<p className="mt-2 text-xs text-stone-500" role="status">{slotNote??addTextWhy??deleteWhy??copyWhy}</p>}
-                    </Group>
                     {textSlot && <>
-                      <Group title="Text">
+                      <Group title="Edit text">
                         <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={Math.min(10, Math.max(3, typed.split("\n").reduce((n, ln) => n + Math.max(1, Math.ceil(ln.length / 32)), 0)))} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
                       </Group>
                       <Group title="Look">
@@ -654,7 +643,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                       <Group title="Position"><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>
                     </>}
                     {photoSlot && <>
-                      <Group title="Photo">
+                      <Group title="Replace image">
                         <label className={"inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-800 "+(photoBusy?"opacity-40":"")}><Icon name="photo" size={16} />Replace photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={choosePhoto} disabled={!!photoBusy} className="sr-only"/></label>
                         {photoBusy&&<p className="mt-2 text-xs text-stone-600" role="status">{photoBusy.label}{photoBusy.pct!==null&&` ${photoBusy.pct}%`}</p>}{photoError&&<p className="mt-2 text-xs font-bold text-red-700" role="alert">{photoError}</p>}
                       </Group>
@@ -665,7 +654,23 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                         <Row label="Zoom"><input type="range" aria-label={`Zoom ${(photo.zoom??1).toFixed(1)}×`} min={1} max={3} step={0.1} value={photo.zoom??1} onChange={e=>setPhotoProps({zoom:Number(e.target.value)})} className="h-11 min-w-[96px] flex-1 accent-rose-700"/><span className="w-10 shrink-0 text-right text-xs text-stone-500">{(photo.zoom??1).toFixed(1)}×</span><button type="button" className={chip(false)} onClick={()=>setPhotoProps({zoom:1})}>Reset</button></Row>
                       </Group>
                     </>}
-                    {!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Tap a text or photo on the page, or choose one above.</p>}
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-stone-800">{textSlot ? "Text selected" : photoSlot ? "Photo selected" : "No component selected"}</p>
+                        <p className="truncate text-[11px] text-stone-500">{slot ? slotName(layout, slot) : "Choose a component above or tap the page"}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-1.5">
+                        <button type="button" onClick={()=>addComp("text")} disabled={!!addTextWhy} aria-label="Add text box" className={chip(false)+" flex items-center gap-1 disabled:opacity-40"}><Icon name="plus" size={14} />Text</button>
+                        <button type="button" onClick={()=>addComp("photo")} disabled={!!addTextWhy} aria-label="Add photo" className={chip(false)+" flex items-center gap-1 disabled:opacity-40"}><Icon name="plus" size={14} />Photo</button>
+                      </div>
+                    </div>
+                    {slot && <div className="flex items-center gap-2">
+                      <button type="button" onClick={copyComp} disabled={!!copyWhy} className={chip(false)+" flex items-center gap-1.5 disabled:opacity-40"}><Icon name="duplicate" size={15} />Duplicate</button>
+                      <button type="button" onClick={()=>setConfirmSlotDelete(true)} disabled={!!deleteWhy} className={chip(false)+" flex items-center gap-1.5 text-red-700 disabled:opacity-40"}><Icon name="trash" size={15} />Delete</button>
+                    </div>}
+                    {confirmSlotDelete && slot && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete this {slot.kind==="text"?"text":"photo"}? You cannot undo it.</span><button type="button" onClick={removeComp} className="min-h-[44px] rounded-md bg-red-700 px-4 text-xs font-bold text-white">Yes, delete</button><button type="button" onClick={()=>setConfirmSlotDelete(false)} className={chip(false)}>Keep</button></div>}
+                    {(slotNote||addTextWhy||deleteWhy||copyWhy)&&<p className="text-xs text-stone-500" role="status">{slotNote??addTextWhy??deleteWhy??copyWhy}</p>}
+                    {!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Select a text or photo to reveal its editing controls. You can also add a new component above.</p>}
                   </div>
                 )}
                 {activeTool === "Audio" && (

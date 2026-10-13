@@ -108,7 +108,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     };
     draw(main.current, page, at, W, H);
     filled.forEach((p, i) => draw(thumbs.current[i], p, i, W, H)); // thumbnails draw at full size and are scaled down by CSS
-  }, [ready, fontTick, book, filled, images, page, at]);
+  }, [ready, fontTick, book, filled, images, page, at, pageControl]);
 
   // Layout picker previews: every layout drawn with this page's content. Only while the Pages tab is open.
   const panelOpen = activeTool === "Pages" && pageControl === "layout";

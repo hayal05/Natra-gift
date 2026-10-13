@@ -366,6 +366,21 @@ export function renderPage(
     else drawShape(c, s, book, w, h);
     c.restore();
   }
+  for (const line of page.lines ?? []) {
+    c.save();
+    c.translate(line.x * w, line.y * h);
+    c.rotate((line.angle * Math.PI) / 180);
+    c.strokeStyle = line.color;
+    c.lineWidth = line.width * (w / 360);
+    c.lineCap = "round";
+    if (line.style === "dashed") c.setLineDash([12, 8]);
+    if (line.style === "dotted") c.setLineDash([1, 8]);
+    const len = line.length * w;
+    if (line.style === "double") {
+      for (const dy of [-line.width, line.width]) { c.beginPath(); c.moveTo(0, dy); c.lineTo(len, dy); c.stroke(); }
+    } else { c.beginPath(); c.moveTo(0, 0); c.lineTo(len, 0); c.stroke(); }
+    c.restore();
+  }
   c.restore();
 }
 

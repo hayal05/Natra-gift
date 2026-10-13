@@ -43,10 +43,11 @@ interface Props {
   onClose?: () => void;
   onSelectionChange?: (kind: "text" | "photo" | null) => void;
   textControl?: "font" | "size" | "align" | "color" | "style" | null;
+  photoControl?: "replace" | "fit" | "frame" | "filter" | "zoom" | null;
   editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" } | null;
 }
 
-export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null }: Props) {
+export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
@@ -529,7 +530,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   }, [editorCommand]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl ? "126px" : "min(38dvh, 340px)") : "0px" }}>
+    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl ? "126px" : "min(38dvh, 340px)") : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
         <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
@@ -620,13 +621,13 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           )}
         </div>
         {activeTool && (
-          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
+          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
             <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ maxHeight: "min(42dvh, 340px)", height: "auto" }}>
               <div className="flex shrink-0 items-center justify-between border-b border-stone-100 pl-3 pr-1">
-                <div className={textControl ? "py-1.5" : "py-2"}><p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Design your book" : activeTool === "Audio" ? "Page audio" : activeTool === "Pages" ? "Pages & layouts" : textControl ? `Text · ${textControl}` : "Edit page content"}</p>{!textControl && <p className="text-[11px] text-stone-500">{activeTool === "Pages" ? `Page ${at + 1} of ${pages.length} · Navigate, reorder and choose layouts` : activeTool === "Edit" ? (textControl ? "Select a text component on the page to customize it" : "Select a component to edit its content and appearance") : activeTool === "Style" ? "Book colours, fonts and page background" : "Record or upload a voice note for this page"}</p>}</div>
+                <div className={textControl || photoControl ? "py-1.5" : "py-2"}><p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Design your book" : activeTool === "Audio" ? "Page audio" : activeTool === "Pages" ? "Pages & layouts" : textControl ? `Text · ${textControl}` : photoControl ? `Photo · ${photoControl}` : "Edit page content"}</p>{!textControl && !photoControl && <p className="text-[11px] text-stone-500">{activeTool === "Pages" ? `Page ${at + 1} of ${pages.length} · Navigate, reorder and choose layouts` : activeTool === "Edit" ? (textControl ? "Select a text component on the page to customize it" : "Select a component to edit its content and appearance") : activeTool === "Style" ? "Book colours, fonts and page background" : "Record or upload a voice note for this page"}</p>}</div>
                 {onClose && <button type="button" onClick={onClose} aria-label={`Close ${activeTool} tools`} className="grid h-11 w-11 place-items-center rounded-lg text-stone-500 hover:text-stone-900"><Icon name="close" size={18} /></button>}
               </div>
-              <div className={textControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
+              <div className={textControl || photoControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
                 {activeTool === "Pages" && (
                   <div className="space-y-4">
                     <Group title="Page navigator"><ul ref={strip} className="flex gap-3 overflow-x-auto pb-2" aria-label="Pages">{filled.map((p,i)=><li key={i} className="relative shrink-0"><button type="button" onClick={()=>goto(i)} aria-current={i===at?"page":undefined} aria-label={`Go to page ${i+1}`} className={"block overflow-hidden rounded-md ring-2 transition "+(i===at?"ring-rose-700":"ring-stone-200")} style={{width:TW,height:TH}}><canvas ref={el=>{thumbs.current[i]=el}} width={W*DPR} height={H*DPR} className="block h-full w-full"/></button>{p.audio&&<span aria-hidden className="pointer-events-none absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-700 text-white"><Icon name="audio" size={11} /></span>}<span className="mt-1 block text-center text-xs text-stone-500">{i+1}</span></li>)}</ul></Group>
@@ -643,12 +644,12 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                 )}
                 {activeTool === "Edit" && (
                   <div className="space-y-4">
-                    {!textControl && <>
+                    {!textControl && !photoControl && <>
                     <Group title="Select text or photo">
                       <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Page components">{slots.map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} aria-pressed={x.id===slotId} className={chip(x.id===slotId)+" flex shrink-0 items-center gap-1.5"}><Icon name={x.kind==="text"?"text":"photo"} size={14} />{slotName(layout,x)}</button>)}</div>
                     </Group>
                     </>}
-                    {textSlot && !textControl && <>
+                    {textSlot && !textControl && !photoControl && <>
                       <Group title="Edit text">
                         <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={Math.min(10, Math.max(3, typed.split("\n").reduce((n, ln) => n + Math.max(1, Math.ceil(ln.length / 32)), 0)))} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
                       </Group>
@@ -664,7 +665,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                       </Group>
                       <Group title="Position"><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>
                     </>}
-                    {photoSlot && !textControl && <>
+                    {photoSlot && !textControl && !photoControl && <>
                       <Group title="Replace image">
                         <label className={"inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-800 "+(photoBusy?"opacity-40":"")}><Icon name="photo" size={16} />Replace photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={choosePhoto} disabled={!!photoBusy} className="sr-only"/></label>
                         {photoBusy&&<p className="mt-2 text-xs text-stone-600" role="status">{photoBusy.label}{photoBusy.pct!==null&&` ${photoBusy.pct}%`}</p>}{photoError&&<p className="mt-2 text-xs font-bold text-red-700" role="alert">{photoError}</p>}
@@ -703,7 +704,16 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                         {textControl === "style" && <Group title="Text style"><Row label="Format"><button type="button" onClick={toggleBold} aria-pressed={cur.bold} className={chip(cur.bold)+" flex items-center gap-1"}><Icon name="bold" size={18}/>Bold</button><button type="button" onClick={toggleItalic} aria-pressed={cur.italic} className={chip(cur.italic)+" flex items-center gap-1"}><Icon name="italic" size={18}/>Italic</button></Row><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>}
                       </>}
                     </div>}
-                    {!textControl&&!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Select a text or photo to reveal its editing controls. You can also add a new component above.</p>}
+                    {photoControl && <div className="space-y-2">
+                      {!photoSlot ? <p className="rounded-lg bg-stone-50 p-2 text-xs text-stone-600">Select a photo directly on the page to adjust its {photoControl}.</p> : <>
+                        {photoControl === "replace" && <Group title="Replace photo"><label className={"inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 text-xs font-bold " + (photoBusy ? "opacity-40" : "")}><Icon name="photo" size={16}/>Choose photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={choosePhoto} disabled={!!photoBusy} className="sr-only"/></label>{photoBusy && <p className="text-xs" role="status">{photoBusy.label}{photoBusy.pct !== null && ` ${photoBusy.pct}%`}</p>}{photoError && <p role="alert" className="text-xs text-red-700">{photoError}</p>}</Group>}
+                        {photoControl === "fit" && <Group title="Image fit"><div className="flex gap-2">{([["fill","Fill"],["fit","Fit"]] as [PhotoFit,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({fit:f==="fill"?undefined:f})} aria-pressed={(photo.fit??"fill")===f} className={chip((photo.fit??"fill")===f)}>{label}</button>)}</div></Group>}
+                        {photoControl === "frame" && <Group title="Photo frame"><div className="flex gap-2">{([["none","None"],["border","Border"],["rounded","Rounded"]] as [PhotoFrame,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({frame:f===(photoSlot.frame??"none")?undefined:f})} aria-pressed={(photo.frame??photoSlot.frame??"none")===f} className={chip((photo.frame??photoSlot.frame??"none")===f)}>{label}</button>)}</div></Group>}
+                        {photoControl === "filter" && <Group title="Photo filter"><div className="flex gap-2">{([["none","Natural"],["warm","Warm"],["bw","B&W"]] as [PhotoFilter,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({filter:f==="none"?undefined:f})} aria-pressed={(photo.filter??"none")===f} className={chip((photo.filter??"none")===f)}>{label}</button>)}</div></Group>}
+                        {photoControl === "zoom" && <Group title="Photo zoom"><div className="flex items-center gap-2"><input type="range" aria-label="Photo zoom" min={1} max={3} step={0.1} value={photo.zoom??1} onChange={e=>setPhotoProps({zoom:Number(e.target.value)})} className="h-10 min-w-0 flex-1 accent-rose-700"/><span className="text-xs tabular-nums">{(photo.zoom??1).toFixed(1)}×</span><button type="button" onClick={()=>setPhotoProps({zoom:1})} className={chip(false)}>Reset</button></div></Group>}
+                      </>}
+                    </div>}
+                    {!textControl&&!photoControl&&!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Select a text or photo to reveal its editing controls. You can also add a new component above.</p>}
                   </div>
                 )}
                 {activeTool === "Audio" && (

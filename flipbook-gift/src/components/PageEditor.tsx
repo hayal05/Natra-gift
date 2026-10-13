@@ -643,58 +643,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                   </div>
                 )}
                 {activeTool === "Edit" && (
-                  <div className="space-y-4">
-                    {!textControl && !photoControl && <>
-                    <Group title="Select text or photo">
-                      <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Page components">{slots.map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} aria-pressed={x.id===slotId} className={chip(x.id===slotId)+" flex shrink-0 items-center gap-1.5"}><Icon name={x.kind==="text"?"text":"photo"} size={14} />{slotName(layout,x)}</button>)}</div>
-                    </Group>
-                    </>}
-                    {textSlot && !textControl && !photoControl && <>
-                      <Group title="Edit text">
-                        <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={Math.min(10, Math.max(3, typed.split("\n").reduce((n, ln) => n + Math.max(1, Math.ceil(ln.length / 32)), 0)))} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
-                      </Group>
-                      <Group title="Look">
-                        <div className="flex items-center gap-3 border-t border-stone-100 first:border-t-0"><span className="w-12 shrink-0 text-xs font-bold text-stone-500">Font</span><div className="relative min-w-0 flex-1 py-1"><FontPicker family={style.family} role={cur.font ?? "body"} fonts={book.fonts} onChange={(c)=>c.family?setStyle({family:c.family}):setStyle({family:undefined,font:c.font===textSlot.font?undefined:c.font})}/></div></div>
-                        <Row label="Size">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}<input type="range" aria-label={`Size ${Math.round(sizeFactor(style)*100)}%`} min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="h-11 min-w-[96px] flex-1 accent-rose-700"/><span className="w-10 shrink-0 text-right text-xs text-stone-500">{Math.round(sizeFactor(style)*100)}%</span></Row>
-                        <Row label="Style">
-                          <button type="button" onClick={toggleBold} aria-pressed={cur.bold} aria-label="Bold" className={chip(cur.bold)+" grid w-11 place-items-center px-0"}><Icon name="bold" size={18} /></button>
-                          <button type="button" onClick={toggleItalic} aria-pressed={cur.italic} aria-label="Italic" className={chip(cur.italic)+" grid w-11 place-items-center px-0"}><Icon name="italic" size={18} /></button>
-                        </Row>
-                        <Row label="Align">{([["left","Align left","align-left"],["center","Align center","align-center"],["right","Align right","align-right"],["justify","Justify","align-justify"]] as [Align,string,IconName][]).map(([a,label,icon])=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} aria-pressed={cur.align===a} aria-label={label} className={chip(cur.align===a)+" grid w-11 place-items-center px-0"}><Icon name={icon} size={18} /></button>)}</Row>
-                        <Row label="Colour">{TEXT_COLORS.map(([k,name])=><button key={k} type="button" aria-label={name} aria-pressed={cur.color===k} onClick={()=>setStyle({color:k===textSlot.color?undefined:k})} className="grid h-11 w-11 shrink-0 place-items-center"><span className={"block h-8 w-8 rounded-full border-2 "+(cur.color===k?"border-rose-700 ring-2 ring-rose-300":"border-stone-300")} style={{background:book.palette[k]}}/></button>)}</Row>
-                      </Group>
-                      <Group title="Position"><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>
-                    </>}
-                    {photoSlot && !textControl && !photoControl && <>
-                      <Group title="Replace image">
-                        <label className={"inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-800 "+(photoBusy?"opacity-40":"")}><Icon name="photo" size={16} />Replace photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={choosePhoto} disabled={!!photoBusy} className="sr-only"/></label>
-                        {photoBusy&&<p className="mt-2 text-xs text-stone-600" role="status">{photoBusy.label}{photoBusy.pct!==null&&` ${photoBusy.pct}%`}</p>}{photoError&&<p className="mt-2 text-xs font-bold text-red-700" role="alert">{photoError}</p>}
-                      </Group>
-                      <Group title="Look">
-                        <Row label="Shape">{([["fill","Fill"],["fit","Fit"]] as [PhotoFit,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({fit:f==="fill"?undefined:f})} className={chip((photo.fit??"fill")===f)}>{label}</button>)}</Row>
-                        <Row label="Frame">{([["none","None"],["border","Border"],["rounded","Rounded"]] as [PhotoFrame,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({frame:f===(photoSlot.frame??"none")?undefined:f})} className={chip((photo.frame??photoSlot.frame??"none")===f)}>{label}</button>)}</Row>
-                        <Row label="Filter">{([["none","Natural"],["warm","Warm"],["bw","B&W"]] as [PhotoFilter,string][]).map(([f,label])=><button key={f} type="button" onClick={()=>setPhotoProps({filter:f==="none"?undefined:f})} className={chip((photo.filter??"none")===f)}>{label}</button>)}</Row>
-                        <Row label="Zoom"><input type="range" aria-label={`Zoom ${(photo.zoom??1).toFixed(1)}×`} min={1} max={3} step={0.1} value={photo.zoom??1} onChange={e=>setPhotoProps({zoom:Number(e.target.value)})} className="h-11 min-w-[96px] flex-1 accent-rose-700"/><span className="w-10 shrink-0 text-right text-xs text-stone-500">{(photo.zoom??1).toFixed(1)}×</span><button type="button" className={chip(false)} onClick={()=>setPhotoProps({zoom:1})}>Reset</button></Row>
-                      </Group>
-                    </>}
-                    {!textControl && <>
-                    <div className="flex items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-stone-800">{textSlot ? "Text selected" : photoSlot ? "Photo selected" : "No component selected"}</p>
-                        <p className="truncate text-[11px] text-stone-500">{slot ? slotName(layout, slot) : "Choose a component above or tap the page"}</p>
-                      </div>
-                      <div className="flex shrink-0 gap-1.5">
-                        <button type="button" onClick={()=>addComp("text")} disabled={!!addTextWhy} aria-label="Add text box" className={chip(false)+" flex items-center gap-1 disabled:opacity-40"}><Icon name="plus" size={14} />Text</button>
-                        <button type="button" onClick={()=>addComp("photo")} disabled={!!addTextWhy} aria-label="Add photo" className={chip(false)+" flex items-center gap-1 disabled:opacity-40"}><Icon name="plus" size={14} />Photo</button>
-                      </div>
-                    </div>
-                    {slot && <div className="flex items-center gap-2">
-                      <button type="button" onClick={copyComp} disabled={!!copyWhy} className={chip(false)+" flex items-center gap-1.5 disabled:opacity-40"}><Icon name="duplicate" size={15} />Duplicate</button>
-                      <button type="button" onClick={()=>setConfirmSlotDelete(true)} disabled={!!deleteWhy} className={chip(false)+" flex items-center gap-1.5 text-red-700 disabled:opacity-40"}><Icon name="trash" size={15} />Delete</button>
-                    </div>}
-                    {confirmSlotDelete && slot && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete this {slot.kind==="text"?"text":"photo"}? You cannot undo it.</span><button type="button" onClick={removeComp} className="min-h-[44px] rounded-md bg-red-700 px-4 text-xs font-bold text-white">Yes, delete</button><button type="button" onClick={()=>setConfirmSlotDelete(false)} className={chip(false)}>Keep</button></div>}
-                    {(slotNote||addTextWhy||deleteWhy||copyWhy)&&<p className="text-xs text-stone-500" role="status">{slotNote??addTextWhy??deleteWhy??copyWhy}</p>}
-                    </>}
+                  <div className="space-y-2">
                     {textControl && <div className="space-y-3">
                       {!textSlot ? <p className="rounded-lg bg-stone-50 p-3 text-xs text-stone-600">Select a text component directly on the page to adjust its {textControl}.</p> : <>
                         {textControl === "font" && <Group title="Font family"><FontPicker family={style.family} role={cur.font ?? "body"} fonts={book.fonts} onChange={(c)=>c.family?setStyle({family:c.family}):setStyle({family:undefined,font:c.font===textSlot.font?undefined:c.font})}/></Group>}
@@ -713,7 +662,6 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                         {photoControl === "zoom" && <Group title="Photo zoom"><div className="flex items-center gap-2"><input type="range" aria-label="Photo zoom" min={1} max={3} step={0.1} value={photo.zoom??1} onChange={e=>setPhotoProps({zoom:Number(e.target.value)})} className="h-10 min-w-0 flex-1 accent-rose-700"/><span className="text-xs tabular-nums">{(photo.zoom??1).toFixed(1)}×</span><button type="button" onClick={()=>setPhotoProps({zoom:1})} className={chip(false)}>Reset</button></div></Group>}
                       </>}
                     </div>}
-                    {!textControl&&!photoControl&&!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Select a text or photo to reveal its editing controls. You can also add a new component above.</p>}
                   </div>
                 )}
                 {activeTool === "Audio" && (

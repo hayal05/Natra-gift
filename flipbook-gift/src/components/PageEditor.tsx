@@ -82,6 +82,15 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const layout = LAYOUTS[page.layout];
   const slots = pageEditable(layout, page);
   const slot = slots.find((s) => s.id === slotId) ?? null;
+  // Keep a valid selection for an open tool controller, including after page/layout changes.
+  useEffect(() => {
+    const kind = textControl ? "text" : photoControl ? "photo" : null;
+    if (!kind) return;
+    if (slots.some(item => item.id === slotId && item.kind === kind)) return;
+    const candidate = slots.find(item => item.kind === kind);
+    if (candidate) { setSlotId(candidate.id); setEditingText(false); }
+  }, [textControl, photoControl, slotId, page.layout, pages, at]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const fontKey = usedFontIds(pages).join(",");
   useEffect(() => { let alive = true; loadFonts(book.fonts, pages).then(() => { if (alive) { setReady(true); setFontTick((t) => t + 1); } }); return () => { alive = false; }; }, [book, fontKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -507,7 +516,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       setSlotId(hit.id);
       setEditingText(!!wasSelectedText);
     } else {
-      setSlotId(hit && hit.id !== slotId ? hit.id : null);
+      setSlotId(hit ? hit.id : (textControl || photoControl ? slotId : null));
       setEditingText(false);
     }
   };

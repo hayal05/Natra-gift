@@ -4,7 +4,7 @@
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { GROUP_NAMES, actionBarSpot, otherBoxes, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, addSlot, deleteSlot, duplicateSlot, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, isAdjusted, pageEditable, movePage, resetTextBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
-import { isSample, loadFonts, usedFontIds, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, textSlotRect, sizeFactor, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_WIDTH_MIN, type Align, type ColorRef, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextSlotDef, type TextStyle } from "../lib/pages";
+import { isSample, loadFonts, usedFontIds, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, textSlotRect, sizeFactor, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_WIDTH_MIN, type Align, type ColorRef, type ImageMap, type PageData, type PageLine, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextSlotDef, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
 import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS, audioFileProblem, readAudioDuration, recordingSupported, uploadAudio } from "../lib/audio";
@@ -51,6 +51,7 @@ interface Props {
 export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null, pageControl = null }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
+  const [lineId, setLineId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
   const [ready, setReady] = useState(false);
   const [fontTick, setFontTick] = useState(0); // bumps when a newly picked font has loaded, so the page and thumbnails redraw in it
@@ -80,6 +81,42 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const filled = useMemo(() => fillPages(pages, { to: to.trim() || "you", from: from.trim() || "me" }), [pages, to, from]);
   const at = Math.min(index, filled.length - 1);
   const page = filled[at];
+  const lines = pages[at]?.lines ?? [];
+  const selectedLine = lines.find(line => line.id === lineId) ?? null;
+  const lineDrag = useRef<{ id: string; mode: "move" | "resize"; x: number; y: number; start: PageLine } | null>(null);
+  const updateLine = (id: string, patch: Partial<PageLine>) => {
+    onChange(pages.map((p, i) => i === at ? { ...p, lines: (p.lines ?? []).map(line => line.id === id ? { ...line, ...patch } : line) } : p));
+  };
+  const addLine = (style: PageLine["style"], angle = 0) => {
+    if (lines.length >= 24) return;
+    const line: PageLine = { id: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 100000).toString(36), x: 0.2, y: 0.5, length: 0.6, angle, width: 3, color: "#222222", style };
+    onChange(pages.map((p, i) => i === at ? { ...p, lines: [...(p.lines ?? []), line] } : p));
+    setLineId(line.id);
+    setSlotId(null);
+  };
+  const deleteLine = () => {
+    if (!selectedLine) return;
+    onChange(pages.map((p, i) => i === at ? { ...p, lines: (p.lines ?? []).filter(line => line.id !== selectedLine.id) } : p));
+    setLineId(null);
+  };
+  const clampLine = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+  const beginLinePointer = (e: React.PointerEvent<SVGElement>, line: PageLine, mode: "move" | "resize") => {
+    e.stopPropagation(); e.preventDefault();
+    lineDrag.current = { id: line.id, mode, x: e.clientX, y: e.clientY, start: line };
+    setLineId(line.id);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const moveLinePointer = (e: React.PointerEvent<SVGElement>) => {
+    e.stopPropagation();
+    const d = lineDrag.current;
+    if (!d) return;
+    const rect = pageBox.current?.getBoundingClientRect();
+    if (!rect) return;
+    const dx = (e.clientX - d.x) / rect.width, dy = (e.clientY - d.y) / rect.height;
+    if (d.mode === "move") updateLine(d.id, { x: clampLine(d.start.x + dx, 0, 1), y: clampLine(d.start.y + dy, 0, 1) });
+    else updateLine(d.id, { length: clampLine(d.start.length + dx * Math.cos(d.start.angle * Math.PI / 180) + dy * rect.height / rect.width * Math.sin(d.start.angle * Math.PI / 180), 0.05, 1.5) });
+  };
+
   const layout = LAYOUTS[page.layout];
   const slots = pageEditable(layout, page);
   const slot = slots.find((s) => s.id === slotId) ?? null;
@@ -252,7 +289,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     else if (li.offsetLeft + li.offsetWidth > ul.scrollLeft + ul.clientWidth) ul.scrollLeft = li.offsetLeft + li.offsetWidth - ul.clientWidth + 4;
   }, [at, pages.length]);
 
-  const goto = (i: number) => { setIndex(i); setSlotId(null); setEditingText(false); };
+  const goto = (i: number) => { setIndex(i); setSlotId(null); setLineId(null); setEditingText(false); };
   const selectedPhotoContent: PhotoContent | null = slot?.kind === "photo" && typeof pages[at]?.slots[slot.id] === "object" ? pages[at]?.slots[slot.id] as PhotoContent : null;
   const selectedPhotoRect = slot?.kind === "photo" ? photoSlotRect(slot, selectedPhotoContent ?? undefined, W, H) : null;
 
@@ -547,6 +584,17 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
         <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
           <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full rounded-lg" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
+          <svg viewBox="0 0 360 480" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-label="Editable lines">
+            {lines.map(line => {
+              const x = line.x * W, y = line.y * H, len = line.length * W, rad = line.angle * Math.PI / 180;
+              const x2 = x + Math.cos(rad) * len, y2 = y + Math.sin(rad) * len;
+              return <g key={line.id}>
+                {line.id === lineId && <line x1={x} y1={y} x2={x2} y2={y2} stroke="#e11d48" strokeWidth="2" strokeDasharray="4 4" />}
+                <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="24" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
+                {line.id === lineId && <circle cx={x2} cy={y2} r="10" fill="#e11d48" stroke="white" strokeWidth="2" className="pointer-events-auto" style={{touchAction:"none",cursor:"ew-resize"}} onPointerDown={e=>beginLinePointer(e,line,"resize")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}}/>}
+              </g>;
+            })}
+          </svg>
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
           {currentAudio && !editingText && <VoiceNotePill key={`${at}:${currentAudio.src}`} src={currentAudio.src} duration={currentAudio.duration} pos={pillPos[at]} onMove={(p) => setPillPos((m) => ({ ...m, [at]: p }))} />}
           {slot && slot.kind === "photo" && (
@@ -688,6 +736,20 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                 )}
                 {activeTool === "Style" && (
                   <div className="space-y-4">
+                    <Group title="Lines">
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["solid","dashed","dotted","double"] as PageLine["style"][]).map(kind=><button key={kind} type="button" onClick={()=>addLine(kind)} disabled={lines.length>=24} className={chip(false)+" capitalize disabled:opacity-40"}>+ {kind}</button>)}
+                        <button type="button" onClick={()=>addLine("solid",90)} disabled={lines.length>=24} className={chip(false)+" disabled:opacity-40"}>+ Vertical</button>
+                      </div>
+                      {lines.length > 0 && <div className="flex gap-1.5 overflow-x-auto py-1">{lines.map((line,i)=><button key={line.id} type="button" onClick={()=>{setLineId(line.id);setSlotId(null);}} aria-pressed={line.id===lineId} className={chip(line.id===lineId)+" shrink-0"}>Line {i+1}</button>)}</div>}
+                      {selectedLine && <div className="space-y-2">
+                        <Row label="Length"><input type="range" min={0.05} max={1.5} step={0.01} value={selectedLine.length} onChange={e=>updateLine(selectedLine.id,{length:Number(e.target.value)})} className="min-w-0 flex-1 accent-rose-700"/><span className="text-xs">{Math.round(selectedLine.length*360)}px</span></Row>
+                        <Row label="Rotate"><input type="range" min={0} max={359} step={1} value={selectedLine.angle} onChange={e=>updateLine(selectedLine.id,{angle:Number(e.target.value)})} className="min-w-0 flex-1 accent-rose-700"/><span className="text-xs">{selectedLine.angle}°</span></Row>
+                        <Row label="Width"><input type="range" min={1} max={16} step={1} value={selectedLine.width} onChange={e=>updateLine(selectedLine.id,{width:Number(e.target.value)})} className="min-w-0 flex-1 accent-rose-700"/><span className="text-xs">{selectedLine.width}px</span></Row>
+                        <Row label="Colour"><input type="color" aria-label="Line colour" value={selectedLine.color} onChange={e=>updateLine(selectedLine.id,{color:e.target.value})} className="h-9 w-14"/></Row>
+                        <button type="button" onClick={deleteLine} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700">Delete selected line</button>
+                      </div>}
+                    </Group>
                     <Group title="Colours">
                       <div className="flex items-center gap-4"><div className="grid h-14 w-14 shrink-0 place-items-center rounded-full" style={{background:"conic-gradient("+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent) ?? book.palette.accent)+" 0 25%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent2) ?? book.palette.accent2)+" 25% 50%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.soft) ?? book.palette.soft)+" 50% 75%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.ink) ?? book.palette.ink)+" 75% 100%)"}}><div className="h-8 w-8 rounded-full bg-white"/></div><div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">{PALETTE_PRESETS.map(p=><button key={p.id} type="button" onClick={()=>onStyle({paletteId:p.id})} aria-pressed={p.id===paletteId} className={chip(p.id===paletteId)+" shrink-0"}>{p.name}</button>)}</div></div>
                     </Group>

@@ -643,9 +643,11 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                 )}
                 {activeTool === "Edit" && (
                   <div className="space-y-4">
+                    {!textControl && <>
                     <Group title="Select text or photo">
                       <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Page components">{slots.map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} aria-pressed={x.id===slotId} className={chip(x.id===slotId)+" flex shrink-0 items-center gap-1.5"}><Icon name={x.kind==="text"?"text":"photo"} size={14} />{slotName(layout,x)}</button>)}</div>
                     </Group>
+                    </>}
                     {textSlot && !textControl && <>
                       <Group title="Edit text">
                         <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={Math.min(10, Math.max(3, typed.split("\n").reduce((n, ln) => n + Math.max(1, Math.ceil(ln.length / 32)), 0)))} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
@@ -674,6 +676,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                         <Row label="Zoom"><input type="range" aria-label={`Zoom ${(photo.zoom??1).toFixed(1)}×`} min={1} max={3} step={0.1} value={photo.zoom??1} onChange={e=>setPhotoProps({zoom:Number(e.target.value)})} className="h-11 min-w-[96px] flex-1 accent-rose-700"/><span className="w-10 shrink-0 text-right text-xs text-stone-500">{(photo.zoom??1).toFixed(1)}×</span><button type="button" className={chip(false)} onClick={()=>setPhotoProps({zoom:1})}>Reset</button></Row>
                       </Group>
                     </>}
+                    {!textControl && <>
                     <div className="flex items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-stone-800">{textSlot ? "Text selected" : photoSlot ? "Photo selected" : "No component selected"}</p>
@@ -690,8 +693,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                     </div>}
                     {confirmSlotDelete && slot && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete this {slot.kind==="text"?"text":"photo"}? You cannot undo it.</span><button type="button" onClick={removeComp} className="min-h-[44px] rounded-md bg-red-700 px-4 text-xs font-bold text-white">Yes, delete</button><button type="button" onClick={()=>setConfirmSlotDelete(false)} className={chip(false)}>Keep</button></div>}
                     {(slotNote||addTextWhy||deleteWhy||copyWhy)&&<p className="text-xs text-stone-500" role="status">{slotNote??addTextWhy??deleteWhy??copyWhy}</p>}
+                    </>}
                     {textControl && <div className="space-y-3">
-                      {!textSlot ? <p className="rounded-lg bg-stone-50 p-3 text-xs text-stone-600">Tap a text component on the page to use {textControl} controls, or select it from the component list above.</p> : <>
+                      {!textSlot ? <p className="rounded-lg bg-stone-50 p-3 text-xs text-stone-600">Select a text component directly on the page to adjust its {textControl}.</p> : <>
                         {textControl === "font" && <Group title="Font family"><FontPicker family={style.family} role={cur.font ?? "body"} fonts={book.fonts} onChange={(c)=>c.family?setStyle({family:c.family}):setStyle({family:undefined,font:c.font===textSlot.font?undefined:c.font})}/></Group>}
                         {textControl === "size" && <Group title="Text size"><Row label="Size">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}<input type="range" aria-label="Text size" min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="h-11 min-w-[90px] flex-1 accent-rose-700"/><span className="text-xs">{Math.round(sizeFactor(style)*100)}%</span></Row></Group>}
                         {textControl === "align" && <Group title="Text alignment"><Row label="Align">{([["left","Align left","align-left"],["center","Align center","align-center"],["right","Align right","align-right"],["justify","Justify","align-justify"]] as [Align,string,IconName][]).map(([a,label,icon])=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} aria-pressed={cur.align===a} aria-label={label} className={chip(cur.align===a)+" grid w-11 place-items-center px-0"}><Icon name={icon} size={18}/></button>)}</Row></Group>}
@@ -699,7 +703,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                         {textControl === "style" && <Group title="Text style"><Row label="Format"><button type="button" onClick={toggleBold} aria-pressed={cur.bold} className={chip(cur.bold)+" flex items-center gap-1"}><Icon name="bold" size={18}/>Bold</button><button type="button" onClick={toggleItalic} aria-pressed={cur.italic} className={chip(cur.italic)+" flex items-center gap-1"}><Icon name="italic" size={18}/>Italic</button></Row><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>}
                       </>}
                     </div>}
-                    {!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Select a text or photo to reveal its editing controls. You can also add a new component above.</p>}
+                    {!textControl&&!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Select a text or photo to reveal its editing controls. You can also add a new component above.</p>}
                   </div>
                 )}
                 {activeTool === "Audio" && (

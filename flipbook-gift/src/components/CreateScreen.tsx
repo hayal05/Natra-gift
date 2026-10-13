@@ -12,7 +12,12 @@ import PublishDialog from "./PublishDialog";
 import { Icon, type IconName } from "./icons";
 
 type EditorTool = "Pages" | "Edit" | "Audio" | "Style";
-const TOOLS: [EditorTool, IconName][] = [["Pages", "pages"], ["Edit", "text"], ["Audio", "audio"], ["Style", "style"]];
+const TOOLS: { id: EditorTool; icon: IconName; hint: string }[] = [
+  { id: "Pages", icon: "pages", hint: "Arrange & layout" },
+  { id: "Edit", icon: "text", hint: "Text & photos" },
+  { id: "Style", icon: "style", hint: "Colours & fonts" },
+  { id: "Audio", icon: "audio", hint: "Voice notes" },
+];
 
 export default function CreateScreen() {
   const wanted = useSearchParams().get("t");
@@ -55,7 +60,7 @@ export default function CreateScreen() {
   if (step === "pages") {
     return (
       <main className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#f7f5f2] text-stone-900"
-        style={{ ["--hdr-h" as string]: "56px", ["--nav-h" as string]: "calc(76px + env(safe-area-inset-bottom, 0px))", ["--tool-panel-h" as string]: "clamp(176px, 30dvh, 236px)" }}>
+        style={{ ["--hdr-h" as string]: "56px", ["--nav-h" as string]: "calc(76px + env(safe-area-inset-bottom, 0px))", ["--tool-panel-h" as string]: "clamp(228px, 38dvh, 340px)" }}>
         <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-stone-200 bg-white/95 px-3 backdrop-blur">
           <button type="button" onClick={() => setStep("names")} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full text-xl text-stone-700 hover:bg-stone-100">←</button>
           <div className="min-w-0 text-center"><p className="truncate text-sm font-bold">{t.name}</p><p className="text-[11px] text-stone-400">Auto-saved</p></div>
@@ -80,11 +85,14 @@ export default function CreateScreen() {
         {view === "edit" && (
           <>
             
-            <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/98 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
-              <div className="mx-auto flex max-w-2xl items-stretch justify-between gap-1">
-                {TOOLS.map(([label, icon]) => (
-                  <button key={label} type="button" aria-label={label} aria-pressed={activeTool === label} onClick={() => activateEditorTool(label)} className={"flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-1.5 transition active:scale-95 " + (activeTool === label ? "bg-stone-100 text-stone-900" : "text-stone-500 hover:bg-stone-100 hover:text-stone-900")}>
-                    <span className={"grid h-7 w-7 place-items-center rounded-lg " + (activeTool === label ? "bg-rose-700 text-white" : "bg-stone-100")}><Icon name={icon} size={18} /></span><span className="text-[11px] font-semibold">{label}</span>
+            <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
+              <div className="mx-auto grid max-w-2xl grid-cols-4 gap-1.5">
+                {TOOLS.map(({ id, icon, hint }) => (
+                  <button key={id} type="button" aria-label={`${id}: ${hint}`} aria-pressed={activeTool === id} onClick={() => activateEditorTool(id)}
+                    className={"relative flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-rose-700 " + (activeTool === id ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
+                    {activeTool === id && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
+                    <Icon name={icon} size={21} />
+                    <span className="text-[11px] font-semibold">{id}</span>
                   </button>
                 ))}
               </div>

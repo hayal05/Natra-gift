@@ -42,7 +42,7 @@ interface Props {
   /** Closes the tool panel (the X in its header). */
   onClose?: () => void;
   onSelectionChange?: (kind: "text" | "photo" | null) => void;
-  pageControl?: "navigate" | "move" | "layout" | null;
+  pageControl?: "navigate" | "layout" | null;
   textControl?: "font" | "size" | "align" | "color" | "style" | null;
   photoControl?: "replace" | "fit" | "frame" | "filter" | "zoom" | null;
   editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" | "add-page" | "duplicate-page" } | null;
@@ -642,14 +642,16 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               <div className={textControl || photoControl || pageControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
                 {activeTool === "Pages" && (
                   <div className="space-y-2">
-                    {pageControl === "navigate" && <Group title="Page navigator"><ul ref={strip} className="flex gap-3 overflow-x-auto pb-2" aria-label="Pages">{filled.map((p,i)=><li key={i} className="relative shrink-0"><button type="button" onClick={()=>goto(i)} aria-current={i===at?"page":undefined} aria-label={`Go to page ${i+1}`} className={"block overflow-hidden rounded-md ring-2 transition "+(i===at?"ring-rose-700":"ring-stone-200")} style={{width:TW,height:TH}}><canvas ref={el=>{thumbs.current[i]=el}} width={W*DPR} height={H*DPR} className="block h-full w-full"/></button>{p.audio&&<span aria-hidden className="pointer-events-none absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-700 text-white"><Icon name="audio" size={11} /></span>}<span className="mt-1 block text-center text-xs text-stone-500">{i+1}</span></li>)}</ul></Group>}
-                    {pageControl === "move" && <Group title="Move current page">
-                      <div className="flex gap-2">
-                        <button type="button" onClick={()=>shiftPage(-1)} disabled={!canEarlier} className={chip(false)+" flex items-center gap-2 disabled:opacity-40"}><Icon name="arrow-left" size={16}/>Move earlier</button>
-                        <button type="button" onClick={()=>shiftPage(1)} disabled={!canLater} className={chip(false)+" flex items-center gap-2 disabled:opacity-40"}>Move later<Icon name="arrow-right" size={16}/></button>
+                    {pageControl === "navigate" && <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2" aria-label="Page actions">
+                        <button type="button" onClick={addNewPage} disabled={!roomForPage} className={chip(false)+" flex items-center justify-center gap-1 disabled:opacity-40"}><Icon name="plus" size={16}/>Add page</button>
+                        <button type="button" onClick={copyPage} disabled={!roomForPage} className={chip(false)+" flex items-center justify-center gap-1 disabled:opacity-40"}><Icon name="duplicate" size={16}/>Duplicate</button>
+                        <button type="button" onClick={()=>setConfirmDelete(true)} disabled={!canDelete} className={chip(false)+" flex items-center justify-center gap-1 text-red-700 disabled:opacity-40"}><Icon name="trash" size={16}/>Delete</button>
                       </div>
-                    </Group>}
-                    {pageControl === "layout" && <Group title="Change page layout"><div className="grid grid-cols-4 gap-2">{LAYOUT_LIST.map(l=><button key={l.id} type="button" onClick={()=>chooseLayout(l.id)} aria-pressed={l.id===page.layout} className={"overflow-hidden rounded-md border-2 "+(l.id===page.layout?"border-rose-700":"border-stone-200")}><canvas ref={el=>{picks.current[l.id]=el}} width={LW} height={LH} className="block aspect-[3/4] w-full"/><span className="block truncate px-1 py-1 text-[9px] text-stone-600">{l.name}</span></button>)}</div></Group>}
+                      {confirmDelete && canDelete && <div className="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2"><span className="text-xs text-red-800">Delete page {at+1}?</span><button type="button" onClick={removePage} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Delete page</button><button type="button" onClick={()=>setConfirmDelete(false)} className={chip(false)}>Cancel</button></div>}
+                      <Group title="Page navigator"><ul ref={strip} className="flex gap-3 overflow-x-auto pb-2" aria-label="Pages">{filled.map((p,i)=><li key={i} className="relative shrink-0"><button type="button" onClick={()=>goto(i)} aria-current={i===at?"page":undefined} aria-label={`Go to page ${i+1}`} className={"block overflow-hidden rounded-md ring-2 transition "+(i===at?"ring-rose-700":"ring-stone-200")} style={{width:TW,height:TH}}><canvas ref={el=>{thumbs.current[i]=el}} width={W*DPR} height={H*DPR} className="block h-full w-full"/></button>{p.audio&&<span aria-hidden className="pointer-events-none absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-700 text-white"><Icon name="audio" size={11} /></span>}<span className="mt-1 block text-center text-xs text-stone-500">{i+1}</span></li>)}</ul></Group>
+                    </div>}
+                    {pageControl === "layout" && <Group title="Change page layout"><div className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1">{LAYOUT_LIST.map(l=><button key={l.id} type="button" onClick={()=>chooseLayout(l.id)} aria-pressed={l.id===page.layout} className={"w-[84px] shrink-0 overflow-hidden rounded-md border-2 "+(l.id===page.layout?"border-rose-700":"border-stone-200")}><canvas ref={el=>{picks.current[l.id]=el}} width={LW} height={LH} className="block aspect-[3/4] w-full"/><span className="block truncate px-1 py-1 text-[9px] text-stone-600">{l.name}</span></button>)}</div></Group>}
                   </div>
                 )}
                 {activeTool === "Edit" && (

@@ -153,9 +153,21 @@ export interface AudioContent {
   duration: number;
 }
 
+export interface PageLine {
+  id: string;
+  x: number; // start point, fraction of page width
+  y: number; // start point, fraction of page height
+  length: number; // fraction of page width
+  angle: number; // 0–359 degrees
+  width: number; // stroke width in logical page pixels
+  color: string;
+  style: "solid" | "dashed" | "dotted" | "double";
+}
+
 /** One page of a gift, exactly as stored in the gifts.content JSON. */
 export interface PageData {
   layout: string;
+  lines?: PageLine[];
   bg?: ColorRef;
   /** Text slots hold strings, photo slots hold PhotoContent. */
   slots: Record<string, string | PhotoContent>;

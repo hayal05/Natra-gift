@@ -42,7 +42,7 @@ interface Props {
   /** Closes the tool panel (the X in its header). */
   onClose?: () => void;
   onSelectionChange?: (kind: "text" | "photo" | null) => void;
-  pageControl?: "navigate" | "move" | "delete" | "layout" | null;
+  pageControl?: "navigate" | "move" | "layout" | null;
   textControl?: "font" | "size" | "align" | "color" | "style" | null;
   photoControl?: "replace" | "fit" | "frame" | "filter" | "zoom" | null;
   editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" | "add-page" | "duplicate-page" } | null;
@@ -648,10 +648,6 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                         <button type="button" onClick={()=>shiftPage(-1)} disabled={!canEarlier} className={chip(false)+" flex items-center gap-2 disabled:opacity-40"}><Icon name="arrow-left" size={16}/>Move earlier</button>
                         <button type="button" onClick={()=>shiftPage(1)} disabled={!canLater} className={chip(false)+" flex items-center gap-2 disabled:opacity-40"}>Move later<Icon name="arrow-right" size={16}/></button>
                       </div>
-                    </Group>}
-                    {pageControl === "delete" && <Group title="Delete current page">
-                      {confirmDelete && canDelete ? <div className="flex items-center gap-2"><span className="text-xs">Delete page {at + 1}?</span><button type="button" onClick={removePage} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white">Delete</button><button type="button" onClick={()=>setConfirmDelete(false)} className={chip(false)}>Keep</button></div> :
-                      <button type="button" disabled={!canDelete} onClick={()=>setConfirmDelete(true)} className={chip(false)+" text-red-700 disabled:opacity-40"}>{canDelete ? `Delete page ${at + 1}` : deleteReason ?? "Cannot delete page"}</button>}
                     </Group>}
                     {pageControl === "layout" && <Group title="Change page layout"><div className="grid grid-cols-4 gap-2">{LAYOUT_LIST.map(l=><button key={l.id} type="button" onClick={()=>chooseLayout(l.id)} aria-pressed={l.id===page.layout} className={"overflow-hidden rounded-md border-2 "+(l.id===page.layout?"border-rose-700":"border-stone-200")}><canvas ref={el=>{picks.current[l.id]=el}} width={LW} height={LH} className="block aspect-[3/4] w-full"/><span className="block truncate px-1 py-1 text-[9px] text-stone-600">{l.name}</span></button>)}</div></Group>}
                   </div>

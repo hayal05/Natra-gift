@@ -42,12 +42,13 @@ interface Props {
   /** Closes the tool panel (the X in its header). */
   onClose?: () => void;
   onSelectionChange?: (kind: "text" | "photo" | null) => void;
+  pageControl?: "navigate" | "manage" | "layout" | null;
   textControl?: "font" | "size" | "align" | "color" | "style" | null;
   photoControl?: "replace" | "fit" | "frame" | "filter" | "zoom" | null;
   editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" } | null;
 }
 
-export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null }: Props) {
+export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null, pageControl = null }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
@@ -110,7 +111,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   }, [ready, fontTick, book, filled, images, page, at]);
 
   // Layout picker previews: every layout drawn with this page's content. Only while the Pages tab is open.
-  const panelOpen = activeTool === "Pages";
+  const panelOpen = activeTool === "Pages" && pageControl === "layout";
   useEffect(() => {
     if (!ready || !panelOpen) return;
     for (const l of LAYOUT_LIST) {
@@ -539,7 +540,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   }, [editorCommand]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl ? "126px" : "min(38dvh, 340px)") : "0px" }}>
+    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl || pageControl ? (pageControl === "layout" ? "230px" : pageControl === "navigate" ? "170px" : "140px") : "min(38dvh, 340px)") : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
         <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
@@ -630,25 +631,25 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           )}
         </div>
         {activeTool && (
-          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
+          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl || pageControl ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
             <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ maxHeight: "min(42dvh, 340px)", height: "auto" }}>
               <div className="flex shrink-0 items-center justify-between border-b border-stone-100 pl-3 pr-1">
-                <div className={textControl || photoControl ? "py-1.5" : "py-2"}><p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Design your book" : activeTool === "Audio" ? "Page audio" : activeTool === "Pages" ? "Pages & layouts" : textControl ? `Text · ${textControl}` : photoControl ? `Photo · ${photoControl}` : "Edit page content"}</p>{!textControl && !photoControl && <p className="text-[11px] text-stone-500">{activeTool === "Pages" ? `Page ${at + 1} of ${pages.length} · Navigate, reorder and choose layouts` : activeTool === "Edit" ? (textControl ? "Select a text component on the page to customize it" : "Select a component to edit its content and appearance") : activeTool === "Style" ? "Book colours, fonts and page background" : "Record or upload a voice note for this page"}</p>}</div>
+                <div className={textControl || photoControl || pageControl ? "py-1.5" : "py-2"}><p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Design your book" : activeTool === "Audio" ? "Page audio" : activeTool === "Pages" ? (pageControl ? `Pages · ${pageControl}` : "Pages & layouts") : textControl ? `Text · ${textControl}` : photoControl ? `Photo · ${photoControl}` : "Edit page content"}</p>{!textControl && !photoControl && !pageControl && <p className="text-[11px] text-stone-500">{activeTool === "Pages" ? `Page ${at + 1} of ${pages.length} · Navigate, reorder and choose layouts` : activeTool === "Edit" ? (textControl ? "Select a text component on the page to customize it" : "Select a component to edit its content and appearance") : activeTool === "Style" ? "Book colours, fonts and page background" : "Record or upload a voice note for this page"}</p>}</div>
                 {onClose && <button type="button" onClick={onClose} aria-label={`Close ${activeTool} tools`} className="grid h-11 w-11 place-items-center rounded-lg text-stone-500 hover:text-stone-900"><Icon name="close" size={18} /></button>}
               </div>
-              <div className={textControl || photoControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
+              <div className={textControl || photoControl || pageControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
                 {activeTool === "Pages" && (
-                  <div className="space-y-4">
-                    <Group title="Page navigator"><ul ref={strip} className="flex gap-3 overflow-x-auto pb-2" aria-label="Pages">{filled.map((p,i)=><li key={i} className="relative shrink-0"><button type="button" onClick={()=>goto(i)} aria-current={i===at?"page":undefined} aria-label={`Go to page ${i+1}`} className={"block overflow-hidden rounded-md ring-2 transition "+(i===at?"ring-rose-700":"ring-stone-200")} style={{width:TW,height:TH}}><canvas ref={el=>{thumbs.current[i]=el}} width={W*DPR} height={H*DPR} className="block h-full w-full"/></button>{p.audio&&<span aria-hidden className="pointer-events-none absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-700 text-white"><Icon name="audio" size={11} /></span>}<span className="mt-1 block text-center text-xs text-stone-500">{i+1}</span></li>)}</ul></Group>
-                    <Group title="Manage pages">
+                  <div className="space-y-2">
+                    {pageControl === "navigate" && <Group title="Page navigator"><ul ref={strip} className="flex gap-3 overflow-x-auto pb-2" aria-label="Pages">{filled.map((p,i)=><li key={i} className="relative shrink-0"><button type="button" onClick={()=>goto(i)} aria-current={i===at?"page":undefined} aria-label={`Go to page ${i+1}`} className={"block overflow-hidden rounded-md ring-2 transition "+(i===at?"ring-rose-700":"ring-stone-200")} style={{width:TW,height:TH}}><canvas ref={el=>{thumbs.current[i]=el}} width={W*DPR} height={H*DPR} className="block h-full w-full"/></button>{p.audio&&<span aria-hidden className="pointer-events-none absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-700 text-white"><Icon name="audio" size={11} /></span>}<span className="mt-1 block text-center text-xs text-stone-500">{i+1}</span></li>)}</ul></Group>}
+                    {pageControl === "manage" && <Group title="Manage pages">
                       <div className="grid grid-cols-5 gap-1.5">
                         {([["Add page", "plus", addNewPage, !roomForPage], ["Duplicate", "duplicate", copyPage, !roomForPage], ["Earlier", "arrow-left", () => shiftPage(-1), !canEarlier], ["Later", "arrow-right", () => shiftPage(1), !canLater], ["Delete", "trash", () => setConfirmDelete(true), !canDelete]] as [string, IconName, () => void, boolean][]).map(([label, icon, run, off]) => (
                           <button key={label} type="button" onClick={run} disabled={off} aria-label={label === "Add page" || label === "Delete" || label === "Duplicate" ? `${label} page` : `Move page ${label.toLowerCase()}`} className={"flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-lg border border-stone-300 bg-white px-1 py-1 text-[10px] font-bold disabled:opacity-40 " + (label === "Delete" ? "text-red-700" : "text-stone-700")}><Icon name={icon} size={18} />{label}</button>
                         ))}
                       </div>
                       {confirmDelete && canDelete && <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete page {at + 1}?</span><button type="button" onClick={removePage} className="min-h-[44px] rounded-md bg-red-700 px-4 text-xs font-bold text-white">Delete</button><button type="button" onClick={() => setConfirmDelete(false)} className={chip(false)}>Keep</button></div>}
-                    </Group>
-                    <Group title="Change page layout"><div className="grid grid-cols-4 gap-2">{LAYOUT_LIST.map(l=><button key={l.id} type="button" onClick={()=>chooseLayout(l.id)} aria-pressed={l.id===page.layout} className={"overflow-hidden rounded-md border-2 "+(l.id===page.layout?"border-rose-700":"border-stone-200")}><canvas ref={el=>{picks.current[l.id]=el}} width={LW} height={LH} className="block aspect-[3/4] w-full"/><span className="block truncate px-1 py-1 text-[9px] text-stone-600">{l.name}</span></button>)}</div></Group>
+                    </Group>}
+                    {pageControl === "layout" && <Group title="Change page layout"><div className="grid grid-cols-4 gap-2">{LAYOUT_LIST.map(l=><button key={l.id} type="button" onClick={()=>chooseLayout(l.id)} aria-pressed={l.id===page.layout} className={"overflow-hidden rounded-md border-2 "+(l.id===page.layout?"border-rose-700":"border-stone-200")}><canvas ref={el=>{picks.current[l.id]=el}} width={LW} height={LH} className="block aspect-[3/4] w-full"/><span className="block truncate px-1 py-1 text-[9px] text-stone-600">{l.name}</span></button>)}</div></Group>}
                   </div>
                 )}
                 {activeTool === "Edit" && (

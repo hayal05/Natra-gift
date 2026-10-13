@@ -41,9 +41,11 @@ interface Props {
   activeTool?: "Pages" | "Edit" | "Audio" | "Style" | null;
   /** Closes the tool panel (the X in its header). */
   onClose?: () => void;
+  onSelectionChange?: (kind: "text" | "photo" | null) => void;
+  editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" } | null;
 }
 
-export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose }: Props) {
+export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
@@ -507,6 +509,23 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       setEditingText(false);
     }
   };
+
+  // Notify the workspace when canvas selection changes; command IDs guarantee one action per tap.
+  useEffect(() => { onSelectionChange?.(slot?.kind ?? null); }, [slot?.id, slot?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
+  const handledCommand = useRef(0);
+  useEffect(() => {
+    if (!editorCommand || handledCommand.current === editorCommand.id) return;
+    handledCommand.current = editorCommand.id;
+    switch (editorCommand.action) {
+      case "add-text": addComp("text"); break;
+      case "add-photo": addComp("photo"); break;
+      case "duplicate": copyComp(); break;
+      case "delete": if (slot) setConfirmSlotDelete(true); break;
+      case "clear": setSlotId(null); setEditingText(false); break;
+      case "bold": toggleBold(); break;
+      case "italic": toggleItalic(); break;
+    }
+  }, [editorCommand]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ ["--panel-reserve" as string]: activeTool ? "calc(var(--tool-panel-h, 208px) + 8px)" : "0px" }}>

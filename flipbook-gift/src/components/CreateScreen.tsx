@@ -31,6 +31,8 @@ export default function CreateScreen() {
   const [sending, setSending] = useState(false);
   const [activeTool, setActiveTool] = useState<EditorTool | null>(null);
   const [selectedKind, setSelectedKind] = useState<"text" | "photo" | null>(null);
+  const [textMenu, setTextMenu] = useState(false);
+  const [textControl, setTextControl] = useState<"font" | "size" | "align" | "color" | "style" | null>(null);
   const [editorCommand, setEditorCommand] = useState<{ id: number; action: EditorAction } | null>(null);
   const commandId = useRef(0);
 
@@ -66,11 +68,24 @@ export default function CreateScreen() {
     if (action === "delete") setActiveTool("Edit");
     else if (action === "clear") setActiveTool(null);
   };
-  const toolbar = selectedKind === "text"
-    ? [{ label: "Back", icon: "arrow-left" as IconName, action: "clear" as EditorAction }, { label: "Edit", icon: "text" as IconName, tool: "Edit" as EditorTool }, { label: "Bold", icon: "bold" as IconName, action: "bold" as EditorAction }, { label: "Italic", icon: "italic" as IconName, action: "italic" as EditorAction }, { label: "More", icon: "style" as IconName, tool: "Edit" as EditorTool }]
-    : selectedKind === "photo"
-      ? [{ label: "Back", icon: "arrow-left" as IconName, action: "clear" as EditorAction }, { label: "Edit", icon: "photo" as IconName, tool: "Edit" as EditorTool }, { label: "Duplicate", icon: "duplicate" as IconName, action: "duplicate" as EditorAction }, { label: "Delete", icon: "trash" as IconName, action: "delete" as EditorAction }, { label: "More", icon: "style" as IconName, tool: "Edit" as EditorTool }]
-      : MAIN_TOOLS;
+  const toolbar = MAIN_TOOLS;
+  const TEXT_TOOLS = ["Add text", "Font", "Size", "Align", "Color", "Style"] as const;
+  const chooseTextTool = (tool: typeof TEXT_TOOLS[number]) => {
+    if (tool === "Add text") { runEditorAction("add-text"); setTextControl(null); setActiveTool(null); return; }
+    setTextControl(tool.toLowerCase() as "font" | "size" | "align" | "color" | "style");
+    setActiveTool("Edit");
+  };
+  const openMainTool = (label: string, tool?: EditorTool, action?: EditorAction) => {
+    if (label === "Text") {
+      setTextMenu(current => !current);
+      setTextControl(null);
+      setActiveTool(null);
+    } else {
+      setTextMenu(false); setTextControl(null);
+      if (tool) activateEditorTool(tool);
+      else if (action) runEditorAction(action);
+    }
+  };
 
   if (step === "pages") {
     return (
@@ -88,7 +103,7 @@ export default function CreateScreen() {
           {view === "edit" ? (
             <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? "calc(var(--nav-h) + var(--tool-panel-h) + 16px)" : "calc(var(--nav-h) + 16px)" }}>
               <div data-natragift-editor>
-                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} onClose={() => setActiveTool(null)} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); setActiveTool(null); }}
+                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} textControl={textMenu ? textControl : null} onClose={() => { setActiveTool(null); setTextControl(null); }} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); }}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
                   onChange={(pages) => set({ pages })} />
               </div>
@@ -100,13 +115,18 @@ export default function CreateScreen() {
         {view === "edit" && (
           <>
             
+            {textMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-3 py-2 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
+              <div className="mx-auto flex max-w-2xl gap-2 overflow-x-auto overscroll-x-contain" role="toolbar" aria-label="Text tools">
+                {TEXT_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseTextTool(label)} aria-pressed={textControl === label.toLowerCase()} className={"min-h-[44px] shrink-0 rounded-lg border px-3 text-xs font-semibold " + (textControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
+              </div>
+            </div>}
             <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
               <div className="mx-auto grid max-w-2xl grid-cols-5 gap-1">
                 {toolbar.map(({ label, icon, tool, action }) => (
-                  <button key={label} type="button" aria-label={label} aria-pressed={!!tool && activeTool === tool}
-                    onClick={() => tool ? activateEditorTool(tool) : action && runEditorAction(action)}
-                    className={"relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 " + (tool && activeTool === tool ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
-                    {tool && activeTool === tool && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
+                  <button key={label} type="button" aria-label={label} aria-pressed={label === "Text" ? textMenu : !!tool && activeTool === tool}
+                    onClick={() => openMainTool(label, tool, action)}
+                    className={"relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 " + ((label === "Text" && textMenu) || (tool && activeTool === tool) ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
+                    {((label === "Text" && textMenu) || (tool && activeTool === tool)) && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
                     <Icon name={icon} size={21} />
                     <span className="text-[11px] font-semibold">{label}</span>
                   </button>

@@ -101,7 +101,7 @@ export default function CreateScreen() {
         </header>
         <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {view === "edit" ? (
-            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? "calc(var(--nav-h) + var(--tool-panel-h) + 16px)" : "calc(var(--nav-h) + 16px)" }}>
+            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? (textControl ? "calc(var(--nav-h) + 190px)" : "calc(var(--nav-h) + 280px)") : textMenu ? "calc(var(--nav-h) + 72px)" : "calc(var(--nav-h) + 16px)" }}>
               <div data-natragift-editor>
                 <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} textControl={textMenu ? textControl : null} onClose={() => { setActiveTool(null); setTextControl(null); }} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); }}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}

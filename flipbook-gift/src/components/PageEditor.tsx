@@ -42,10 +42,11 @@ interface Props {
   /** Closes the tool panel (the X in its header). */
   onClose?: () => void;
   onSelectionChange?: (kind: "text" | "photo" | null) => void;
+  textControl?: "font" | "size" | "align" | "color" | "style" | null;
   editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" } | null;
 }
 
-export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand }: Props) {
+export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
@@ -619,10 +620,10 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           )}
         </div>
         {activeTool && (
-          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
+          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl ? "calc(var(--nav-h, 76px) + 60px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
             <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ height: "var(--tool-panel-h, 280px)" }}>
               <div className="flex shrink-0 items-center justify-between border-b border-stone-100 pl-4 pr-1">
-                <div className="py-2"><p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Design your book" : activeTool === "Audio" ? "Page audio" : activeTool === "Pages" ? "Pages & layouts" : "Edit page content"}</p><p className="text-[11px] text-stone-500">{activeTool === "Pages" ? `Page ${at + 1} of ${pages.length} · Navigate, reorder and choose layouts` : activeTool === "Edit" ? "Select a component to edit its content and appearance" : activeTool === "Style" ? "Book colours, fonts and page background" : "Record or upload a voice note for this page"}</p></div>
+                <div className="py-2"><p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Design your book" : activeTool === "Audio" ? "Page audio" : activeTool === "Pages" ? "Pages & layouts" : textControl ? `Text · ${textControl}` : "Edit page content"}</p><p className="text-[11px] text-stone-500">{activeTool === "Pages" ? `Page ${at + 1} of ${pages.length} · Navigate, reorder and choose layouts` : activeTool === "Edit" ? (textControl ? "Select a text component on the page to customize it" : "Select a component to edit its content and appearance") : activeTool === "Style" ? "Book colours, fonts and page background" : "Record or upload a voice note for this page"}</p></div>
                 {onClose && <button type="button" onClick={onClose} aria-label={`Close ${activeTool} tools`} className="grid h-11 w-11 place-items-center rounded-lg text-stone-500 hover:text-stone-900"><Icon name="close" size={18} /></button>}
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3">
@@ -645,7 +646,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                     <Group title="Select text or photo">
                       <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Page components">{slots.map(x=><button key={x.id} type="button" onClick={()=>setSlotId(x.id)} aria-pressed={x.id===slotId} className={chip(x.id===slotId)+" flex shrink-0 items-center gap-1.5"}><Icon name={x.kind==="text"?"text":"photo"} size={14} />{slotName(layout,x)}</button>)}</div>
                     </Group>
-                    {textSlot && <>
+                    {textSlot && !textControl && <>
                       <Group title="Edit text">
                         <textarea value={typed} onChange={e=>setText(e.target.value)} maxLength={textLimit(textSlot)} rows={Math.min(10, Math.max(3, typed.split("\n").reduce((n, ln) => n + Math.max(1, Math.ceil(ln.length / 32)), 0)))} placeholder={textSlot.hint} aria-label="Text on this component" className="w-full resize-none rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium focus:border-stone-900 focus:outline-none"/>
                       </Group>
@@ -661,7 +662,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                       </Group>
                       <Group title="Position"><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>
                     </>}
-                    {photoSlot && <>
+                    {photoSlot && !textControl && <>
                       <Group title="Replace image">
                         <label className={"inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-stone-300 bg-white px-4 text-xs font-bold text-stone-800 "+(photoBusy?"opacity-40":"")}><Icon name="photo" size={16} />Replace photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={choosePhoto} disabled={!!photoBusy} className="sr-only"/></label>
                         {photoBusy&&<p className="mt-2 text-xs text-stone-600" role="status">{photoBusy.label}{photoBusy.pct!==null&&` ${photoBusy.pct}%`}</p>}{photoError&&<p className="mt-2 text-xs font-bold text-red-700" role="alert">{photoError}</p>}
@@ -689,6 +690,15 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                     </div>}
                     {confirmSlotDelete && slot && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3"><span className="text-xs font-bold text-red-800">Delete this {slot.kind==="text"?"text":"photo"}? You cannot undo it.</span><button type="button" onClick={removeComp} className="min-h-[44px] rounded-md bg-red-700 px-4 text-xs font-bold text-white">Yes, delete</button><button type="button" onClick={()=>setConfirmSlotDelete(false)} className={chip(false)}>Keep</button></div>}
                     {(slotNote||addTextWhy||deleteWhy||copyWhy)&&<p className="text-xs text-stone-500" role="status">{slotNote??addTextWhy??deleteWhy??copyWhy}</p>}
+                    {textControl && <div className="space-y-3">
+                      {!textSlot ? <p className="rounded-lg bg-stone-50 p-3 text-xs text-stone-600">Tap a text component on the page to use {textControl} controls, or select it from the component list above.</p> : <>
+                        {textControl === "font" && <Group title="Font family"><FontPicker family={style.family} role={cur.font ?? "body"} fonts={book.fonts} onChange={(c)=>c.family?setStyle({family:c.family}):setStyle({family:undefined,font:c.font===textSlot.font?undefined:c.font})}/></Group>}
+                        {textControl === "size" && <Group title="Text size"><Row label="Size">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}<input type="range" aria-label="Text size" min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="h-11 min-w-[90px] flex-1 accent-rose-700"/><span className="text-xs">{Math.round(sizeFactor(style)*100)}%</span></Row></Group>}
+                        {textControl === "align" && <Group title="Text alignment"><Row label="Align">{([["left","Align left","align-left"],["center","Align center","align-center"],["right","Align right","align-right"],["justify","Justify","align-justify"]] as [Align,string,IconName][]).map(([a,label,icon])=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} aria-pressed={cur.align===a} aria-label={label} className={chip(cur.align===a)+" grid w-11 place-items-center px-0"}><Icon name={icon} size={18}/></button>)}</Row></Group>}
+                        {textControl === "color" && <Group title="Text colour"><div className="flex flex-wrap gap-2">{TEXT_COLORS.map(([k,name])=><button key={k} type="button" aria-label={name} aria-pressed={cur.color===k} onClick={()=>setStyle({color:k===textSlot.color?undefined:k})} className="grid h-11 w-11 place-items-center"><span className={"block h-8 w-8 rounded-full border-2 "+(cur.color===k?"border-rose-700 ring-2 ring-rose-300":"border-stone-300")} style={{background:book.palette[k]}}/></button>)}</div></Group>}
+                        {textControl === "style" && <Group title="Text style"><Row label="Format"><button type="button" onClick={toggleBold} aria-pressed={cur.bold} className={chip(cur.bold)+" flex items-center gap-1"}><Icon name="bold" size={18}/>Bold</button><button type="button" onClick={toggleItalic} aria-pressed={cur.italic} className={chip(cur.italic)+" flex items-center gap-1"}><Icon name="italic" size={18}/>Italic</button></Row><button type="button" onClick={()=>editPage(resetTextBox(pages[at],textSlot.id))} className={chip(false)}>Reset position &amp; size</button></Group>}
+                      </>}
+                    </div>}
                     {!textSlot&&!photoSlot&&<p className="text-xs text-stone-500">Select a text or photo to reveal its editing controls. You can also add a new component above.</p>}
                   </div>
                 )}

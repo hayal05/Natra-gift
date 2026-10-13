@@ -32,7 +32,7 @@ export default function CreateScreen() {
   const [activeTool, setActiveTool] = useState<EditorTool | null>(null);
   const [selectedKind, setSelectedKind] = useState<"text" | "photo" | null>(null);
   const [pagesMenu, setPagesMenu] = useState(false);
-  const [pageControl, setPageControl] = useState<"navigate" | "move" | "layout" | null>(null);
+  const [pageControl, setPageControl] = useState<"navigate" | "layout" | null>(null);
   const [textMenu, setTextMenu] = useState(false);
   const [photoMenu, setPhotoMenu] = useState(false);
   const [photoControl, setPhotoControl] = useState<"replace" | "fit" | "frame" | "filter" | "zoom" | null>(null);
@@ -73,7 +73,7 @@ export default function CreateScreen() {
     else if (action === "clear") setActiveTool(null);
   };
   const toolbar = MAIN_TOOLS;
-  const PAGE_TOOLS = ["Navigate", "Add page", "Move", "Layout"] as const;
+  const PAGE_TOOLS = ["Navigate", "Layout"] as const;
   const choosePageTool = (label: typeof PAGE_TOOLS[number]) => {
     if (label === "Add page") { runEditorAction("add-page"); setActiveTool(null); setPageControl(null); return; }
     setPageControl(label.toLowerCase() as "navigate" | "move" | "layout");

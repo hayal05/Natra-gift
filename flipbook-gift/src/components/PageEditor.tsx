@@ -529,7 +529,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   }, [editorCommand]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ ["--panel-reserve" as string]: activeTool ? "calc(var(--tool-panel-h, 208px) + 8px)" : "0px" }}>
+    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl ? "150px" : "min(38dvh, 340px)") : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
         <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
@@ -621,12 +621,12 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
         </div>
         {activeTool && (
           <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl ? "calc(var(--nav-h, 76px) + 60px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
-            <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ height: "var(--tool-panel-h, 280px)" }}>
-              <div className="flex shrink-0 items-center justify-between border-b border-stone-100 pl-4 pr-1">
-                <div className="py-2"><p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Design your book" : activeTool === "Audio" ? "Page audio" : activeTool === "Pages" ? "Pages & layouts" : textControl ? `Text · ${textControl}` : "Edit page content"}</p><p className="text-[11px] text-stone-500">{activeTool === "Pages" ? `Page ${at + 1} of ${pages.length} · Navigate, reorder and choose layouts` : activeTool === "Edit" ? (textControl ? "Select a text component on the page to customize it" : "Select a component to edit its content and appearance") : activeTool === "Style" ? "Book colours, fonts and page background" : "Record or upload a voice note for this page"}</p></div>
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ maxHeight: "min(42dvh, 340px)", height: "auto" }}>
+              <div className="flex shrink-0 items-center justify-between border-b border-stone-100 pl-3 pr-1">
+                <div className={textControl ? "py-1.5" : "py-2"}><p className="text-sm font-bold text-stone-900">{activeTool === "Style" ? "Design your book" : activeTool === "Audio" ? "Page audio" : activeTool === "Pages" ? "Pages & layouts" : textControl ? `Text · ${textControl}` : "Edit page content"}</p>{!textControl && <p className="text-[11px] text-stone-500">{activeTool === "Pages" ? `Page ${at + 1} of ${pages.length} · Navigate, reorder and choose layouts` : activeTool === "Edit" ? (textControl ? "Select a text component on the page to customize it" : "Select a component to edit its content and appearance") : activeTool === "Style" ? "Book colours, fonts and page background" : "Record or upload a voice note for this page"}</p>}</div>
                 {onClose && <button type="button" onClick={onClose} aria-label={`Close ${activeTool} tools`} className="grid h-11 w-11 place-items-center rounded-lg text-stone-500 hover:text-stone-900"><Icon name="close" size={18} /></button>}
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3">
+              <div className={textControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
                 {activeTool === "Pages" && (
                   <div className="space-y-4">
                     <Group title="Page navigator"><ul ref={strip} className="flex gap-3 overflow-x-auto pb-2" aria-label="Pages">{filled.map((p,i)=><li key={i} className="relative shrink-0"><button type="button" onClick={()=>goto(i)} aria-current={i===at?"page":undefined} aria-label={`Go to page ${i+1}`} className={"block overflow-hidden rounded-md ring-2 transition "+(i===at?"ring-rose-700":"ring-stone-200")} style={{width:TW,height:TH}}><canvas ref={el=>{thumbs.current[i]=el}} width={W*DPR} height={H*DPR} className="block h-full w-full"/></button>{p.audio&&<span aria-hidden className="pointer-events-none absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-700 text-white"><Icon name="audio" size={11} /></span>}<span className="mt-1 block text-center text-xs text-stone-500">{i+1}</span></li>)}</ul></Group>

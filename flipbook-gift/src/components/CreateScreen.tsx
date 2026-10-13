@@ -75,8 +75,7 @@ export default function CreateScreen() {
   const toolbar = MAIN_TOOLS;
   const PAGE_TOOLS = ["Navigate", "Layout"] as const;
   const choosePageTool = (label: typeof PAGE_TOOLS[number]) => {
-    if (label === "Add page") { runEditorAction("add-page"); setActiveTool(null); setPageControl(null); return; }
-    setPageControl(label.toLowerCase() as "navigate" | "move" | "layout");
+    setPageControl(label.toLowerCase() as "navigate" | "layout");
     setActiveTool("Pages");
   };
   const TEXT_TOOLS = ["Add text", "Font", "Size", "Align", "Color", "Style"] as const;

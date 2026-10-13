@@ -134,7 +134,7 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
       ids.add(item.id);
       if (!inRange(item.x, 0, 1) || !inRange(item.y, 0, 1) || !inRange(item.length, 0.05, 1.5) || !inRange(item.angle, 0, 360) || !inRange(item.width, 1, 16)) return bad("A page line setting is invalid.");
       if (typeof item.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(item.color) || !oneOf(item.style, ["solid", "dashed", "dotted", "double"])) return bad("A page line style is invalid.");
-      page.lines.push({ id: item.id, x: item.x, y: item.y, length: item.length, angle: item.angle, width: item.width, color: item.color, style: item.style });
+      page.lines.push({ id: item.id, x: item.x, y: item.y, length: item.length, angle: item.angle, width: item.width, color: item.color, style: item.style as "solid" | "dashed" | "dotted" | "double" });
     }
   }
   if (extras) page.extras = extras;

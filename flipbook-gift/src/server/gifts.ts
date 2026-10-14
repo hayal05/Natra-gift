@@ -152,6 +152,10 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
       if (!inRange(p.audio.width, 0.35, 0.9)) return bad("An audio pill size is invalid.");
       page.audio.width = p.audio.width as number;
     }
+    if (p.audio.height !== undefined) {
+      if (!inRange(p.audio.height, 36, 88)) return bad("An audio pill height is invalid.");
+      page.audio.height = p.audio.height as number;
+    }
   }
   if (p.styles !== undefined) {
     if (!isObj(p.styles)) return bad("A text style is not valid.");

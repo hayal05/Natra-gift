@@ -142,6 +142,16 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
     if (opts.cloud && m[1] !== opts.cloud) return bad("An audio note is not from our uploads.");
     if (!inRange(p.audio.duration, 1, 180)) return bad("An audio note duration is not valid.");
     page.audio = { src: p.audio.src as string, duration: Math.round(p.audio.duration) };
+    for (const key of ["x", "y"] as const) {
+      if (p.audio[key] !== undefined) {
+        if (!inRange(p.audio[key], 0, 1)) return bad("An audio pill position is invalid.");
+        page.audio[key] = p.audio[key] as number;
+      }
+    }
+    if (p.audio.width !== undefined) {
+      if (!inRange(p.audio.width, 0.35, 0.9)) return bad("An audio pill size is invalid.");
+      page.audio.width = p.audio.width as number;
+    }
   }
   if (p.styles !== undefined) {
     if (!isObj(p.styles)) return bad("A text style is not valid.");

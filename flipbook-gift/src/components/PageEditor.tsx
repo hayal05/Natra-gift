@@ -543,7 +543,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   }, [editorCommand]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl || pageControl || designControl ? (pageControl === "layout" ? "230px" : pageControl === "navigate" ? "170px" : "140px") : "min(38dvh, 340px)") : "0px" }}>
+    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl || pageControl || designControl ? (pageControl === "layout" ? "230px" : pageControl === "navigate" ? "170px" : "140px") : activeTool === "Audio" ? "min(30dvh, 250px)" : "min(38dvh, 340px)") : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
         <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
@@ -635,7 +635,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
         </div>
         {activeTool && (
           <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl || pageControl || designControl ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
-            <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ maxHeight: "min(42dvh, 340px)", height: "auto" }}>
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ maxHeight: activeTool === "Audio" ? "min(30dvh, 250px)" : "min(42dvh, 340px)", height: "auto" }}>
               <div className={textControl || photoControl || pageControl || designControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
                 {activeTool === "Pages" && (
                   <div className="space-y-2">

@@ -600,6 +600,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
             {lines.map(line => {
               const x = line.x * W, y = line.y * H, len = line.length * W, rad = line.angle * Math.PI / 180;
               const x2 = x + Math.cos(rad) * len, y2 = y + Math.sin(rad) * len;
+              const mx = (x + x2) / 2, my = (y + y2) / 2;
+              const rx = mx - Math.sin(rad) * 34, ry = my + Math.cos(rad) * 34;
               return <g key={line.id}>
                 {activeTool === "Style" && <>
                   <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="18" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />

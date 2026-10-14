@@ -634,9 +634,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           )}
         </div>
         {activeTool && (
-          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl || pageControl || designControl ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
+          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl || pageControl || designControl || activeTool === "Audio" ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
             <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ maxHeight: activeTool === "Audio" ? "140px" : "min(42dvh, 340px)", height: "auto" }}>
-              <div className={textControl || photoControl || pageControl || designControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
+              <div className={textControl || photoControl || pageControl || designControl || activeTool === "Audio" ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
                 {activeTool === "Pages" && (
                   <div className="space-y-2">
                     {pageControl === "navigate" && <div className="space-y-1">

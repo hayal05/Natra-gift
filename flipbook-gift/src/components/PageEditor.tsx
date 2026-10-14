@@ -283,7 +283,6 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const copyPage = () => { if (!roomForPage) return; onChange(duplicatePage(pages, at)); goto(at + 1); };
 
   const currentAudio = pages[at]?.audio;
-  const [pillPos, setPillPos] = useState<Record<number, PillPos>>({}); // where the creator dragged each page's voice pill (editing only)
   const chooseAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";

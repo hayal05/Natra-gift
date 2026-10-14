@@ -252,7 +252,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     else if (li.offsetLeft + li.offsetWidth > ul.scrollLeft + ul.clientWidth) ul.scrollLeft = li.offsetLeft + li.offsetWidth - ul.clientWidth + 4;
   }, [at, pages.length]);
 
-  const goto = (i: number) => { setIndex(i); setSlotId(null); setLineId(null); setEditingText(false); };
+  const goto = (i: number) => { setIndex(i); setSlotId(null); setEditingText(false); };
   const selectedPhotoContent: PhotoContent | null = slot?.kind === "photo" && typeof pages[at]?.slots[slot.id] === "object" ? pages[at]?.slots[slot.id] as PhotoContent : null;
   const selectedPhotoRect = slot?.kind === "photo" ? photoSlotRect(slot, selectedPhotoContent ?? undefined, W, H) : null;
 

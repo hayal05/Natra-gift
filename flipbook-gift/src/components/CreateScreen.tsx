@@ -133,7 +133,7 @@ export default function CreateScreen() {
   if (step === "pages") {
     return (
       <main className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#f7f5f2] text-stone-900"
-        style={{ ["--hdr-h" as string]: "56px", ["--nav-h" as string]: "calc(76px + env(safe-area-inset-bottom, 0px))", ["--tool-panel-h" as string]: "clamp(228px, 38dvh, 340px)" }}>
+        style={{ ["--hdr-h" as string]: "56px", ["--nav-h" as string]: "calc(76px + env(safe-area-inset-bottom, 0px))", ["--tool-panel-h" as string]: "min(32dvh, 260px)", ["--subnav-h" as string]: "clamp(38px, 5.5dvh, 44px)" }}>
         <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-stone-200 bg-white/95 px-3 backdrop-blur">
           <button type="button" onClick={() => setStep("names")} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full text-xl text-stone-700 hover:bg-stone-100">←</button>
           <div className="min-w-0 text-center"><p className="truncate text-sm font-bold">{t.name}</p><p className="text-[11px] text-stone-400">Auto-saved</p></div>
@@ -144,7 +144,7 @@ export default function CreateScreen() {
         </header>
         <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {view === "edit" ? (
-            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? (textControl || photoControl || pageControl || designControl || audioControl ? "calc(var(--nav-h) + 162px)" : "calc(var(--nav-h) + 280px)") : textMenu || photoMenu || pagesMenu || designMenu || audioMenu ? "calc(var(--nav-h) + 48px)" : "calc(var(--nav-h) + 16px)" }}>
+            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? `calc(var(--nav-h) + ${pageControl === "layout" ? "min(230px, 34dvh)" : pageControl === "navigate" ? "min(170px, 28dvh)" : "min(180px, 30dvh)"})` : textMenu || photoMenu || pagesMenu || designMenu || audioMenu ? "calc(var(--nav-h) + var(--subnav-h, 42px))" : "calc(var(--nav-h) + 16px)" }}>
               <div data-natragift-editor>
                 <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} pageControl={pagesMenu ? pageControl : null} textControl={textMenu ? textControl : null} photoControl={photoMenu ? photoControl : null} designControl={designMenu ? designControl : null} audioControl={audioMenu ? audioControl : null} onClose={() => { setActiveTool(null); setTextControl(null); setPhotoControl(null); setPageControl(null); setDesignControl(null); setAudioControl(null); }} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); }}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
@@ -159,7 +159,7 @@ export default function CreateScreen() {
           <>
             
             {pagesMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
-              <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto" role="toolbar" aria-label="Page tools">
+              <div className="mx-auto flex max-w-2xl min-w-0 gap-1.5 overflow-x-auto" role="toolbar" aria-label="Page tools">
                 {PAGE_TOOLS.map(label => <button key={label} type="button" onClick={() => choosePageTool(label)} aria-pressed={pageControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (pageControl === label.toLowerCase() ? "border-rose-500 bg-rose-700" : "border-stone-700 bg-stone-900")}>{label}</button>)}
               </div>
             </div>}

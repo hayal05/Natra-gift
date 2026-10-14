@@ -156,7 +156,7 @@ export interface AudioContent {
   y?: number;
   /** Pill width relative to page width, 0.35..0.9. */
   width?: number;
-  /** Pill height in logical pixels, from 36 to 88. */
+  /** Pill height in logical pixels, from 8 to 480. */
   height?: number;
 }
 

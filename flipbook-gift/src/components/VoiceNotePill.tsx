@@ -123,7 +123,7 @@ export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PIL
         transform: `translate(${-x * 100}%, ${-y * 100}%)`,
         touchAction: "none",
         width: `${Math.max(35, Math.min(90, width * 100))}%`,
-        height: `${Math.max(36, Math.min(88, height))}px`,
+        height: `${Math.max(8, Math.min(480, height))}px`,
       }}
       className={"absolute z-10 flex select-none items-center gap-3 rounded-full bg-[#1b8fd0] pl-0 pr-4 text-white shadow-md " + (dragging ? "cursor-grabbing ring-2 ring-white/70" : "cursor-grab")}
     >
@@ -133,7 +133,7 @@ export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PIL
         aria-label={state === "error" ? "Try the voice note again" : playing ? "Pause voice note" : "Play voice note"}
         className="grid h-full aspect-square shrink-0 place-items-center text-white active:scale-90"
       >
-        <svg viewBox="0 0 34 34" className="block h-[34px] w-[34px] shrink-0 overflow-visible" aria-hidden>
+        <svg viewBox="0 0 34 34" className="block h-[min(34px,90%)] w-[min(34px,90%)] shrink-0 overflow-visible" aria-hidden>
           <circle cx="17" cy="17" r="16" fill="none" stroke="currentColor" strokeWidth="2" />
           {state === "error" ? (
             <>
@@ -161,7 +161,7 @@ export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PIL
       </div>
       {onResize && <div role="slider" aria-label="Resize voice note" aria-valuemin={35} aria-valuemax={90} aria-valuenow={Math.round(width*100)}
         onPointerDown={e=>{e.stopPropagation();e.preventDefault();resizing.current={pointer:e.pointerId,startX:e.clientX,startWidth:width,startHeight:height,startY:e.clientY};e.currentTarget.setPointerCapture(e.pointerId);}}
-        onPointerMove={e=>{e.stopPropagation();const d=resizing.current;if(!d||d.pointer!==e.pointerId)return;const parent=box.current?.offsetParent as HTMLElement|null;if(parent)onResize({width:Math.max(.35,Math.min(.9,d.startWidth+(e.clientX-d.startX)/parent.clientWidth)),height:Math.max(36,Math.min(88,d.startHeight+(e.clientY-d.startY)))});}}
+        onPointerMove={e=>{e.stopPropagation();const d=resizing.current;if(!d||d.pointer!==e.pointerId)return;const parent=box.current?.offsetParent as HTMLElement|null;if(parent)onResize({width:Math.max(.35,Math.min(.9,d.startWidth+(e.clientX-d.startX)/parent.clientWidth)),height:Math.max(8,Math.min(480,d.startHeight+(e.clientY-d.startY)))});}}
         onPointerUp={e=>{e.stopPropagation();resizing.current=null;}} onPointerCancel={()=>{resizing.current=null;}}
         className="absolute -bottom-2 -right-2 z-20 grid h-7 w-7 touch-none place-items-center rounded-lg border border-white/80 bg-sky-700 text-lg text-white shadow" title="Drag diagonally to resize">⤡</div>}
       {onOpen && (

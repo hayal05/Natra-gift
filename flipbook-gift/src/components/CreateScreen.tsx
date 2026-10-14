@@ -189,7 +189,7 @@ export default function CreateScreen() {
                   <button key={label} type="button" aria-label={label} aria-pressed={label === "Pages" ? pagesMenu : label === "Text" ? textMenu : label === "Photo" ? photoMenu : label === "Design" ? designMenu : label === "Audio" ? audioMenu : !!tool && activeTool === tool}
                     onClick={() => openMainTool(label, tool, action)}
                     className={"relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 " + ((label === "Pages" && pagesMenu) || (label === "Text" && textMenu) || (label === "Photo" && photoMenu) || (label === "Design" && designMenu) || (label === "Audio" && audioMenu) || (tool && activeTool === tool) ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
-                    {((label === "Text" && textMenu) || (label === "Design" && designMenu) || (label === "Audio" && audioMenu) || (tool && activeTool === tool)) && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
+                    {((label === "Pages" && pagesMenu) || (label === "Text" && textMenu) || (label === "Photo" && photoMenu) || (label === "Design" && designMenu) || (label === "Audio" && audioMenu)) && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
                     <Icon name={icon} size={21} />
                     <span className="text-[11px] font-semibold">{label}</span>
                   </button>

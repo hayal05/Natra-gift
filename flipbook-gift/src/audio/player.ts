@@ -5,7 +5,7 @@
 // note; no autoplay; a file that cannot play shows a message, never a silent dead button.
 // Usage: call `show(note)` whenever the page changes (it always stops and resets), `show(null)` when the page has no note.
 
-export interface AudioNote { src: string; duration: number }
+export interface AudioNote { src: string; duration: number; x?: number; y?: number; width?: number }
 
 export interface AudioPlayerOptions {
   /** Accessible name of the button. Default "voice note". The button says "Play <label>" / "Pause <label>". */
@@ -40,7 +40,7 @@ export interface AudioPlayer {
 }
 
 const CSS = `
-.fba-root{position:absolute;left:50%;transform:translateX(-50%);bottom:max(12px,env(safe-area-inset-bottom));z-index:20;pointer-events:auto;display:flex;align-items:center;gap:10px;width:84%;max-width:calc(100% - 24px);height:44px;\
+.fba-root{position:absolute;left:50%;top:calc(100% - 56px);transform:translate(-50%,-50%);z-index:20;pointer-events:auto;display:flex;align-items:center;gap:10px;width:84%;max-width:calc(100% - 24px);height:44px;\
   padding:0 16px 0 0;border-radius:999px;background:var(--fba-bg,#1b8fd0);color:var(--fba-fg,#fff);font:600 13px/1.3 system-ui,-apple-system,sans-serif;\
   box-shadow:0 3px 10px rgba(0,0,0,.25);-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 .fba-root[hidden]{display:none}
@@ -123,6 +123,7 @@ export function createAudioPlayer(container: HTMLElement, options: AudioPlayerOp
   let state: AudioPlayerState = "hidden";
   let destroyed = false;
   let shape: number[] = [];
+  let pageNote: AudioNote | null = null;
 
   const total = () => (audio && Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : note?.duration ?? 0);
 
@@ -143,6 +144,14 @@ export function createAudioPlayer(container: HTMLElement, options: AudioPlayerOp
       bar.style.opacity = !started || (i + 0.5) / BARS <= progress ? "1" : "0.5"; // heard bars stay solid, the rest dim
     });
     root.hidden = state === "hidden";
+    const p = note;
+    const x = Math.max(0, Math.min(1, p?.x ?? 0.5));
+    const y = Math.max(0, Math.min(1, p?.y ?? 1));
+    const width = Math.max(0.35, Math.min(0.9, p?.width ?? 0.84));
+    root.style.width = `${width * 100}%`;
+    root.style.left = `calc(12px + ${x} * (100% - 24px))`;
+    root.style.top = `calc(12px + ${y} * (100% - 24px))`;
+    root.style.transform = `translate(${-x*100}%, ${-y*100}%)`;
   }
 
   function set(next: AudioPlayerState) {
@@ -174,7 +183,7 @@ export function createAudioPlayer(container: HTMLElement, options: AudioPlayerOp
     a.onplaying = () => set("playing");
     a.onwaiting = () => { if (state === "playing") set("loading"); };
     a.onpause = () => { if (!a.ended && state !== "idle" && state !== "hidden" && state !== "error") set("paused"); };
-    a.onended = () => { a.currentTime = 0; set("paused"); };
+    a.onended = () => { a.currentTime = 0; if (pageNote?.src !== note?.src) show(pageNote); else set("paused"); };
     a.ontimeupdate = () => { if (state === "playing") render(); };
     a.onloadedmetadata = () => render();
     a.onerror = () => fail();
@@ -207,8 +216,12 @@ export function createAudioPlayer(container: HTMLElement, options: AudioPlayerOp
 
   function show(next: AudioNote | null) {
     if (destroyed) return;
+    pageNote = next && typeof next.src === "string" && next.src ? { ...next } : null;
+    // A page turn does not interrupt audio the visitor explicitly started.
+    if ((state === "playing" || state === "loading") && note) return;
+    if (pageNote?.src === note?.src) { note = pageNote; render(); return; }
     release();
-    note = next && typeof next.src === "string" && next.src ? { src: next.src, duration: next.duration } : null;
+    note = pageNote;
     shape = note ? waveform(note.src) : [];
     if (note) set("idle"); else set("hidden");
     render();

@@ -83,7 +83,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const page = filled[at];
   const lines = pages[at]?.lines ?? [];
   const selectedLine = lines.find(line => line.id === lineId) ?? null;
-  const lineDrag = useRef<{ id: string; mode: "move" | "endpoint"; x: number; y: number; start: PageLine } | null>(null);
+  const lineDrag = useRef<{ id: string; mode: "move" | "endpoint" | "rotate"; x: number; y: number; start: PageLine } | null>(null);
   const updateLine = (id: string, patch: Partial<PageLine>) => {
     onChange(pages.map((p, i) => i === at ? { ...p, lines: (p.lines ?? []).map(line => line.id === id ? { ...line, ...patch } : line) } : p));
   };
@@ -100,7 +100,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     setLineId(null);
   };
   const clampLine = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
-  const beginLinePointer = (e: React.PointerEvent<SVGElement>, line: PageLine, mode: "move" | "endpoint") => {
+  const beginLinePointer = (e: React.PointerEvent<SVGElement>, line: PageLine, mode: "move" | "endpoint" | "rotate") => {
     e.stopPropagation(); e.preventDefault();
     lineDrag.current = { id: line.id, mode, x: e.clientX, y: e.clientY, start: line };
     setLineId(line.id);
@@ -114,7 +114,13 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     if (!rect) return;
     const dx = (e.clientX - d.x) / rect.width, dy = (e.clientY - d.y) / rect.height;
     if (d.mode === "move") updateLine(d.id, { x: clampLine(d.start.x + dx, 0, 1), y: clampLine(d.start.y + dy, 0, 1) });
-    else {
+    else if (d.mode === "rotate") {
+      const cx = (d.start.x + Math.cos(d.start.angle * Math.PI / 180) * d.start.length / 2) * rect.width;
+      const cy = d.start.y * rect.height + Math.sin(d.start.angle * Math.PI / 180) * d.start.length * rect.width / 2;
+      const from = Math.atan2(d.y - rect.top - cy, d.x - rect.left - cx);
+      const to = Math.atan2(e.clientY - rect.top - cy, e.clientX - rect.left - cx);
+      updateLine(d.id, { angle: ((d.start.angle + (to - from) * 180 / Math.PI) % 360 + 360) % 360 });
+    } else {
       const startX = d.start.x * rect.width, startY = d.start.y * rect.height;
       const endX = startX + Math.cos(d.start.angle * Math.PI / 180) * d.start.length * rect.width + (e.clientX - d.x);
       const endY = startY + Math.sin(d.start.angle * Math.PI / 180) * d.start.length * rect.width + (e.clientY - d.y);
@@ -598,9 +604,14 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                 {activeTool === "Style" && <>
                   <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="18" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
                   {line.id === lineId && <>
-                    <circle cx={x} cy={y} r="3" fill="white" stroke="#57534e" strokeWidth="1"/>
-                    <circle cx={x2} cy={y2} r="12" fill="transparent" className="pointer-events-auto" style={{touchAction:"none",cursor:"crosshair"}} onPointerDown={e=>beginLinePointer(e,line,"endpoint")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
-                    <circle cx={x2} cy={y2} r="3" fill="white" stroke="#57534e" strokeWidth="1" className="pointer-events-none"/>
+                    <line x1={x} y1={y} x2={x2} y2={y2} stroke="#0ea5e9" strokeWidth="1.2" strokeDasharray="5 4" className="pointer-events-none"/>
+                    <circle cx={x} cy={y} r="5" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
+                    <circle cx={x2} cy={y2} r="13" fill="transparent" className="pointer-events-auto" style={{touchAction:"none",cursor:"crosshair"}} onPointerDown={e=>beginLinePointer(e,line,"endpoint")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
+                    <circle cx={x2} cy={y2} r="5" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
+                    <line x1={mx} y1={my} x2={rx} y2={ry} stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
+                    <circle cx={rx} cy={ry} r="14" fill="transparent" className="pointer-events-auto" style={{touchAction:"none",cursor:"grab"}} onPointerDown={e=>beginLinePointer(e,line,"rotate")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
+                    <circle cx={rx} cy={ry} r="9" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
+                    <path d={`M ${rx-4} ${ry+1} A 5 5 0 1 1 ${rx+4} ${ry-2} M ${rx+4} ${ry-2} l -1.5 -3 M ${rx+4} ${ry-2} l 3 1`} fill="none" stroke="#0284c7" strokeWidth="1.3" className="pointer-events-none"/>
                   </>}
                 </>}
               </g>;

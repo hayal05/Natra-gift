@@ -28,9 +28,10 @@ const fmt = (s: number): string => {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 };
 
-export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PILL_POS, onMove }: { src: string; duration: number; onOpen?: () => void; pos?: PillPos; onMove?: (p: PillPos) => void }) {
+export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PILL_POS, onMove, width = 0.84, onResize }: { src: string; duration: number; onOpen?: () => void; pos?: PillPos; onMove?: (p: PillPos) => void; width?: number; onResize?: (w: number) => void }) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const box = useRef<HTMLDivElement | null>(null);
+  const resizing = useRef<{ pointer: number; startX: number; startWidth: number } | null>(null);
   const drag = useRef<{ id: number; px: number; py: number; left: number; top: number; moved: boolean } | null>(null);
   const justDragged = useRef(false);
   const [dragging, setDragging] = useState(false);
@@ -67,6 +68,7 @@ export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PIL
   // Drag from anywhere on the pill. A press that never travels 6px stays a tap, so play / pause / edit still work.
   const down = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    if (resizing.current) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const el = box.current, parent = el?.offsetParent as HTMLElement | null;
     if (!el || !parent) return;
@@ -120,8 +122,9 @@ export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PIL
         top: `calc(${EDGE}px + ${y} * (100% - ${EDGE * 2}px))`,
         transform: `translate(${-x * 100}%, ${-y * 100}%)`,
         touchAction: "none",
+        width: `${Math.max(35, Math.min(90, width * 100))}%`,
       }}
-      className={"absolute z-10 flex h-11 w-[84%] select-none items-center gap-3 rounded-full bg-[#1b8fd0] pl-0 pr-4 text-white shadow-md " + (dragging ? "cursor-grabbing ring-2 ring-white/70" : "cursor-grab")}
+      className={"absolute z-10 flex h-11 select-none items-center gap-3 rounded-full bg-[#1b8fd0] pl-0 pr-4 text-white shadow-md " + (dragging ? "cursor-grabbing ring-2 ring-white/70" : "cursor-grab")}
     >
       <button
         type="button"
@@ -155,6 +158,11 @@ export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PIL
           />
         ))}
       </div>
+      {onResize && <div role="slider" aria-label="Resize voice note" aria-valuemin={35} aria-valuemax={90} aria-valuenow={Math.round(width*100)}
+        onPointerDown={e=>{e.stopPropagation();e.preventDefault();resizing.current={pointer:e.pointerId,startX:e.clientX,startWidth:width};e.currentTarget.setPointerCapture(e.pointerId);}}
+        onPointerMove={e=>{e.stopPropagation();const d=resizing.current;if(!d||d.pointer!==e.pointerId)return;const parent=box.current?.offsetParent as HTMLElement|null;if(parent)onResize(Math.max(.35,Math.min(.9,d.startWidth+(e.clientX-d.startX)/parent.clientWidth)));}}
+        onPointerUp={e=>{e.stopPropagation();resizing.current=null;}} onPointerCancel={()=>{resizing.current=null;}}
+        className="absolute -right-2 top-1/2 z-20 grid h-8 w-5 -translate-y-1/2 touch-none place-items-center rounded-md border border-white/80 bg-sky-700 text-xs text-white shadow" title="Drag to resize">⋮</div>}
       {onOpen && (
         <button type="button" onClick={onOpen} aria-label="Open voice note settings" className="grid h-6 w-6 shrink-0 place-items-center text-xs text-white/80 hover:text-white">✎</button>
       )}

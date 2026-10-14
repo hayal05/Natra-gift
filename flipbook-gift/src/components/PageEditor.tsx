@@ -46,10 +46,11 @@ interface Props {
   textControl?: "font" | "size" | "align" | "color" | "style" | null;
   photoControl?: "replace" | "fit" | "frame" | "filter" | "zoom" | null;
   designControl?: "colors" | "fonts" | "background" | null;
+  audioControl?: "upload" | "record" | "manage" | null;
   editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" | "add-page" | "duplicate-page" } | null;
 }
 
-export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null, pageControl = null, designControl = null }: Props) {
+export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null, pageControl = null, designControl = null, audioControl = null }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
@@ -543,7 +544,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   }, [editorCommand]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl || pageControl || designControl ? (pageControl === "layout" ? "230px" : pageControl === "navigate" ? "170px" : "140px")  : activeTool === "Audio" ? "140px" : "min(38dvh, 340px)") : "0px" }}>
+    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl || pageControl || designControl || audioControl ? (pageControl === "layout" ? "230px" : pageControl === "navigate" ? "170px" : "140px")  : activeTool === "Audio" ? "140px" : "min(38dvh, 340px)") : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
         <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
@@ -634,9 +635,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           )}
         </div>
         {activeTool && (
-          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl || pageControl || designControl || activeTool === "Audio" ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
+          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl || pageControl || designControl || audioControl || activeTool === "Audio" ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
             <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ maxHeight: activeTool === "Audio" ? "140px" : "min(42dvh, 340px)", height: "auto" }}>
-              <div className={textControl || photoControl || pageControl || designControl || activeTool === "Audio" ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
+              <div className={textControl || photoControl || pageControl || designControl || audioControl || activeTool === "Audio" ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
                 {activeTool === "Pages" && (
                   <div className="space-y-2">
                     {pageControl === "navigate" && <div className="space-y-1">
@@ -673,17 +674,28 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                     </div>}
                   </div>
                 )}
-                {activeTool === "Audio" && (
-                  <div className="space-y-4">
-                    {!AUDIO_ENABLED&&!currentAudio?<p className="text-xs font-bold text-stone-600">{AUDIO_OFF_REASON}</p>:<>
-                      {currentAudio&&<Group title="On this page"><div className="space-y-2"><audio controls preload="metadata" src={currentAudio.src} className="w-full"/><div className="flex items-center gap-3"><span className="text-xs text-stone-500">{currentAudio.duration}s</span><button type="button" onClick={removeAudio} disabled={!!audioBusy||recPhase==="recording"} className="min-h-[44px] text-xs font-bold text-red-700 disabled:opacity-40">Remove</button></div></div></Group>}
-                      <Group title={currentAudio?"Replace with":"Add a voice note"}>
-                        {recPhase==="idle"&&<div className="grid grid-cols-2 gap-2"><label className={"flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-3 text-xs font-bold text-stone-800 "+(audioBusy?"opacity-40":"")}><Icon name="audio" size={16} />Choose file<input type="file" accept=".mp3,.m4a,.aac,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav" onChange={chooseAudio} disabled={!!audioBusy} className="sr-only"/></label>{canRecord&&<button type="button" onClick={()=>void startRecording()} disabled={!!audioBusy} className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-rose-700 px-3 text-xs font-bold text-white disabled:opacity-40"><Icon name="microphone" size={16} />Record</button>}</div>}
-                        {recPhase==="starting"&&<div className="flex items-center gap-3"><span className="text-xs text-stone-600">Waiting for microphone…</span><button type="button" onClick={dropRecording} className="min-h-[44px] px-2 text-xs font-bold">Cancel</button></div>}
-                        {recPhase==="recording"&&<div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold text-red-700">● Recording {fmtClock(recSeconds)} / {fmtClock(RECORD_MAX_SECONDS)}</span><button type="button" onClick={stopRecording} className="min-h-[44px] rounded-xl bg-rose-700 px-5 text-xs font-bold text-white">Stop</button><button type="button" onClick={dropRecording} className="min-h-[44px] px-2 text-xs font-bold">Cancel</button></div>}
-                        {recPhase==="review"&&recTake&&<div className="space-y-2"><audio controls preload="metadata" src={recTake.url} className="w-full"/><div className="flex flex-wrap gap-2"><button type="button" onClick={useRecording} disabled={!!audioBusy} className="min-h-[44px] rounded-xl bg-rose-700 px-4 text-xs font-bold text-white disabled:opacity-40">Use recording</button><button type="button" onClick={()=>{dropRecording();void startRecording(true)}} className={chip(false)}>Record again</button><button type="button" onClick={dropRecording} className={chip(false)}>Discard</button></div></div>}
-                        {audioBusy&&<p className="mt-2 text-xs text-stone-600" role="status">{audioBusy.label}{audioBusy.pct!==null&&` ${audioBusy.pct}%`}</p>}{(recError||audioError)&&<p className="mt-2 text-xs font-bold text-red-700" role="alert">{recError||audioError}</p>}
-                      </Group>
+                {activeTool === "Audio" && audioControl && (
+                  <div className="space-y-2">
+                    {!AUDIO_ENABLED && !currentAudio ? <p className="text-xs text-stone-600">{AUDIO_OFF_REASON}</p> : <>
+                      {audioControl === "upload" && <Group title="Upload audio">
+                        <label className={"inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 text-xs font-semibold text-stone-800 " + (audioBusy ? "opacity-40" : "")}>
+                          <Icon name="audio" size={16}/>Choose audio file
+                          <input type="file" accept=".mp3,.m4a,.aac,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav" onChange={chooseAudio} disabled={!!audioBusy || recPhase === "recording"} className="sr-only"/>
+                        </label>
+                      </Group>}
+                      {audioControl === "record" && <Group title="Record audio">
+                        {recPhase === "idle" && (canRecord ?
+                          <button type="button" onClick={() => void startRecording()} disabled={!!audioBusy} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-rose-700 px-3 text-xs font-semibold text-white disabled:opacity-40"><Icon name="microphone" size={16}/>Start recording</button>
+                          : <p className="text-xs text-stone-600">Recording is not supported in this browser.</p>)}
+                        {recPhase === "starting" && <div className="flex items-center gap-2 text-xs">Waiting for microphone…<button type="button" onClick={dropRecording} className={chip(false)}>Cancel</button></div>}
+                        {recPhase === "recording" && <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold text-red-700">● {fmtClock(recSeconds)} / {fmtClock(RECORD_MAX_SECONDS)}</span><button type="button" onClick={stopRecording} className={chip(true)}>Stop</button><button type="button" onClick={dropRecording} className={chip(false)}>Cancel</button></div>}
+                        {recPhase === "review" && recTake && <div className="space-y-2"><audio controls preload="metadata" src={recTake.url} className="w-full"/><div className="flex flex-wrap gap-2"><button type="button" onClick={useRecording} disabled={!!audioBusy} className={chip(true)}>Use recording</button><button type="button" onClick={() => {dropRecording();void startRecording(true);}} className={chip(false)}>Record again</button><button type="button" onClick={dropRecording} className={chip(false)}>Discard</button></div></div>}
+                      </Group>}
+                      {audioControl === "manage" && <Group title="Page audio">
+                        {currentAudio ? <div className="flex items-center gap-2"><audio controls preload="metadata" src={currentAudio.src} className="min-w-0 flex-1"/><button type="button" onClick={removeAudio} disabled={!!audioBusy || recPhase === "recording"} className="shrink-0 rounded-lg border border-red-200 px-2 py-2 text-xs font-semibold text-red-700 disabled:opacity-40">Remove</button></div> : <p className="text-xs text-stone-500">No audio added to this page.</p>}
+                      </Group>}
+                      {audioBusy && <p role="status" className="text-xs text-stone-600">{audioBusy.label}{audioBusy.pct !== null && ` ${audioBusy.pct}%`}</p>}
+                      {(recError || audioError) && <p role="alert" className="text-xs font-semibold text-red-700">{recError || audioError}</p>}
                     </>}
                   </div>
                 )}

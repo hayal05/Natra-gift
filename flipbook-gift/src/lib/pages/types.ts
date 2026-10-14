@@ -151,6 +151,11 @@ export interface AudioContent {
   src: string;
   /** Rounded duration in seconds, capped by the editor and server. */
   duration: number;
+  /** Pill position within the page free space, 0..1. */
+  x?: number;
+  y?: number;
+  /** Pill width relative to page width, 0.35..0.9. */
+  width?: number;
 }
 
 /** One page of a gift, exactly as stored in the gifts.content JSON. */

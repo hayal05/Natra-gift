@@ -11,7 +11,7 @@ import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS,
 import { createRecorder, type Recorder } from "../audio/recorder";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
-import VoiceNotePill, { type PillPos } from "./VoiceNotePill";
+import VoiceNotePill from "./VoiceNotePill";
 import FontPicker from "./FontPicker";
 import { LAYOUTS, LAYOUT_LIST, bookStyle, fillPages, type Template } from "../templates";
 
@@ -550,7 +550,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
           <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full rounded-lg" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
-          {currentAudio && !editingText && <VoiceNotePill key={`${at}:${currentAudio.src}`} src={currentAudio.src} duration={currentAudio.duration} pos={pillPos[at]} onMove={(p) => setPillPos((m) => ({ ...m, [at]: p }))} />}
+          {currentAudio && !editingText && <VoiceNotePill key={`${at}:${currentAudio.src}`} src={currentAudio.src} duration={currentAudio.duration} pos={{x:currentAudio.x ?? 0.5,y:currentAudio.y ?? 1}} width={currentAudio.width ?? 0.84} onMove={(pos) => editPage({...pages[at],audio:{...currentAudio,...pos}})} onResize={(width) => editPage({...pages[at],audio:{...currentAudio,width}})} />}
           {slot && slot.kind === "photo" && (
             <div
               aria-hidden

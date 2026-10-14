@@ -52,7 +52,7 @@ const CSS = `
 .fba-btn[aria-busy="true"]{opacity:.7;cursor:progress}
 .fba-wave{flex:1;min-width:0;height:100%;display:flex;align-items:center;justify-content:space-between}
 .fba-wave[hidden]{display:none}
-.fba-bar{flex:none;width:2.5px;border-radius:999px;background:var(--fba-fg,#fff)}
+.fba-bar{flex:1;min-width:0;max-width:2.5px;border-radius:999px;background:var(--fba-fg,#fff)}
 .fba-time{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .fba-err{flex:1;min-width:0;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fba-err[hidden]{display:none}

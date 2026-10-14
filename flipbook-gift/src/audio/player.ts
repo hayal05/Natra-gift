@@ -40,13 +40,13 @@ export interface AudioPlayer {
 }
 
 const CSS = `
-.fba-root{position:absolute;left:50%;top:calc(100% - 56px);transform:translate(-50%,-50%);z-index:20;pointer-events:auto;display:flex;align-items:center;gap:10px;width:84%;max-width:calc(100% - 24px);height:44px;\
+.fba-root{position:absolute;left:50%;top:calc(100% - 56px);transform:translate(-50%,-50%);z-index:20;pointer-events:auto;display:flex;align-items:center;gap:4px;width:84%;max-width:calc(100% - 24px);height:44px;\
   padding:0 16px 0 0;border-radius:999px;background:var(--fba-bg,#1b8fd0);color:var(--fba-fg,#fff);font:600 13px/1.3 system-ui,-apple-system,sans-serif;\
   box-shadow:0 3px 10px rgba(0,0,0,.25);-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 .fba-root[hidden]{display:none}
-.fba-btn{flex:none;width:auto;height:100%;aspect-ratio:1;min-width:36px;min-height:36px;border:0;border-radius:50%;padding:0;cursor:pointer;background:transparent;color:var(--fba-fg,#fff);
+.fba-btn{flex:none;width:auto;height:100%;aspect-ratio:1;min-width:0;min-height:0;border:0;border-radius:50%;padding:0;cursor:pointer;background:transparent;color:var(--fba-fg,#fff);
   display:flex;align-items:center;justify-content:center;touch-action:manipulation;font:inherit;font-size:20px}
-.fba-btn svg{width:34px;height:34px;flex:none;display:block;overflow:visible}
+.fba-btn svg{width:min(34px,90%);height:min(34px,90%);flex:none;display:block;overflow:visible}
 .fba-btn:active{transform:scale(.92)}
 .fba-btn:focus-visible{outline:3px solid var(--fba-fg,#fff);outline-offset:-3px}
 .fba-btn[aria-busy="true"]{opacity:.7;cursor:progress}
@@ -149,7 +149,7 @@ export function createAudioPlayer(container: HTMLElement, options: AudioPlayerOp
     const y = Math.max(0, Math.min(1, p?.y ?? 1));
     const width = Math.max(0.35, Math.min(0.9, p?.width ?? 0.84));
     root.style.width = `${width * 100}%`;
-    root.style.height = `${Math.max(36, Math.min(88, p?.height ?? 44))}px`;
+    root.style.height = `${Math.max(8, Math.min(480, p?.height ?? 44))}px`;
     root.style.left = `calc(12px + ${x} * (100% - 24px))`;
     root.style.top = `calc(12px + ${y} * (100% - 24px))`;
     root.style.transform = `translate(${-x*100}%, ${-y*100}%)`;

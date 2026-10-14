@@ -83,13 +83,13 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const page = filled[at];
   const lines = pages[at]?.lines ?? [];
   const selectedLine = lines.find(line => line.id === lineId) ?? null;
-  const lineDrag = useRef<{ id: string; mode: "move" | "resize"; x: number; y: number; start: PageLine } | null>(null);
+  const lineDrag = useRef<{ id: string; mode: "move" | "endpoint"; x: number; y: number; start: PageLine } | null>(null);
   const updateLine = (id: string, patch: Partial<PageLine>) => {
     onChange(pages.map((p, i) => i === at ? { ...p, lines: (p.lines ?? []).map(line => line.id === id ? { ...line, ...patch } : line) } : p));
   };
   const addLine = (style: PageLine["style"], angle = 0) => {
     if (lines.length >= 24) return;
-    const line: PageLine = { id: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 100000).toString(36), x: 0.2, y: 0.5, length: 0.6, angle, width: 3, color: "#222222", style };
+    const line: PageLine = { id: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 100000).toString(36), x: 0.2, y: 0.5, length: 0.6, angle, width: 2, color: "#222222", style };
     onChange(pages.map((p, i) => i === at ? { ...p, lines: [...(p.lines ?? []), line] } : p));
     setLineId(line.id);
     setSlotId(null);
@@ -100,7 +100,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     setLineId(null);
   };
   const clampLine = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
-  const beginLinePointer = (e: React.PointerEvent<SVGElement>, line: PageLine, mode: "move" | "resize") => {
+  const beginLinePointer = (e: React.PointerEvent<SVGElement>, line: PageLine, mode: "move" | "endpoint") => {
     e.stopPropagation(); e.preventDefault();
     lineDrag.current = { id: line.id, mode, x: e.clientX, y: e.clientY, start: line };
     setLineId(line.id);
@@ -114,7 +114,13 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     if (!rect) return;
     const dx = (e.clientX - d.x) / rect.width, dy = (e.clientY - d.y) / rect.height;
     if (d.mode === "move") updateLine(d.id, { x: clampLine(d.start.x + dx, 0, 1), y: clampLine(d.start.y + dy, 0, 1) });
-    else updateLine(d.id, { length: clampLine(d.start.length + dx * Math.cos(d.start.angle * Math.PI / 180) + dy * rect.height / rect.width * Math.sin(d.start.angle * Math.PI / 180), 0.05, 1.5) });
+    else {
+      const startX = d.start.x * rect.width, startY = d.start.y * rect.height;
+      const endX = startX + Math.cos(d.start.angle * Math.PI / 180) * d.start.length * rect.width + (e.clientX - d.x);
+      const endY = startY + Math.sin(d.start.angle * Math.PI / 180) * d.start.length * rect.width + (e.clientY - d.y);
+      const vx = endX - startX, vy = endY - startY;
+      updateLine(d.id, { length: clampLine(Math.hypot(vx, vy) / rect.width, 0.05, 1.5), angle: (Math.atan2(vy, vx) * 180 / Math.PI + 360) % 360 });
+    }
   };
 
   const layout = LAYOUTS[page.layout];
@@ -589,9 +595,14 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               const x = line.x * W, y = line.y * H, len = line.length * W, rad = line.angle * Math.PI / 180;
               const x2 = x + Math.cos(rad) * len, y2 = y + Math.sin(rad) * len;
               return <g key={line.id}>
-                {line.id === lineId && <line x1={x} y1={y} x2={x2} y2={y2} stroke="#e11d48" strokeWidth="2" strokeDasharray="4 4" />}
-                <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="24" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
-                {line.id === lineId && <circle cx={x2} cy={y2} r="10" fill="#e11d48" stroke="white" strokeWidth="2" className="pointer-events-auto" style={{touchAction:"none",cursor:"ew-resize"}} onPointerDown={e=>beginLinePointer(e,line,"resize")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}}/>}
+                {activeTool === "Style" && <>
+                  <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="18" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
+                  {line.id === lineId && <>
+                    <circle cx={x} cy={y} r="3" fill="white" stroke="#57534e" strokeWidth="1"/>
+                    <circle cx={x2} cy={y2} r="12" fill="transparent" className="pointer-events-auto" style={{touchAction:"none",cursor:"crosshair"}} onPointerDown={e=>beginLinePointer(e,line,"endpoint")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
+                    <circle cx={x2} cy={y2} r="3" fill="white" stroke="#57534e" strokeWidth="1" className="pointer-events-none"/>
+                  </>}
+                </>}
               </g>;
             })}
           </svg>

@@ -4,7 +4,7 @@
 // Task 3.5 adds photo controls (3.5b: fill/fit and frame chips, 3.5c: filter chips, 3.5d: zoom slider, 3.5f: drag the photo on the page to pan, 3.5g: choose a new photo and reset, in a "Photo" section of the Customize panel); page controls arrive in 3.6 (3.6b: Add page and Duplicate above the thumbnail strip, 3.6c: Delete with a confirm step, 3.6d: Move earlier and Move later; 3.6e: page colour in a \"Page\" section of the Customize panel); 3.7 adds the \"Book style\" panel (colours from the ten templates, two font pairs).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { GROUP_NAMES, actionBarSpot, otherBoxes, bgHidden, bgProblem, pageBgOptions, setPageBg, MAX_PAGES, MIN_PAGES, TEXT_COLORS, addPage, addSlot, deleteSlot, duplicateSlot, canAddPage, canDeletePage, canMovePage, deletePage, duplicatePage, editableAt, isAdjusted, pageEditable, movePage, resetTextBox, photoFileProblem, photoOverflow, replacePhoto, resetPhoto, setPhoto, setSlotText, setTextPosition, setTextStyle, slotName, slotSummary, swapLayout, textLimit } from "../lib/editor";
-import { isSample, loadFonts, usedFontIds, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, textSlotRect, sizeFactor, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_WIDTH_MIN, type Align, type ColorRef, type ImageMap, type PageData, type PageLine, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextSlotDef, type TextStyle } from "../lib/pages";
+import { isSample, loadFonts, usedFontIds, loadImages, renderPage, photoSlotRect, textFitRect, textEditBox, slotRect, textSlotRect, sizeFactor, TEXT_SCALE_MIN, TEXT_SCALE_MAX, TEXT_WIDTH_MIN, type Align, type ColorRef, type ImageMap, type PageData, type Palette, type PhotoContent, type PhotoFilter, type PhotoFit, type PhotoFrame, type SizeStep, type TextSlotDef, type TextStyle } from "../lib/pages";
 import { PALETTE_PRESETS } from "../lib/draft";
 import { UPLOADS_ENABLED, blobToDataUri, resizePhoto, uploadPhoto } from "../lib/photo";
 import { AUDIO_ENABLED, AUDIO_MAX_SECONDS, AUDIO_OFF_REASON, RECORD_MAX_SECONDS, audioFileProblem, readAudioDuration, recordingSupported, uploadAudio } from "../lib/audio";
@@ -51,7 +51,6 @@ interface Props {
 export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null, pageControl = null }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
-  const [lineId, setLineId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
   const [ready, setReady] = useState(false);
   const [fontTick, setFontTick] = useState(0); // bumps when a newly picked font has loaded, so the page and thumbnails redraw in it
@@ -81,71 +80,6 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const filled = useMemo(() => fillPages(pages, { to: to.trim() || "you", from: from.trim() || "me" }), [pages, to, from]);
   const at = Math.min(index, filled.length - 1);
   const page = filled[at];
-  const [linePreview, setLinePreview] = useState<{ pageIndex: number; lines: PageLine[] } | null>(null);
-  const lines = linePreview?.pageIndex === at ? linePreview.lines : (pages[at]?.lines ?? []);
-  const selectedLine = lines.find(line => line.id === lineId) ?? null;
-  const linePreviewRef = useRef<PageLine[] | null>(null);
-  const lineDrag = useRef<{ id: string; mode: "move" | "endpoint" | "rotate"; x: number; y: number; start: PageLine } | null>(null);
-  const updateLine = (id: string, patch: Partial<PageLine>) => {
-    onChange(pages.map((p, i) => i === at ? { ...p, lines: (p.lines ?? []).map(line => line.id === id ? { ...line, ...patch } : line) } : p));
-  };
-  const addLine = (style: PageLine["style"], angle = 0) => {
-    if (lines.length >= 24) return;
-    const line: PageLine = { id: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 100000).toString(36), x: 0.2, y: 0.5, length: 0.6, angle, width: 2, color: "#222222", style };
-    onChange(pages.map((p, i) => i === at ? { ...p, lines: [...(p.lines ?? []), line] } : p));
-    setLineId(line.id);
-    setSlotId(null);
-  };
-  const deleteLine = () => {
-    if (!selectedLine) return;
-    onChange(pages.map((p, i) => i === at ? { ...p, lines: (p.lines ?? []).filter(line => line.id !== selectedLine.id) } : p));
-    setLineId(null);
-  };
-  const clampLine = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
-  const beginLinePointer = (e: React.PointerEvent<SVGElement>, line: PageLine, mode: "move" | "endpoint" | "rotate") => {
-    e.stopPropagation(); e.preventDefault();
-    lineDrag.current = { id: line.id, mode, x: e.clientX, y: e.clientY, start: line };
-    linePreviewRef.current = pages[at]?.lines ?? [];
-    setLinePreview({ pageIndex: at, lines: linePreviewRef.current });
-    setLineId(line.id);
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const moveLinePointer = (e: React.PointerEvent<SVGElement>) => {
-    e.stopPropagation();
-    const d = lineDrag.current;
-    if (!d) return;
-    const rect = pageBox.current?.getBoundingClientRect();
-    if (!rect) return;
-    const dx = (e.clientX - d.x) / rect.width, dy = (e.clientY - d.y) / rect.height;
-    let patch: Partial<PageLine>;
-    if (d.mode === "move") patch = { x: clampLine(d.start.x + dx, 0, 1), y: clampLine(d.start.y + dy, 0, 1) };
-    else if (d.mode === "rotate") {
-      const cx = (d.start.x + Math.cos(d.start.angle * Math.PI / 180) * d.start.length / 2) * rect.width;
-      const cy = d.start.y * rect.height + Math.sin(d.start.angle * Math.PI / 180) * d.start.length * rect.width / 2;
-      const from = Math.atan2(d.y - rect.top - cy, d.x - rect.left - cx);
-      const to = Math.atan2(e.clientY - rect.top - cy, e.clientX - rect.left - cx);
-      patch = { angle: ((d.start.angle + (to - from) * 180 / Math.PI) % 360 + 360) % 360 };
-    } else {
-      const startX = d.start.x * rect.width, startY = d.start.y * rect.height;
-      const endX = startX + Math.cos(d.start.angle * Math.PI / 180) * d.start.length * rect.width + (e.clientX - d.x);
-      const endY = startY + Math.sin(d.start.angle * Math.PI / 180) * d.start.length * rect.width + (e.clientY - d.y);
-      const vx = endX - startX, vy = endY - startY;
-      patch = { length: clampLine(Math.hypot(vx, vy) / rect.width, 0.05, 1.5), angle: (Math.atan2(vy, vx) * 180 / Math.PI + 360) % 360 };
-    }
-    const nextLines = (linePreviewRef.current ?? pages[at]?.lines ?? []).map(line => line.id === d.id ? { ...line, ...patch } : line);
-    linePreviewRef.current = nextLines;
-    setLinePreview({ pageIndex: at, lines: nextLines });
-  };
-  const finishLinePointer = (e: React.PointerEvent<SVGElement>) => {
-    e.stopPropagation();
-    if (!lineDrag.current) return;
-    lineDrag.current = null;
-    const finalLines = linePreviewRef.current;
-    linePreviewRef.current = null;
-    if (finalLines) onChange(pages.map((p, i) => i === at ? { ...p, lines: finalLines } : p));
-    setLinePreview(null);
-  };
-
   const layout = LAYOUTS[page.layout];
   const slots = pageEditable(layout, page);
   const slot = slots.find((s) => s.id === slotId) ?? null;
@@ -172,9 +106,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       c.setTransform(DPR, 0, 0, DPR, 0, 0);
       renderPage(c, w, h, p, l, book, images, i);
     };
-    draw(main.current, linePreview?.pageIndex === at ? { ...page, lines: linePreview.lines } : page, at, W, H);
-    if (!linePreview) filled.forEach((p, i) => draw(thumbs.current[i], p, i, W, H)); // Avoid expensive thumbnail redraws while dragging a line
-  }, [ready, fontTick, book, filled, images, page, at, pageControl, linePreview]);
+    draw(main.current, page, at, W, H);
+    filled.forEach((p, i) => draw(thumbs.current[i], p, i, W, H));
+  }, [ready, fontTick, book, filled, images, page, at, pageControl]);
 
   // Layout picker previews: every layout drawn with this page's content. Only while the Pages tab is open.
   const panelOpen = activeTool === "Pages" && pageControl === "layout";
@@ -613,33 +547,6 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
         <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
           <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full rounded-lg" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
-          <svg viewBox="0 0 360 480" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-label="Editable lines">
-            {lines.map(line => {
-              const x = line.x * W, y = line.y * H, len = line.length * W, rad = line.angle * Math.PI / 180;
-              const x2 = x + Math.cos(rad) * len, y2 = y + Math.sin(rad) * len;
-              const mx = (x + x2) / 2, my = (y + y2) / 2;
-              const rx = mx - Math.sin(rad) * 34, ry = my + Math.cos(rad) * 34;
-              const nx = mx + Math.sin(rad) * 34, ny = my - Math.cos(rad) * 34;
-              return <g key={line.id}>
-                {activeTool === "Style" && <>
-                  <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="18" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={finishLinePointer} onPointerCancel={finishLinePointer} />
-                  {line.id === lineId && <>
-                    <line x1={x} y1={y} x2={x2} y2={y2} stroke="#0ea5e9" strokeWidth="1.2" strokeDasharray="5 4" className="pointer-events-none"/>
-                    <circle cx={x} cy={y} r="5" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
-                    <circle cx={x2} cy={y2} r="13" fill="transparent" className="pointer-events-auto" style={{touchAction:"none",cursor:"crosshair"}} onPointerDown={e=>beginLinePointer(e,line,"endpoint")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
-                    <circle cx={x2} cy={y2} r="5" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
-                    <line x1={mx} y1={my} x2={nx} y2={ny} stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
-                    <rect x={nx-18} y={ny-15} width="36" height="30" rx="9" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
-                    <path d={`M ${nx} ${ny-9} v18 M ${nx-9} ${ny} h18 M ${nx-3} ${ny-6} l3 -3 3 3 M ${nx-3} ${ny+6} l3 3 3 -3 M ${nx-6} ${ny-3} l-3 3 3 3 M ${nx+6} ${ny-3} l3 3 -3 3`} fill="none" stroke="#0284c7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none"/>
-                    <line x1={mx} y1={my} x2={rx} y2={ry} stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
-                    <circle cx={rx} cy={ry} r="14" fill="transparent" className="pointer-events-auto" style={{touchAction:"none",cursor:"grab"}} onPointerDown={e=>beginLinePointer(e,line,"rotate")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
-                    <circle cx={rx} cy={ry} r="9" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
-                    <path d={`M ${rx-4} ${ry+1} A 5 5 0 1 1 ${rx+4} ${ry-2} M ${rx+4} ${ry-2} l -1.5 -3 M ${rx+4} ${ry-2} l 3 1`} fill="none" stroke="#0284c7" strokeWidth="1.3" className="pointer-events-none"/>
-                  </>}
-                </>}
-              </g>;
-            })}
-          </svg>
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
           {currentAudio && !editingText && <VoiceNotePill key={`${at}:${currentAudio.src}`} src={currentAudio.src} duration={currentAudio.duration} pos={pillPos[at]} onMove={(p) => setPillPos((m) => ({ ...m, [at]: p }))} />}
           {slot && slot.kind === "photo" && (
@@ -781,20 +688,6 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                 )}
                 {activeTool === "Style" && (
                   <div className="space-y-4">
-                    <Group title="Lines">
-                      <div className="flex flex-wrap gap-1.5">
-                        {(["solid","dashed","dotted","double"] as PageLine["style"][]).map(kind=><button key={kind} type="button" onClick={()=>addLine(kind)} disabled={lines.length>=24} className={chip(false)+" capitalize disabled:opacity-40"}>+ {kind}</button>)}
-                        <button type="button" onClick={()=>addLine("solid",90)} disabled={lines.length>=24} className={chip(false)+" disabled:opacity-40"}>+ Vertical</button>
-                      </div>
-                      {lines.length > 0 && <div className="flex gap-1.5 overflow-x-auto py-1">{lines.map((line,i)=><button key={line.id} type="button" onClick={()=>{setLineId(line.id);setSlotId(null);}} aria-pressed={line.id===lineId} className={chip(line.id===lineId)+" shrink-0"}>Line {i+1}</button>)}</div>}
-                      {selectedLine && <div className="space-y-2">
-                        <Row label="Length"><input type="range" min={0.05} max={1.5} step={0.01} value={selectedLine.length} onChange={e=>updateLine(selectedLine.id,{length:Number(e.target.value)})} className="min-w-0 flex-1 accent-rose-700"/><span className="text-xs">{Math.round(selectedLine.length*360)}px</span></Row>
-                        <Row label="Rotate"><input type="range" min={0} max={359} step={1} value={selectedLine.angle} onChange={e=>updateLine(selectedLine.id,{angle:Number(e.target.value)})} className="min-w-0 flex-1 accent-rose-700"/><span className="text-xs">{selectedLine.angle}°</span></Row>
-                        <Row label="Width"><input type="range" min={1} max={16} step={1} value={selectedLine.width} onChange={e=>updateLine(selectedLine.id,{width:Number(e.target.value)})} className="min-w-0 flex-1 accent-rose-700"/><span className="text-xs">{selectedLine.width}px</span></Row>
-                        <Row label="Colour"><input type="color" aria-label="Line colour" value={selectedLine.color} onChange={e=>updateLine(selectedLine.id,{color:e.target.value})} className="h-9 w-14"/></Row>
-                        <button type="button" onClick={deleteLine} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700">Delete selected line</button>
-                      </div>}
-                    </Group>
                     <Group title="Colours">
                       <div className="flex items-center gap-4"><div className="grid h-14 w-14 shrink-0 place-items-center rounded-full" style={{background:"conic-gradient("+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent) ?? book.palette.accent)+" 0 25%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent2) ?? book.palette.accent2)+" 25% 50%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.soft) ?? book.palette.soft)+" 50% 75%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.ink) ?? book.palette.ink)+" 75% 100%)"}}><div className="h-8 w-8 rounded-full bg-white"/></div><div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">{PALETTE_PRESETS.map(p=><button key={p.id} type="button" onClick={()=>onStyle({paletteId:p.id})} aria-pressed={p.id===paletteId} className={chip(p.id===paletteId)+" shrink-0"}>{p.name}</button>)}</div></div>
                     </Group>

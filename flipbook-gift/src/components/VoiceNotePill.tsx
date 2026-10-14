@@ -153,7 +153,7 @@ export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PIL
         {bars.map((v, i) => (
           <span
             key={i}
-            className="w-[2.5px] shrink-0 rounded-full bg-white"
+            className="min-w-0 flex-1 rounded-full bg-white"
             style={{ height: `${Math.round(v * 62)}%`, opacity: state === "error" ? 0.35 : (i + 0.5) / BARS <= progress ? 1 : playing || progress > 0 ? 0.5 : 1 }}
           />
         ))}

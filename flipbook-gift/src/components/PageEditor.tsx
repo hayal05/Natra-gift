@@ -602,6 +602,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               const x2 = x + Math.cos(rad) * len, y2 = y + Math.sin(rad) * len;
               const mx = (x + x2) / 2, my = (y + y2) / 2;
               const rx = mx - Math.sin(rad) * 34, ry = my + Math.cos(rad) * 34;
+              const nx = mx + Math.sin(rad) * 34, ny = my - Math.cos(rad) * 34;
               return <g key={line.id}>
                 {activeTool === "Style" && <>
                   <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="18" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
@@ -610,6 +611,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                     <circle cx={x} cy={y} r="5" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
                     <circle cx={x2} cy={y2} r="13" fill="transparent" className="pointer-events-auto" style={{touchAction:"none",cursor:"crosshair"}} onPointerDown={e=>beginLinePointer(e,line,"endpoint")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
                     <circle cx={x2} cy={y2} r="5" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
+                    <line x1={mx} y1={my} x2={nx} y2={ny} stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
+                    <rect x={nx-18} y={ny-15} width="36" height="30" rx="9" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
+                    <path d={`M ${nx} ${ny-9} v18 M ${nx-9} ${ny} h18 M ${nx-3} ${ny-6} l3 -3 3 3 M ${nx-3} ${ny+6} l3 3 3 -3 M ${nx-6} ${ny-3} l-3 3 3 3 M ${nx+6} ${ny-3} l3 3 -3 3`} fill="none" stroke="#0284c7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none"/>
                     <line x1={mx} y1={my} x2={rx} y2={ry} stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>
                     <circle cx={rx} cy={ry} r="14" fill="transparent" className="pointer-events-auto" style={{touchAction:"none",cursor:"grab"}} onPointerDown={e=>beginLinePointer(e,line,"rotate")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
                     <circle cx={rx} cy={ry} r="9" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>

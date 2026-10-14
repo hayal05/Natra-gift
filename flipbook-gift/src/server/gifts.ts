@@ -153,7 +153,7 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
       page.audio.width = p.audio.width as number;
     }
     if (p.audio.height !== undefined) {
-      if (!inRange(p.audio.height, 36, 88)) return bad("An audio pill height is invalid.");
+      if (!inRange(p.audio.height, 8, 480)) return bad("An audio pill height is invalid.");
       page.audio.height = p.audio.height as number;
     }
   }

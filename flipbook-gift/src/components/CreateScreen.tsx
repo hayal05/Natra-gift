@@ -36,6 +36,8 @@ export default function CreateScreen() {
   const [textMenu, setTextMenu] = useState(false);
   const [photoMenu, setPhotoMenu] = useState(false);
   const [designMenu, setDesignMenu] = useState(false);
+  const [audioMenu, setAudioMenu] = useState(false);
+  const [audioControl, setAudioControl] = useState<"upload" | "record" | "manage" | null>(null);
   const [designControl, setDesignControl] = useState<"colors" | "fonts" | "background" | null>(null);
   const [photoControl, setPhotoControl] = useState<"replace" | "fit" | "frame" | "filter" | "zoom" | null>(null);
   const [textControl, setTextControl] = useState<"font" | "size" | "align" | "color" | "style" | null>(null);
@@ -83,6 +85,11 @@ export default function CreateScreen() {
   const TEXT_TOOLS = ["Add text", "Font", "Size", "Align", "Color", "Style"] as const;
   const PHOTO_TOOLS = ["Add photo", "Replace", "Fit", "Frame", "Filter", "Zoom"] as const;
   const DESIGN_TOOLS = ["Colors", "Fonts", "Background"] as const;
+  const AUDIO_TOOLS = ["Upload", "Record", "Manage"] as const;
+  const chooseAudioTool = (tool: typeof AUDIO_TOOLS[number]) => {
+    setAudioControl(tool.toLowerCase() as "upload" | "record" | "manage");
+    setActiveTool("Audio");
+  };
   const chooseDesignTool = (tool: typeof DESIGN_TOOLS[number]) => {
     setDesignControl(tool.toLowerCase() as "colors" | "fonts" | "background");
     setActiveTool("Style");
@@ -100,7 +107,7 @@ export default function CreateScreen() {
   const openMainTool = (label: string, tool?: EditorTool, action?: EditorAction) => {
     if (label === "Pages") {
       setPagesMenu(current => !current); setPageControl(null);
-      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setDesignMenu(false); setDesignControl(null); setActiveTool(null);
+      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setDesignMenu(false); setDesignControl(null); setAudioMenu(false); setAudioControl(null); setActiveTool(null);
     } else if (label === "Text") {
       setTextMenu(current => !current);
       setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null); setDesignMenu(false); setDesignControl(null);
@@ -110,11 +117,14 @@ export default function CreateScreen() {
       setPhotoMenu(current => !current);
       setTextMenu(false); setTextControl(null); setPagesMenu(false); setPageControl(null); setDesignMenu(false); setDesignControl(null);
       setPhotoControl(null); setActiveTool(null);
+    } else if (label === "Audio") {
+      setAudioMenu(current => !current); setAudioControl(null);
+      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null); setDesignMenu(false); setDesignControl(null); setActiveTool(null);
     } else if (label === "Design") {
       setDesignMenu(current => !current); setDesignControl(null);
-      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null); setActiveTool(null);
+      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null); setAudioMenu(false); setAudioControl(null); setActiveTool(null);
     } else {
-      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null);
+      setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null); setDesignMenu(false); setDesignControl(null); setAudioMenu(false); setAudioControl(null);
       if (tool) activateEditorTool(tool);
       else if (action) runEditorAction(action);
     }
@@ -134,9 +144,9 @@ export default function CreateScreen() {
         </header>
         <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {view === "edit" ? (
-            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? (textControl || photoControl || pageControl || designControl || activeTool === "Audio" ? "calc(var(--nav-h) + 162px)" : "calc(var(--nav-h) + 280px)") : textMenu || photoMenu || pagesMenu || designMenu ? "calc(var(--nav-h) + 48px)" : "calc(var(--nav-h) + 16px)" }}>
+            <div className="mx-auto w-full max-w-2xl px-3 pt-1" style={{ paddingBottom: activeTool ? (textControl || photoControl || pageControl || designControl || audioControl ? "calc(var(--nav-h) + 162px)" : "calc(var(--nav-h) + 280px)") : textMenu || photoMenu || pagesMenu || designMenu || audioMenu ? "calc(var(--nav-h) + 48px)" : "calc(var(--nav-h) + 16px)" }}>
               <div data-natragift-editor>
-                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} pageControl={pagesMenu ? pageControl : null} textControl={textMenu ? textControl : null} photoControl={photoMenu ? photoControl : null} designControl={designMenu ? designControl : null} onClose={() => { setActiveTool(null); setTextControl(null); setPhotoControl(null); setPageControl(null); setDesignControl(null); }} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); }}
+                <PageEditor active template={t} pages={draft.pages} to={draft.to} from={draft.from} fontPair={draft.fontPair} palette={draftPalette(draft)} paletteId={draft.paletteId ?? draft.templateId} activeTool={activeTool} pageControl={pagesMenu ? pageControl : null} textControl={textMenu ? textControl : null} photoControl={photoMenu ? photoControl : null} designControl={designMenu ? designControl : null} audioControl={audioMenu ? audioControl : null} onClose={() => { setActiveTool(null); setTextControl(null); setPhotoControl(null); setPageControl(null); setDesignControl(null); setAudioControl(null); }} editorCommand={editorCommand} onSelectionChange={(kind) => { setSelectedKind(kind); }}
                   onStyle={(patch) => set({ fontPair: patch.fontPair ?? draft.fontPair, paletteId: patch.paletteId === undefined ? draft.paletteId : patch.paletteId === draft.templateId ? undefined : patch.paletteId })}
                   onChange={(pages) => set({ pages })} />
               </div>
@@ -168,13 +178,18 @@ export default function CreateScreen() {
                 {DESIGN_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseDesignTool(label)} aria-pressed={designControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (designControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
               </div>
             </div>}
+            {audioMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
+              <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto overscroll-x-contain" role="toolbar" aria-label="Audio tools">
+                {AUDIO_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseAudioTool(label)} aria-pressed={audioControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (audioControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
+              </div>
+            </div>}
             <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">
               <div className="mx-auto grid max-w-2xl grid-cols-5 gap-1">
                 {toolbar.map(({ label, icon, tool, action }) => (
-                  <button key={label} type="button" aria-label={label} aria-pressed={label === "Pages" ? pagesMenu : label === "Text" ? textMenu : label === "Photo" ? photoMenu : label === "Design" ? designMenu : !!tool && activeTool === tool}
+                  <button key={label} type="button" aria-label={label} aria-pressed={label === "Pages" ? pagesMenu : label === "Text" ? textMenu : label === "Photo" ? photoMenu : label === "Design" ? designMenu : label === "Audio" ? audioMenu : !!tool && activeTool === tool}
                     onClick={() => openMainTool(label, tool, action)}
-                    className={"relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 " + ((label === "Pages" && pagesMenu) || (label === "Text" && textMenu) || (label === "Photo" && photoMenu) || (label === "Design" && designMenu) || (tool && activeTool === tool) ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
-                    {((label === "Text" && textMenu) || (label === "Design" && designMenu) || (tool && activeTool === tool)) && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
+                    className={"relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 " + ((label === "Pages" && pagesMenu) || (label === "Text" && textMenu) || (label === "Photo" && photoMenu) || (label === "Design" && designMenu) || (label === "Audio" && audioMenu) || (tool && activeTool === tool) ? "bg-rose-50 text-rose-800" : "text-stone-600 hover:bg-stone-100")}>
+                    {((label === "Text" && textMenu) || (label === "Design" && designMenu) || (label === "Audio" && audioMenu) || (tool && activeTool === tool)) && <span aria-hidden="true" className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-rose-700" />}
                     <Icon name={icon} size={21} />
                     <span className="text-[11px] font-semibold">{label}</span>
                   </button>

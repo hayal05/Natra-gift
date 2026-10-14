@@ -125,18 +125,6 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
     }
   }
   const page: PageData = { layout: p.layout, slots };
-  if (p.lines !== undefined) {
-    if (!Array.isArray(p.lines) || p.lines.length > 24) return bad("Too many page lines.");
-    const ids = new Set<string>();
-    page.lines = [];
-    for (const item of p.lines) {
-      if (!isObj(item) || typeof item.id !== "string" || !/^line-[a-z0-9-]{1,32}$/.test(item.id) || ids.has(item.id)) return bad("A page line is invalid.");
-      ids.add(item.id);
-      if (!inRange(item.x, 0, 1) || !inRange(item.y, 0, 1) || !inRange(item.length, 0.05, 1.5) || !inRange(item.angle, 0, 360) || !inRange(item.width, 1, 16)) return bad("A page line setting is invalid.");
-      if (typeof item.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(item.color) || !oneOf(item.style, ["solid", "dashed", "dotted", "double"])) return bad("A page line style is invalid.");
-      page.lines.push({ id: item.id, x: item.x, y: item.y, length: item.length, angle: item.angle, width: item.width, color: item.color, style: item.style as "solid" | "dashed" | "dotted" | "double" });
-    }
-  }
   if (extras) page.extras = extras;
   if (p.hidden !== undefined) { // layout components the creator deleted: known editable ids only, and the page keeps a photo
     if (!Array.isArray(p.hidden) || p.hidden.length > 32) return bad("A deleted item is not valid.");

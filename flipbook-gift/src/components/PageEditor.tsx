@@ -45,10 +45,11 @@ interface Props {
   pageControl?: "navigate" | "layout" | null;
   textControl?: "font" | "size" | "align" | "color" | "style" | null;
   photoControl?: "replace" | "fit" | "frame" | "filter" | "zoom" | null;
+  designControl?: "colors" | "fonts" | "background" | null;
   editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" | "add-page" | "duplicate-page" } | null;
 }
 
-export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null, pageControl = null }: Props) {
+export default function PageEditor({ template, pages, to, from, fontPair, palette, paletteId, onStyle, onChange, active = true, activeTool = null, onClose, onSelectionChange, editorCommand, textControl = null, photoControl = null, pageControl = null, designControl = null }: Props) {
   const [index, setIndex] = useState(0);
   const [slotId, setSlotId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState(false);
@@ -542,7 +543,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   }, [editorCommand]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl || pageControl ? (pageControl === "layout" ? "230px" : pageControl === "navigate" ? "170px" : "140px") : "min(38dvh, 340px)") : "0px" }}>
+    <div style={{ ["--panel-reserve" as string]: activeTool ? (textControl || photoControl || pageControl || designControl ? (pageControl === "layout" ? "230px" : pageControl === "navigate" ? "170px" : "140px") : "min(38dvh, 340px)") : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
         <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
@@ -633,9 +634,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           )}
         </div>
         {activeTool && (
-          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl || pageControl ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
+          <section className="fixed inset-x-0 z-20 mx-auto w-full max-w-2xl px-3" style={{ bottom: textControl || photoControl || pageControl || designControl ? "calc(var(--nav-h, 76px) + 40px)" : "var(--nav-h, 76px)" }} aria-label={`${activeTool} tools`}>
             <div className="flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_-14px_44px_rgba(0,0,0,0.16)]" style={{ maxHeight: "min(42dvh, 340px)", height: "auto" }}>
-              <div className={textControl || photoControl || pageControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
+              <div className={textControl || photoControl || pageControl || designControl ? "min-h-0 overflow-y-auto overscroll-contain px-3 py-2" : "min-h-0 overflow-y-auto overscroll-contain px-4 py-3"}>
                 {activeTool === "Pages" && (
                   <div className="space-y-2">
                     {pageControl === "navigate" && <div className="space-y-1">
@@ -688,11 +689,11 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                 )}
                 {activeTool === "Style" && (
                   <div className="space-y-4">
-                    <Group title="Colours">
+                    {designControl === "colors" && <Group title="Colours">
                       <div className="flex items-center gap-4"><div className="grid h-14 w-14 shrink-0 place-items-center rounded-full" style={{background:"conic-gradient("+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent) ?? book.palette.accent)+" 0 25%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent2) ?? book.palette.accent2)+" 25% 50%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.soft) ?? book.palette.soft)+" 50% 75%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.ink) ?? book.palette.ink)+" 75% 100%)"}}><div className="h-8 w-8 rounded-full bg-white"/></div><div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">{PALETTE_PRESETS.map(p=><button key={p.id} type="button" onClick={()=>onStyle({paletteId:p.id})} aria-pressed={p.id===paletteId} className={chip(p.id===paletteId)+" shrink-0"}>{p.name}</button>)}</div></div>
-                    </Group>
-                    <Group title="Fonts"><div className="flex gap-2 overflow-x-auto">{template.fontPairs.map((fp,i)=><button key={i} type="button" onClick={()=>onStyle({fontPair:i as 0|1})} aria-pressed={fontPair===i} className={chip(fontPair===i)} style={{fontFamily:fp.display}}>{i===0?"Classic":"Modern"}</button>)}</div></Group>
-                    <Group title="This page's background"><div className="flex gap-2 overflow-x-auto">{bgChoices.map(([k,name])=><button key={k} type="button" aria-label={name} aria-pressed={rawPage.bg===k} onClick={()=>setBg(k)} className={chip(rawPage.bg===k)+" shrink-0"}>{name}</button>)}</div></Group>
+                    </Group>}
+                    {designControl === "fonts" && <Group title="Fonts"><div className="flex gap-2 overflow-x-auto">{template.fontPairs.map((fp,i)=><button key={i} type="button" onClick={()=>onStyle({fontPair:i as 0|1})} aria-pressed={fontPair===i} className={chip(fontPair===i)} style={{fontFamily:fp.display}}>{i===0?"Classic":"Modern"}</button>)}</div></Group>
+                    <Group title="This page's background"><div className="flex gap-2 overflow-x-auto">{bgChoices.map(([k,name])=><button key={k} type="button" aria-label={name} aria-pressed={rawPage.bg===k} onClick={()=>setBg(k)} className={chip(rawPage.bg===k)+" shrink-0"}>{name}</button>)}</div></Group>}
                   </div>
                 )}
               </div>

@@ -160,27 +160,27 @@ export default function CreateScreen() {
             
             {pagesMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
               <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }} role="toolbar" aria-label="Page tools">
-                {PAGE_TOOLS.map(label => <button key={label} type="button" onClick={() => choosePageTool(label)} aria-pressed={pageControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (pageControl === label.toLowerCase() ? "border-rose-500 bg-rose-700" : "border-stone-700 bg-stone-900")}>{label}</button>)}
+                {PAGE_TOOLS.map(label => <button key={label} type="button" onClick={() => choosePageTool(label)} aria-pressed={pageControl === label.toLowerCase()} className={"h-8 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-0.5 text-[clamp(9px,2.65vw,12px)] font-semibold " + (pageControl === label.toLowerCase() ? "border-rose-500 bg-rose-700" : "border-stone-700 bg-stone-900")}>{label}</button>)}
               </div>
             </div>}
             {textMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
-              <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto overscroll-x-contain" role="toolbar" aria-label="Text tools">
-                {TEXT_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseTextTool(label)} aria-pressed={textControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (textControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
+              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" }} role="toolbar" aria-label="Text tools">
+                {TEXT_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseTextTool(label)} aria-pressed={textControl === label.toLowerCase()} className={"h-8 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-0.5 text-[clamp(9px,2.65vw,12px)] font-semibold " + (textControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
               </div>
             </div>}
             {photoMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
-              <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto overscroll-x-contain" role="toolbar" aria-label="Photo tools">
-                {PHOTO_TOOLS.map(label => <button key={label} type="button" onClick={() => choosePhotoTool(label)} aria-pressed={photoControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (photoControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
+              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" }} role="toolbar" aria-label="Photo tools">
+                {PHOTO_TOOLS.map(label => <button key={label} type="button" onClick={() => choosePhotoTool(label)} aria-pressed={photoControl === label.toLowerCase()} className={"h-8 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-0.5 text-[clamp(9px,2.65vw,12px)] font-semibold " + (photoControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
               </div>
             </div>}
             {designMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
-              <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto overscroll-x-contain" role="toolbar" aria-label="Design tools">
-                {DESIGN_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseDesignTool(label)} aria-pressed={designControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (designControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
+              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} role="toolbar" aria-label="Design tools">
+                {DESIGN_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseDesignTool(label)} aria-pressed={designControl === label.toLowerCase()} className={"h-8 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-0.5 text-[clamp(9px,2.65vw,12px)] font-semibold " + (designControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
               </div>
             </div>}
             {audioMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
-              <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto overscroll-x-contain" role="toolbar" aria-label="Audio tools">
-                {AUDIO_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseAudioTool(label)} aria-pressed={audioControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (audioControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
+              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} role="toolbar" aria-label="Audio tools">
+                {AUDIO_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseAudioTool(label)} aria-pressed={audioControl === label.toLowerCase()} className={"h-8 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-0.5 text-[clamp(9px,2.65vw,12px)] font-semibold " + (audioControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
               </div>
             </div>}
             <nav aria-label="Editing tools" className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur">

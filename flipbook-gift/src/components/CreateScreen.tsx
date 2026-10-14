@@ -110,12 +110,12 @@ export default function CreateScreen() {
       setTextMenu(false); setTextControl(null); setPhotoMenu(false); setPhotoControl(null); setDesignMenu(false); setDesignControl(null); setAudioMenu(false); setAudioControl(null); setActiveTool(null);
     } else if (label === "Text") {
       setTextMenu(current => !current);
-      setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null); setDesignMenu(false); setDesignControl(null);
+      setPhotoMenu(false); setPhotoControl(null); setPagesMenu(false); setPageControl(null); setDesignMenu(false); setDesignControl(null); setAudioMenu(false); setAudioControl(null);
       setTextControl(null);
       setActiveTool(null);
     } else if (label === "Photo") {
       setPhotoMenu(current => !current);
-      setTextMenu(false); setTextControl(null); setPagesMenu(false); setPageControl(null); setDesignMenu(false); setDesignControl(null);
+      setTextMenu(false); setTextControl(null); setPagesMenu(false); setPageControl(null); setDesignMenu(false); setDesignControl(null); setAudioMenu(false); setAudioControl(null);
       setPhotoControl(null); setActiveTool(null);
     } else if (label === "Audio") {
       setAudioMenu(current => !current); setAudioControl(null);

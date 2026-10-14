@@ -549,6 +549,20 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
           <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full rounded-lg" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
+          {/* Page navigation stays inside the editing canvas so its arrows follow the page size. */}
+          <button type="button" aria-label="Previous page" title="Previous page"
+            disabled={at === 0 || editingText}
+            onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); if (at > 0) goto(at - 1); }}
+            className="absolute left-1 top-1/2 z-30 grid h-10 w-8 -translate-y-1/2 place-items-center rounded-r-xl bg-stone-900/65 text-white shadow-md backdrop-blur-sm disabled:pointer-events-none disabled:opacity-20"
+          ><span aria-hidden="true" className="text-2xl leading-none">‹</span></button>
+          <button type="button" aria-label="Next page" title="Next page"
+            disabled={at >= filled.length - 1 || editingText}
+            onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); if (at < filled.length - 1) goto(at + 1); }}
+            className="absolute right-1 top-1/2 z-30 grid h-10 w-8 -translate-y-1/2 place-items-center rounded-l-xl bg-stone-900/65 text-white shadow-md backdrop-blur-sm disabled:pointer-events-none disabled:opacity-20"
+          ><span aria-hidden="true" className="text-2xl leading-none">›</span></button>
+
           {currentAudio && !editingText && <VoiceNotePill key={`${at}:${currentAudio.src}`} src={currentAudio.src} duration={currentAudio.duration} pos={{x:currentAudio.x ?? 0.5,y:currentAudio.y ?? 1}} width={currentAudio.width ?? 0.84} height={currentAudio.height ?? 44} onMove={(pos) => editPage({...pages[at],audio:{...currentAudio,...pos}})} onResize={(size) => editPage({...pages[at],audio:{...currentAudio,...size}})} />}
           {slot && slot.kind === "photo" && (
             <div

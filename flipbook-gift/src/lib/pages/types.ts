@@ -156,6 +156,8 @@ export interface AudioContent {
   y?: number;
   /** Pill width relative to page width, 0.35..0.9. */
   width?: number;
+  /** Pill height in logical pixels, from 36 to 88. */
+  height?: number;
 }
 
 /** One page of a gift, exactly as stored in the gifts.content JSON. */

@@ -81,8 +81,10 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const filled = useMemo(() => fillPages(pages, { to: to.trim() || "you", from: from.trim() || "me" }), [pages, to, from]);
   const at = Math.min(index, filled.length - 1);
   const page = filled[at];
-  const lines = pages[at]?.lines ?? [];
+  const [linePreview, setLinePreview] = useState<{ pageIndex: number; lines: PageLine[] } | null>(null);
+  const lines = linePreview?.pageIndex === at ? linePreview.lines : (pages[at]?.lines ?? []);
   const selectedLine = lines.find(line => line.id === lineId) ?? null;
+  const linePreviewRef = useRef<PageLine[] | null>(null);
   const lineDrag = useRef<{ id: string; mode: "move" | "endpoint" | "rotate"; x: number; y: number; start: PageLine } | null>(null);
   const updateLine = (id: string, patch: Partial<PageLine>) => {
     onChange(pages.map((p, i) => i === at ? { ...p, lines: (p.lines ?? []).map(line => line.id === id ? { ...line, ...patch } : line) } : p));
@@ -103,6 +105,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const beginLinePointer = (e: React.PointerEvent<SVGElement>, line: PageLine, mode: "move" | "endpoint" | "rotate") => {
     e.stopPropagation(); e.preventDefault();
     lineDrag.current = { id: line.id, mode, x: e.clientX, y: e.clientY, start: line };
+    linePreviewRef.current = pages[at]?.lines ?? [];
+    setLinePreview({ pageIndex: at, lines: linePreviewRef.current });
     setLineId(line.id);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -113,20 +117,33 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     const rect = pageBox.current?.getBoundingClientRect();
     if (!rect) return;
     const dx = (e.clientX - d.x) / rect.width, dy = (e.clientY - d.y) / rect.height;
-    if (d.mode === "move") updateLine(d.id, { x: clampLine(d.start.x + dx, 0, 1), y: clampLine(d.start.y + dy, 0, 1) });
+    let patch: Partial<PageLine>;
+    if (d.mode === "move") patch = { x: clampLine(d.start.x + dx, 0, 1), y: clampLine(d.start.y + dy, 0, 1) };
     else if (d.mode === "rotate") {
       const cx = (d.start.x + Math.cos(d.start.angle * Math.PI / 180) * d.start.length / 2) * rect.width;
       const cy = d.start.y * rect.height + Math.sin(d.start.angle * Math.PI / 180) * d.start.length * rect.width / 2;
       const from = Math.atan2(d.y - rect.top - cy, d.x - rect.left - cx);
       const to = Math.atan2(e.clientY - rect.top - cy, e.clientX - rect.left - cx);
-      updateLine(d.id, { angle: ((d.start.angle + (to - from) * 180 / Math.PI) % 360 + 360) % 360 });
+      patch = { angle: ((d.start.angle + (to - from) * 180 / Math.PI) % 360 + 360) % 360 };
     } else {
       const startX = d.start.x * rect.width, startY = d.start.y * rect.height;
       const endX = startX + Math.cos(d.start.angle * Math.PI / 180) * d.start.length * rect.width + (e.clientX - d.x);
       const endY = startY + Math.sin(d.start.angle * Math.PI / 180) * d.start.length * rect.width + (e.clientY - d.y);
       const vx = endX - startX, vy = endY - startY;
-      updateLine(d.id, { length: clampLine(Math.hypot(vx, vy) / rect.width, 0.05, 1.5), angle: (Math.atan2(vy, vx) * 180 / Math.PI + 360) % 360 });
+      patch = { length: clampLine(Math.hypot(vx, vy) / rect.width, 0.05, 1.5), angle: (Math.atan2(vy, vx) * 180 / Math.PI + 360) % 360 };
     }
+    const nextLines = (linePreviewRef.current ?? pages[at]?.lines ?? []).map(line => line.id === d.id ? { ...line, ...patch } : line);
+    linePreviewRef.current = nextLines;
+    setLinePreview({ pageIndex: at, lines: nextLines });
+  };
+  const finishLinePointer = (e: React.PointerEvent<SVGElement>) => {
+    e.stopPropagation();
+    if (!lineDrag.current) return;
+    lineDrag.current = null;
+    const finalLines = linePreviewRef.current;
+    linePreviewRef.current = null;
+    if (finalLines) onChange(pages.map((p, i) => i === at ? { ...p, lines: finalLines } : p));
+    setLinePreview(null);
   };
 
   const layout = LAYOUTS[page.layout];
@@ -155,9 +172,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       c.setTransform(DPR, 0, 0, DPR, 0, 0);
       renderPage(c, w, h, p, l, book, images, i);
     };
-    draw(main.current, page, at, W, H);
+    draw(main.current, linePreview?.pageIndex === at ? { ...page, lines: linePreview.lines } : page, at, W, H);
     filled.forEach((p, i) => draw(thumbs.current[i], p, i, W, H)); // thumbnails draw at full size and are scaled down by CSS
-  }, [ready, fontTick, book, filled, images, page, at, pageControl]);
+  }, [ready, fontTick, book, filled, images, page, at, pageControl, linePreview]);
 
   // Layout picker previews: every layout drawn with this page's content. Only while the Pages tab is open.
   const panelOpen = activeTool === "Pages" && pageControl === "layout";
@@ -605,7 +622,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               const nx = mx + Math.sin(rad) * 34, ny = my - Math.cos(rad) * 34;
               return <g key={line.id}>
                 {activeTool === "Style" && <>
-                  <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="18" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={e=>{e.stopPropagation();lineDrag.current=null;}} onPointerCancel={()=>{lineDrag.current=null;}} />
+                  <line x1={x} y1={y} x2={x2} y2={y2} stroke="transparent" strokeWidth="18" className="pointer-events-auto" style={{touchAction:"none",cursor:"move"}} onPointerDown={e=>beginLinePointer(e,line,"move")} onPointerMove={moveLinePointer} onPointerUp={finishLinePointer} onPointerCancel={finishLinePointer} />
                   {line.id === lineId && <>
                     <line x1={x} y1={y} x2={x2} y2={y2} stroke="#0ea5e9" strokeWidth="1.2" strokeDasharray="5 4" className="pointer-events-none"/>
                     <circle cx={x} cy={y} r="5" fill="white" stroke="#0284c7" strokeWidth="1.5" className="pointer-events-none"/>

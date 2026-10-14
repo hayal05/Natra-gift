@@ -159,7 +159,7 @@ export default function CreateScreen() {
           <>
             
             {pagesMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
-              <div className="mx-auto flex max-w-2xl min-w-0 gap-1.5 overflow-x-auto" role="toolbar" aria-label="Page tools">
+              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }} role="toolbar" aria-label="Page tools">
                 {PAGE_TOOLS.map(label => <button key={label} type="button" onClick={() => choosePageTool(label)} aria-pressed={pageControl === label.toLowerCase()} className={"h-8 shrink-0 rounded-md border px-2.5 text-[11px] font-semibold " + (pageControl === label.toLowerCase() ? "border-rose-500 bg-rose-700" : "border-stone-700 bg-stone-900")}>{label}</button>)}
               </div>
             </div>}

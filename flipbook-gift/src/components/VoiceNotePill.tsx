@@ -161,7 +161,7 @@ export default function VoiceNotePill({ src, duration, onOpen, pos = DEFAULT_PIL
       </div>
       {onResize && <div role="slider" aria-label="Resize voice note" aria-valuemin={35} aria-valuemax={90} aria-valuenow={Math.round(width*100)}
         onPointerDown={e=>{e.stopPropagation();e.preventDefault();resizing.current={pointer:e.pointerId,startX:e.clientX,startWidth:width,startHeight:height,startY:e.clientY};e.currentTarget.setPointerCapture(e.pointerId);}}
-        onPointerMove={e=>{e.stopPropagation();const d=resizing.current;if(!d||d.pointer!==e.pointerId)return;const parent=box.current?.offsetParent as HTMLElement|null;if(parent)onResize({width:Math.max(.35,Math.min(.9,d.startWidth+(e.clientX-d.startX)/parent.clientWidth)),height:Math.max(36,Math.min(88,d.startHeight+(e.clientY-(resizing.current?.startY ?? e.clientY))))});}}
+        onPointerMove={e=>{e.stopPropagation();const d=resizing.current;if(!d||d.pointer!==e.pointerId)return;const parent=box.current?.offsetParent as HTMLElement|null;if(parent)onResize({width:Math.max(.35,Math.min(.9,d.startWidth+(e.clientX-d.startX)/parent.clientWidth)),height:Math.max(36,Math.min(88,d.startHeight+(e.clientY-d.startY)))});}}
         onPointerUp={e=>{e.stopPropagation();resizing.current=null;}} onPointerCancel={()=>{resizing.current=null;}}
         className="absolute -bottom-2 -right-2 z-20 grid h-7 w-7 touch-none place-items-center rounded-lg border border-white/80 bg-sky-700 text-lg text-white shadow" title="Drag diagonally to resize">⤡</div>}
       {onOpen && (

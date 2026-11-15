@@ -3,6 +3,7 @@
 import { create, type Flipbook } from "../engine";
 import { createAudioPlayer, createPageLayer, type AudioPlayer, type PageLayer } from "../audio/player"; // not "../audio": its index also pulls in the recorder, which reads process.env and crashes a plain browser file
 import { createEnvelope, type Envelope } from "../envelope";
+import { createCelebrationLayer, type CelebrationLayer } from "../components/pageCelebration";
 import { loadFonts, loadImages, pageDrawFn } from "../lib/pages";
 import { enterFullscreen, fsElement, fsSupported, leaveFullscreen, onFullscreenChange } from "../lib/fullscreen";
 import { LAYOUTS } from "../templates/layouts";
@@ -40,7 +41,7 @@ async function main() {
   const stage = el("div", "fbo-stage", undefined, root);
   const drawFns = loadImages(g.pages).then((images) => g.pages.map((p) => pageDrawFn(p, LAYOUTS, g.style, images)));
 
-  let book: Flipbook | undefined, player: AudioPlayer | undefined, layer: PageLayer | undefined, envelope: Envelope | undefined;
+  let book: Flipbook | undefined, player: AudioPlayer | undefined, layer: PageLayer | undefined, celebration: CelebrationLayer | undefined, envelope: Envelope | undefined;
   let bar: HTMLElement | undefined, closed: HTMLElement | undefined;
   let fsBtn: HTMLButtonElement | undefined;
   const syncFs = () => { if (fsBtn) { const on = !!fsElement(); fsBtn.textContent = on ? "Exit full screen" : "Full screen"; fsBtn.setAttribute("aria-label", fsBtn.textContent); fsBtn.setAttribute("aria-pressed", String(on)); } };
@@ -50,13 +51,16 @@ async function main() {
     if (book) return;
     closed?.remove(); closed = undefined;
     layer = createPageLayer(stage); // the player sits on the page itself, not at the screen edge
-    player = createAudioPlayer(layer.el); player.show(g.pages[0]?.audio ?? null); // voice notes: only on the page that owns one, no autoplay
+    player = createAudioPlayer(layer.el); player.show(g.pages[0]?.audio ?? null);
+    celebration = createCelebrationLayer(stage); // voice notes: only on the page that owns one, no autoplay
     book = create(stage, {
       pages: g.pages.map((_, i) => drawFns.then((fns) => fns[i])),
-      onPageChange: (i) => player?.show(g.pages[i]?.audio ?? null),
-      onLayout: (r) => layer?.setRect(r),
+      onPageChange: (i) => { player?.show(g.pages[i]?.audio ?? null); celebration?.show(g.pages[i]?.celebration); },
+      onLayout: (r) => { layer?.setRect(r); celebration?.setRect(r); },
       fit: "contain", loadingText: "Opening your gift…", errorText: "This gift could not be drawn.", retryText: "Try again", onRetry: () => location.reload(),
     });
+    const openingBook = book;
+    void openingBook.ready.then((ok) => { if (ok && book === openingBook) celebration?.show(g.pages[0]?.celebration); });
     bar = el("div", "fbo-bar", undefined, app);
     if (fsSupported()) {
       fsBtn = el("button", "fbo-btn", undefined, bar); fsBtn.type = "button"; syncFs();
@@ -67,7 +71,7 @@ async function main() {
   };
   const stop = () => {
     void leaveFullscreen();
-    player?.destroy(); player = undefined; layer?.destroy(); layer = undefined; book?.destroy(); book = undefined; bar?.remove(); bar = undefined; fsBtn = undefined;
+    celebration?.destroy(); celebration = undefined; player?.destroy(); player = undefined; layer?.destroy(); layer = undefined; book?.destroy(); book = undefined; bar?.remove(); bar = undefined; fsBtn = undefined;
     closed = el("div", "fbo-screen", undefined, app);
     el("p", "fbo-text", "Your gift is closed. Open it again whenever you like.", closed);
     const again = el("button", "fbo-again", "Open the book again", closed); again.type = "button"; again.autofocus = true;

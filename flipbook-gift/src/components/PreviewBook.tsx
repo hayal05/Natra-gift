@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { create, type Flipbook } from "../engine";
 import { createAudioPlayer, createPageLayer } from "../audio";
+import { createCelebrationLayer } from "./pageCelebration";
 import { loadFonts, loadImages, pageDrawFn, type PageData, type Palette } from "../lib/pages";
 import { LAYOUTS, bookStyle, fillPages, type Template } from "../templates";
 
@@ -25,15 +26,17 @@ export default function PreviewBook({ template, pages, to, from, fontPair, palet
     let layer: ReturnType<typeof createPageLayer> | undefined = createPageLayer(frame.current);
     let player: ReturnType<typeof createAudioPlayer> | undefined = createAudioPlayer(layer.el);
     player.show(pages[0]?.audio ?? null);
+    const celebration = createCelebrationLayer(frame.current);
     let fb: Flipbook | undefined = create(host.current, {
       pages: filled.map((_, i) => ready.then((fns) => fns[i])),
       loadingText: "Opening the book…",
       errorText: "The preview could not be drawn.",
       onError: () => setFailed(true),
-      onPageChange: (i) => player?.show(pages[i]?.audio ?? null),
-      onLayout: (r) => layer?.setRect(r),
+      onPageChange: (i) => { player?.show(pages[i]?.audio ?? null); celebration.show(pages[i]?.celebration); },
+      onLayout: (r) => { layer?.setRect(r); celebration.setRect(r); },
     });
-    return () => { player?.destroy(); player = undefined; layer?.destroy(); layer = undefined; fb?.destroy(); fb = undefined; };
+    void fb.ready.then((ok) => { if (ok && fb) celebration.show(pages[0]?.celebration); });
+    return () => { celebration.destroy(); player?.destroy(); player = undefined; layer?.destroy(); layer = undefined; fb?.destroy(); fb = undefined; };
   }, [book, filled, pages]);
 
   return (

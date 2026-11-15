@@ -280,6 +280,18 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const bgChoices = pageBgOptions(rawPage, layout, book.palette);
   const bgIssue = rawPage.bg === undefined ? null : bgProblem(rawPage, layout, book.palette, rawPage.bg);
   const setBg = (bg: ColorRef | undefined) => { onChange(pages.map((p, i) => (i === at ? setPageBg(p, bg) : p))); };
+  const selectedBg: ColorRef | undefined = rawPage.bg;
+  const selectedBgColor = selectedBg === undefined ? layout.bg : selectedBg;
+  const allPagesReadable = pages.every((p) => {
+    const target = LAYOUTS[p.layout];
+    return target && bgProblem(p, target, book.palette, selectedBgColor) === null;
+  });
+  const applyBgToAll = () => {
+    if (!allPagesReadable) return;
+    onChange(pages.map((p) => setPageBg(p, selectedBgColor)));
+  };
+  const bgSwatch = (ref: ColorRef) =>
+    ref in book.palette ? book.palette[ref as keyof Palette] : ref;
   const copyPage = () => { if (!roomForPage) return; onChange(duplicatePage(pages, at)); goto(at + 1); };
 
   const currentAudio = pages[at]?.audio;
@@ -718,7 +730,20 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                       <div className="flex items-center gap-4"><div className="grid h-14 w-14 shrink-0 place-items-center rounded-full" style={{background:"conic-gradient("+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent) ?? book.palette.accent)+" 0 25%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent2) ?? book.palette.accent2)+" 25% 50%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.soft) ?? book.palette.soft)+" 50% 75%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.ink) ?? book.palette.ink)+" 75% 100%)"}}><div className="h-8 w-8 rounded-full bg-white"/></div><div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">{PALETTE_PRESETS.map(p=><button key={p.id} type="button" onClick={()=>onStyle({paletteId:p.id})} aria-pressed={p.id===paletteId} className={chip(p.id===paletteId)+" shrink-0"}>{p.name}</button>)}</div></div>
                     </Group>}
                     {designControl === "fonts" && <Group title="Fonts"><div className="flex gap-2 overflow-x-auto">{template.fontPairs.map((fp,i)=><button key={i} type="button" onClick={()=>onStyle({fontPair:i as 0|1})} aria-pressed={fontPair===i} className={chip(fontPair===i)} style={{fontFamily:fp.display}}>{i===0?"Classic":"Modern"}</button>)}</div></Group>}
-                    {designControl === "background" && <Group title="This page's background"><div className="flex gap-2 overflow-x-auto">{bgChoices.map(([k,name])=><button key={k} type="button" aria-label={name} aria-pressed={rawPage.bg===k} onClick={()=>setBg(k)} className={chip(rawPage.bg===k)+" shrink-0"}>{name}</button>)}</div></Group>}
+                    {designControl === "background" && <Group title="Page colour">
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => setBg(undefined)} aria-pressed={rawPage.bg===undefined} className={chip(rawPage.bg===undefined)}>Original</button>
+                          {bgChoices.map(([k, name]) => <button key={k} type="button" aria-label={name} aria-pressed={rawPage.bg===k} onClick={() => setBg(k)} className={chip(rawPage.bg===k)+" inline-flex items-center gap-2"}>
+                            <span aria-hidden="true" className="h-5 w-5 shrink-0 rounded-full border border-stone-400/50" style={{backgroundColor:bgSwatch(k)}} />{name}
+                          </button>)}
+                        </div>
+                        <button type="button" onClick={applyBgToAll} disabled={!allPagesReadable}
+                          className={chip(false)+" disabled:cursor-not-allowed disabled:opacity-40"}>Apply this colour to all pages</button>
+                        {!allPagesReadable && <p className="text-xs text-stone-500">Some pages have text that would be difficult to read with this colour. Choose another colour or adjust their text colours first.</p>}
+                        {bgIssue && <p className="text-xs text-amber-700">Some text may be difficult to read with the selected background.</p>}
+                      </div>
+                    </Group>}
                   </div>
                 )}
               </div>

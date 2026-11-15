@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { create, type Flipbook } from "../engine";
 import { createEnvelope, type Envelope } from "../envelope";
 import { createAudioPlayer, createPageLayer, type AudioPlayer, type PageLayer } from "../audio";
+import { createCelebrationLayer, type CelebrationLayer } from "./pageCelebration";
 import { loadFonts, loadImages, pageDrawFn } from "../lib/pages";
 import { draftPalette, type Draft } from "../lib/draft";
 import { enterFullscreen, fsElement, fsSupported, leaveFullscreen, onFullscreenChange } from "../lib/fullscreen";
@@ -40,6 +41,7 @@ export default function GiftView({ token }: { token: string }) {
     let book: Flipbook | undefined;
     let player: AudioPlayer | undefined;
     let layer: PageLayer | undefined;
+    let celebration: CelebrationLayer | undefined;
     const ctl = new AbortController();
     setMode("envelope");
 
@@ -79,6 +81,7 @@ export default function GiftView({ token }: { token: string }) {
           layer = createPageLayer(stage);
           player = createAudioPlayer(layer.el);
           player.show(draft.pages[0]?.audio ?? null);
+          celebration = createCelebrationLayer(stage);
           book = create(stage, {
             pages: pages.map((_, i) => drawFns.then((fns) => fns[i])),
             fit: "contain",
@@ -86,12 +89,14 @@ export default function GiftView({ token }: { token: string }) {
             errorText: "This gift could not be drawn.",
             retryText: "Try again",
             onRetry: () => window.location.reload(),
-            onPageChange: (i) => player?.show(draft.pages[i]?.audio ?? null),
-            onLayout: (r) => layer?.setRect(r),
+            onPageChange: (i) => { player?.show(draft.pages[i]?.audio ?? null); celebration?.show(pages[i]?.celebration); },
+            onLayout: (r) => { layer?.setRect(r); celebration?.setRect(r); },
           });
+          const openingBook = book;
+          void openingBook.ready.then((ok) => { if (ok && book === openingBook) celebration?.show(pages[0]?.celebration); });
           setMode("reading");
         },
-        stop: () => { player?.destroy(); player = undefined; layer?.destroy(); layer = undefined; book?.destroy(); book = undefined; setMode("closed"); },
+        stop: () => { celebration?.destroy(); celebration = undefined; player?.destroy(); player = undefined; layer?.destroy(); layer = undefined; book?.destroy(); book = undefined; setMode("closed"); },
       };
       envelope = createEnvelope(root, {
         to: names.to, from: names.from, message,
@@ -105,7 +110,7 @@ export default function GiftView({ token }: { token: string }) {
       });
     })();
 
-    return () => { reader.current = null; cancelled = true; ctl.abort(); timers.forEach(clearTimeout); envelope?.destroy(); player?.destroy(); layer?.destroy(); book?.destroy(); };
+    return () => { reader.current = null; cancelled = true; ctl.abort(); timers.forEach(clearTimeout); envelope?.destroy(); celebration?.destroy(); player?.destroy(); layer?.destroy(); book?.destroy(); };
   }, [token, attempt]);
 
   useEffect(() => {

@@ -136,6 +136,10 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
     }
   }
   if (p.bg !== undefined) { if (!oneOf(p.bg, PALETTE_KEYS)) return bad("A page colour is not valid."); page.bg = p.bg as PageData["bg"]; }
+  if (p.celebration !== undefined) {
+    if (!oneOf(p.celebration, ["confetti", "hearts", "sparkles", "balloons"])) return bad("A page celebration is not valid.");
+    page.celebration = p.celebration as PageData["celebration"];
+  }
   if (p.audio !== undefined) {
     const m = isObj(p.audio) && typeof p.audio.src === "string" ? AUDIO_SRC.exec(p.audio.src) : null;
     if (!isObj(p.audio) || !m) return bad("An audio note is not valid.");

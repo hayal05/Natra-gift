@@ -294,9 +294,14 @@ export function setPageBg(page: PageData, bg: ColorRef | undefined): PageData {
 
 // ---------- Page background (task 3.6e) ----------
 
-/** Background colours a creator can pick, from the book's palette. "Layout's own" is the absence of a choice. */
-export const PAGE_BG_CHOICES: [keyof Palette, string][] = [
-  ["paper", "Paper"], ["soft", "Soft"], ["dark", "Dark"], ["accent", "Accent"], ["accent2", "Accent 2"],
+/** Background colours include theme colours and fixed paper tones, which remain consistent across templates.
+ * Literal hex values are already supported by PageData.bg and by the canvas/offline renderers. */
+export const PAGE_BG_CHOICES: [ColorRef, string][] = [
+  ["paper", "Theme Paper"], ["soft", "Theme Soft"], ["dark", "Theme Dark"],
+  ["accent", "Accent"], ["accent2", "Accent 2"],
+  ["#F5E8CE", "Vintage Cream"], ["#FFF9ED", "Ivory"], ["#E8D5AF", "Parchment"],
+  ["#FFFFFF", "White"], ["#F2F0E9", "Warm Gray"], ["#E4EDDF", "Sage"],
+  ["#E9E4F3", "Lavender"],
 ];
 
 const toRgb = (css: string): [number, number, number] | null => {
@@ -345,7 +350,7 @@ export function bgProblem(page: PageData, layout: Layout, palette: Palette, bg: 
 }
 
 /** The palette backgrounds that keep all text readable on this page. The current choice is never removed. */
-export function pageBgOptions(page: PageData, layout: Layout, palette: Palette): [keyof Palette, string][] {
+export function pageBgOptions(page: PageData, layout: Layout, palette: Palette): [ColorRef, string][] {
   return PAGE_BG_CHOICES.filter(([k]) => k === page.bg || bgProblem(page, layout, palette, k) === null);
 }
 

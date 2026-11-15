@@ -91,7 +91,7 @@ export default function CreateScreen() {
     setActiveTool("Audio");
   };
   const chooseDesignTool = (tool: typeof DESIGN_TOOLS[number]) => {
-    setDesignControl(tool.toLowerCase() as "colors" | "fonts" | "background");
+    setDesignControl(tool.toLowerCase() as "colors" | "fonts" | "background" | "celebrate");
     setActiveTool("Style");
   };
   const choosePhotoTool = (tool: typeof PHOTO_TOOLS[number]) => {

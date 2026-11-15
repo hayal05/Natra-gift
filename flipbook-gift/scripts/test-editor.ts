@@ -213,7 +213,7 @@ ok("contrast: unreadable colours count as fine", contrast("rgba(0,0,0,.5)", "#ff
   const pg0: PageData = { layout: "letter", slots: { title: "Dear you", body: "Hello" } };
   ok("letter: the layout's own colour is fine", bgProblem(pg0, lay, pal, undefined) === null);
   ok("letter: dark background with dark ink is refused", bgProblem(pg0, lay, pal, "dark") !== null);
-  ok("letter: pageBgOptions drops dark and keeps paper", !pageBgOptions(pg0, lay, pal).some(([k]) => k === "dark") && pageBgOptions(pg0, lay, pal).some(([k]) => k === "paper"));
+  ok("letter: all colour choices remain visible, even with contrast warnings", pageBgOptions(pg0, lay, pal).some(([k]) => k === "dark") && pageBgOptions(pg0, lay, pal).some(([k]) => k === "paper"));
   ok("the current choice is never removed", pageBgOptions({ ...pg0, bg: "dark" }, lay, pal).some(([k]) => k === "dark"));
   ok("empty text is not checked, but the page number always is", bgProblem({ layout: "letter", slots: {} }, lay, pal, "dark") === "the page number");
   ok("a text colour the creator picked is respected", bgProblem({ ...pg0, styles: { title: { color: "paper" }, body: { color: "paper" }, folio: { color: "paper" } } }, lay, pal, "dark") === null);
@@ -223,15 +223,12 @@ ok("vintage cream preserves readable dark text", bgProblem({ layout: "letter", s
 ok("literal page background is retained", setPageBg({ layout: "letter", slots: {} }, "#F5E8CE").bg === "#F5E8CE");
 ok("a full-page photo hides the background colour", bgHidden(LAYOUT_LIST.find((l) => l.id === "photo-full")!) && !bgHidden(LAYOUT_LIST.find((l) => l.id === "letter")!));
 {
-  // Every offered chip, on every layout and template, leaves the page readable (the property the chips promise).
-  let bad = 0, offered = 0, none = 0;
+  // Every layout and template shows all colours; contrast checks are advisory rather than hiding options.
   for (const tpl of TEMPLATE_LIST) for (const lay of LAYOUT_LIST) {
-    const page: PageData = { layout: lay.id, slots: Object.fromEntries(editableSlots(lay).filter((s) => s.kind === "text").map((s) => [s.id, "Sample text"])) };
+    const page: PageData = { layout: lay.id, slots: {} };
     const opts = pageBgOptions(page, lay, tpl.palette);
-    offered += opts.length; if (!opts.length) none++;
-    for (const [k] of opts) if (bgProblem(page, lay, tpl.palette, k) !== null) bad++;
+    ok(`all page backgrounds visible on ${lay.id} (${tpl.id})`, opts.length === PAGE_BG_CHOICES.length);
   }
-  ok(`every offered chip is readable (${offered} offered, ${none} layout/template pairs with no chip)`, bad === 0);
   console.log("  layouts with no readable chip per template:", none, "of", TEMPLATE_LIST.length * LAYOUT_LIST.length);
 }
 

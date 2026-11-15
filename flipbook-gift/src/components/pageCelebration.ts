@@ -11,15 +11,19 @@ export const CELEBRATIONS: { id: Celebration; label: string }[] = [
 
 const STYLE_ID = "fb-celebration-style";
 const STYLES = `
-.fb-celebration{position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none;z-index:21}
-.fb-celebration-item{position:absolute;left:var(--x);top:var(--y);opacity:0;will-change:transform,opacity;animation-duration:var(--duration);animation-delay:var(--delay);animation-fill-mode:both;animation-timing-function:ease-out;animation-iteration-count:1}
-.fb-celebration--confetti .fb-celebration-item{width:8px;height:14px;border-radius:2px;background:var(--color);animation-name:fb-confetti}
-.fb-celebration--hearts .fb-celebration-item{font-size:clamp(14px,5vw,24px);animation-name:fb-float}
-.fb-celebration--sparkles .fb-celebration-item{font-size:clamp(16px,5vw,26px);animation-name:fb-sparkle}
-.fb-celebration--balloons .fb-celebration-item{font-size:clamp(20px,7vw,36px);animation-name:fb-float}
-@keyframes fb-confetti{0%{opacity:0;transform:translate3d(0,-22px,0) rotate(0)}12%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx),110vh,0) rotate(var(--spin))}}
-@keyframes fb-float{0%{opacity:0;transform:translate3d(0,22px,0) scale(.65)}15%{opacity:1}75%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx),var(--rise),0) scale(1.15)}}
-@keyframes fb-sparkle{0%{opacity:0;transform:scale(.2) rotate(-45deg)}35%{opacity:1;transform:scale(1.2) rotate(10deg)}100%{opacity:0;transform:scale(.3) rotate(60deg)}}
+.fb-celebration{position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none;z-index:21;contain:layout paint}
+.fb-celebration-item{position:absolute;left:var(--x);top:var(--y);opacity:0;will-change:transform,opacity;animation-duration:var(--duration);animation-delay:var(--delay);animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.6,.3,1);animation-iteration-count:1}
+.fb-celebration--confetti .fb-celebration-item{width:var(--size);height:calc(var(--size)*1.6);border-radius:1.5px;background:var(--color);animation-name:fb-confetti}
+.fb-celebration--confetti .fb-celebration-item:nth-child(4n){border-radius:50%;height:var(--size)}
+.fb-celebration--hearts .fb-celebration-item{font-size:var(--size);line-height:1;animation-name:fb-float}
+.fb-celebration--sparkles .fb-celebration-item{font-size:var(--size);line-height:1;color:var(--color);text-shadow:0 0 9px var(--color);animation-name:fb-sparkle}
+.fb-celebration--balloons .fb-celebration-item{width:var(--size);height:calc(var(--size)*1.28);border-radius:48% 48% 47% 47%;background:radial-gradient(circle at 31% 24%,rgba(255,255,255,.8),transparent 33%),var(--color);box-shadow:inset -5px -7px 9px rgba(0,0,0,.12);animation-name:fb-balloon}
+.fb-celebration--balloons .fb-celebration-item::before{content:"";position:absolute;left:calc(50% - 4px);bottom:-5px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:0;border-top:7px solid var(--color)}
+.fb-celebration--balloons .fb-celebration-item::after{content:"";position:absolute;left:50%;top:calc(100% + 4px);height:calc(var(--size)*.9);border-left:1px solid rgba(95,68,68,.5)}
+@keyframes fb-confetti{0%{opacity:0;transform:translate3d(0,-16px,0) rotate(0)}9%{opacity:1}86%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx),var(--travel),0) rotate(var(--spin))}}
+@keyframes fb-float{0%{opacity:0;transform:translate3d(0,25px,0) scale(.5) rotate(-15deg)}14%{opacity:1}82%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx),var(--rise),0) scale(1.25) rotate(20deg)}}
+@keyframes fb-balloon{0%{opacity:0;transform:translate3d(0,28px,0) scale(.65) rotate(-6deg)}12%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx),var(--rise),0) scale(1.06) rotate(8deg)}}
+@keyframes fb-sparkle{0%{opacity:0;transform:translate3d(0,10px,0) scale(.1) rotate(-35deg)}23%{opacity:1;transform:translate3d(0,0,0) scale(1.35) rotate(0)}56%{opacity:.85;transform:translate3d(var(--dx),-15px,0) scale(.7) rotate(30deg)}100%{opacity:0;transform:translate3d(var(--dx),var(--rise),0) scale(.1) rotate(85deg)}}
 @media (prefers-reduced-motion:reduce){.fb-celebration-item{animation:none!important;display:none}}
 `;
 
@@ -61,24 +65,39 @@ export function createCelebrationLayer(container: HTMLElement): CelebrationLayer
       if (!effect || !CELEBRATIONS.some((item) => item.id === effect) ||
           doc.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
       root.classList.add("fb-celebration--" + effect);
-      const count = effect === "confetti" ? 34 : effect === "sparkles" ? 18 : 14;
-      const colors = ["#ec4899", "#f59e0b", "#0ea5e9", "#22c55e", "#a855f7"];
+      // A finite, varied burst across the whole page. The counts are capped for mobile performance.
+      const count = effect === "confetti" ? 110 : effect === "sparkles" ? 75 : effect === "hearts" ? 48 : 44;
+      const colors = ["#ec4899", "#f59e0b", "#0ea5e9", "#22c55e", "#a855f7", "#ef4444", "#facc15", "#14b8a6"];
+      const height = Math.max(240, root.getBoundingClientRect().height);
+      const random = (i: number, salt: number) => {
+        const v = Math.sin((i + 1) * 127.1 + salt * 311.7) * 43758.5453;
+        return v - Math.floor(v);
+      };
+      const fragment = doc.createDocumentFragment();
       for (let i = 0; i < count; i++) {
         const el = doc.createElement("span");
         el.className = "fb-celebration-item";
-        const rand = (n: number) => ((i * 47 + n * 31 + i * i * 13) % 101) / 101;
-        el.style.setProperty("--x", (5 + rand(1) * 90) + "%");
-        el.style.setProperty("--y", (effect === "confetti" ? -10 + rand(2) * 30 : 38 + rand(2) * 58) + "%");
-        el.style.setProperty("--dx", (rand(3) * 100 - 50) + "px");
-        el.style.setProperty("--rise", (-120 - rand(4) * 240) + "px");
-        el.style.setProperty("--spin", (rand(5) * 1000 - 500) + "deg");
-        el.style.setProperty("--delay", (rand(6) * 0.35) + "s");
-        el.style.setProperty("--duration", (1.5 + rand(7) * 0.65) + "s");
-        if (effect === "confetti") el.style.setProperty("--color", colors[i % colors.length]);
-        else el.textContent = effect === "hearts" ? "💗" : effect === "balloons" ? "🎈" : "✨";
-        root.appendChild(el);
+        const rand = (salt: number) => random(i, salt);
+        const size = effect === "confetti" ? 5 + rand(1) * 7 :
+          effect === "balloons" ? 22 + rand(1) * 24 : 15 + rand(1) * 21;
+        const startY = effect === "confetti" ? -18 + rand(2) * 34 :
+          effect === "balloons" ? 76 + rand(2) * 37 : 30 + rand(2) * 63;
+        el.style.setProperty("--x", (2 + rand(3) * 96) + "%");
+        el.style.setProperty("--y", startY + "%");
+        el.style.setProperty("--size", size + "px");
+        el.style.setProperty("--dx", (rand(4) * 220 - 110) + "px");
+        el.style.setProperty("--travel", (height * (1.25 - startY / 100) + 40) + "px");
+        el.style.setProperty("--rise", (-height * (0.7 + rand(5) * 0.95)) + "px");
+        el.style.setProperty("--spin", (rand(6) * 1440 - 720) + "deg");
+        el.style.setProperty("--delay", (rand(7) * 0.9) + "s");
+        el.style.setProperty("--duration", (2.3 + rand(8) * 1.25) + "s");
+        el.style.setProperty("--color", colors[Math.floor(rand(9) * colors.length)]);
+        if (effect === "hearts") el.textContent = rand(10) > 0.5 ? "💗" : "❤️";
+        else if (effect === "sparkles") el.textContent = rand(10) > 0.5 ? "✦" : "✨";
+        fragment.appendChild(el);
       }
-      cleanup = doc.defaultView?.setTimeout(stop, 2600);
+      root.appendChild(fragment);
+      cleanup = doc.defaultView?.setTimeout(stop, 4800);
     },
     destroy() { destroyed = true; stop(); root.remove(); },
   };

@@ -160,10 +160,15 @@ export interface AudioContent {
   height?: number;
 }
 
+/** A one-shot animation triggered when the reader opens this page. */
+export type Celebration = "confetti" | "hearts" | "sparkles" | "balloons";
+
 /** One page of a gift, exactly as stored in the gifts.content JSON. */
 export interface PageData {
   layout: string;
   bg?: ColorRef;
+  /** Optional animation that plays once on every page-opening event (no continuous loop). */
+  celebration?: Celebration;
   /** Text slots hold strings, photo slots hold PhotoContent. */
   slots: Record<string, string | PhotoContent>;
   styles?: Record<string, TextStyle>;

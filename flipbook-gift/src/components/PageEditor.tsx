@@ -12,6 +12,7 @@ import { createRecorder, type Recorder } from "../audio/recorder";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
 import VoiceNotePill from "./VoiceNotePill";
+import { CELEBRATIONS } from "./pageCelebration";
 import FontPicker from "./FontPicker";
 import { LAYOUTS, LAYOUT_LIST, bookStyle, fillPages, type Template } from "../templates";
 
@@ -45,7 +46,7 @@ interface Props {
   pageControl?: "navigate" | "layout" | null;
   textControl?: "font" | "size" | "align" | "color" | "style" | null;
   photoControl?: "replace" | "fit" | "frame" | "filter" | "zoom" | null;
-  designControl?: "colors" | "fonts" | "background" | null;
+  designControl?: "colors" | "fonts" | "background" | "celebrate" | null;
   audioControl?: "upload" | "record" | "manage" | null;
   editorCommand?: { id: number; action: "add-text" | "add-photo" | "duplicate" | "delete" | "clear" | "bold" | "italic" | "add-page" | "duplicate-page" } | null;
 }
@@ -292,6 +293,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   };
   const bgSwatch = (ref: ColorRef) =>
     ref in book.palette ? book.palette[ref as keyof Palette] : ref;
+  const setCelebration = (celebration: PageData["celebration"]) => {
+    onChange(pages.map((p, i) => i === at ? { ...p, celebration } : p));
+  };
   const copyPage = () => { if (!roomForPage) return; onChange(duplicatePage(pages, at)); goto(at + 1); };
 
   const currentAudio = pages[at]?.audio;
@@ -730,6 +734,13 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                       <div className="flex items-center gap-4"><div className="grid h-14 w-14 shrink-0 place-items-center rounded-full" style={{background:"conic-gradient("+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent) ?? book.palette.accent)+" 0 25%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.accent2) ?? book.palette.accent2)+" 25% 50%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.soft) ?? book.palette.soft)+" 50% 75%, "+((PALETTE_PRESETS.find(p=>p.id===paletteId)?.palette.ink) ?? book.palette.ink)+" 75% 100%)"}}><div className="h-8 w-8 rounded-full bg-white"/></div><div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">{PALETTE_PRESETS.map(p=><button key={p.id} type="button" onClick={()=>onStyle({paletteId:p.id})} aria-pressed={p.id===paletteId} className={chip(p.id===paletteId)+" shrink-0"}>{p.name}</button>)}</div></div>
                     </Group>}
                     {designControl === "fonts" && <Group title="Fonts"><div className="flex gap-2 overflow-x-auto">{template.fontPairs.map((fp,i)=><button key={i} type="button" onClick={()=>onStyle({fontPair:i as 0|1})} aria-pressed={fontPair===i} className={chip(fontPair===i)} style={{fontFamily:fp.display}}>{i===0?"Classic":"Modern"}</button>)}</div></Group>}
+                    {designControl === "celebrate" && <Group title="Celebration on page open">
+                      <div className="flex flex-wrap gap-2" aria-label="Page celebration">
+                        <button type="button" aria-pressed={!rawPage.celebration} onClick={() => setCelebration(undefined)} className={chip(!rawPage.celebration)}>None</button>
+                        {CELEBRATIONS.map(({id,label}) => <button key={id} type="button" aria-pressed={rawPage.celebration===id} onClick={() => setCelebration(id)} className={chip(rawPage.celebration===id)}>{label}</button>)}
+                      </div>
+                      <p className="mt-2 text-xs text-stone-500">Plays once when this page opens. Select Preview to see it; no animation repeats while the page stays open.</p>
+                    </Group>}
                     {designControl === "background" && <Group title="Page colour">
                       <div className="space-y-3">
                         <div className="flex flex-wrap gap-2">

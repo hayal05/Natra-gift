@@ -38,7 +38,7 @@ export default function CreateScreen() {
   const [designMenu, setDesignMenu] = useState(false);
   const [audioMenu, setAudioMenu] = useState(false);
   const [audioControl, setAudioControl] = useState<"upload" | "record" | "manage" | null>(null);
-  const [designControl, setDesignControl] = useState<"colors" | "fonts" | "background" | null>(null);
+  const [designControl, setDesignControl] = useState<"colors" | "fonts" | "background" | "celebrate" | null>(null);
   const [photoControl, setPhotoControl] = useState<"replace" | "fit" | "frame" | "filter" | "zoom" | null>(null);
   const [textControl, setTextControl] = useState<"font" | "size" | "align" | "color" | "style" | null>(null);
   const [editorCommand, setEditorCommand] = useState<{ id: number; action: EditorAction } | null>(null);
@@ -84,14 +84,14 @@ export default function CreateScreen() {
   };
   const TEXT_TOOLS = ["Add text", "Font", "Size", "Align", "Color", "Style"] as const;
   const PHOTO_TOOLS = ["Add photo", "Replace", "Fit", "Frame", "Filter", "Zoom"] as const;
-  const DESIGN_TOOLS = ["Colors", "Fonts", "Background"] as const;
+  const DESIGN_TOOLS = ["Colors", "Fonts", "Background", "Celebrate"] as const;
   const AUDIO_TOOLS = ["Upload", "Record", "Manage"] as const;
   const chooseAudioTool = (tool: typeof AUDIO_TOOLS[number]) => {
     setAudioControl(tool.toLowerCase() as "upload" | "record" | "manage");
     setActiveTool("Audio");
   };
   const chooseDesignTool = (tool: typeof DESIGN_TOOLS[number]) => {
-    setDesignControl(tool.toLowerCase() as "colors" | "fonts" | "background");
+    setDesignControl(tool.toLowerCase() as "colors" | "fonts" | "background" | "celebrate");
     setActiveTool("Style");
   };
   const choosePhotoTool = (tool: typeof PHOTO_TOOLS[number]) => {
@@ -174,7 +174,7 @@ export default function CreateScreen() {
               </div>
             </div>}
             {designMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
-              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} role="toolbar" aria-label="Design tools">
+              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }} role="toolbar" aria-label="Design tools">
                 {DESIGN_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseDesignTool(label)} aria-pressed={designControl === label.toLowerCase()} className={"h-8 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-0.5 text-[clamp(9px,2.65vw,12px)] font-semibold " + (designControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
               </div>
             </div>}

@@ -58,6 +58,23 @@ const cx = checkDraft(x, opt); assert(cx.ok); assert(!("extra" in cx.draft) && !
 const same: any = draft(); same.paletteId = same.templateId; assert(!("paletteId" in (checkDraft(same, opt) as any).draft)); ok("template's own palette id is not stored");
 const r = await createGift(store, { v: 1 }, site); assert(!r.ok && r.status === 400); ok("invalid create returns 400");
 
+// ---- One-shot page celebrations: safe presets are stored, unknown values rejected ----
+for (const effect of ["confetti", "hearts", "sparkles", "balloons"] as const) {
+  const d = draft(); d.pages[1].celebration = effect;
+  const result = checkDraft(d);
+  assert(result.ok);
+  assert.equal(result.draft.pages[1].celebration, effect);
+}
+for (const invalid of ["loop", "javascript:alert(1)", "", 42, null]) {
+  assert(!bad((d) => { d.pages[1].celebration = invalid; }));
+}
+{ const d = draft(); d.pages[2].celebration = "confetti";
+  const dup = duplicatePage(d.pages, 2);
+  assert.equal(dup[3].celebration, "confetti");
+  assert.equal(movePage(d.pages, 2, 1)[3].celebration, "confetti");
+  assert.equal(swapLayout(d.pages[2], LAYOUTS.letter).celebration, "confetti");
+} ok("celebration presets validate and survive page editing");
+
 // ---- 8.5: audio notes ----
 const aud = (src: string, duration: unknown = 30) => ({ src, duration });
 const good = "https://res.cloudinary.com/mycloud/video/upload/v1/flipbook-audio/note.mp3";

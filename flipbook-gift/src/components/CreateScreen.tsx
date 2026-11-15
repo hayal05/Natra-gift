@@ -174,7 +174,7 @@ export default function CreateScreen() {
               </div>
             </div>}
             {designMenu && <div className="fixed inset-x-0 z-30 border-t border-stone-700 bg-black px-2 py-1 text-white shadow-lg" style={{ bottom: "var(--nav-h)" }}>
-              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} role="toolbar" aria-label="Design tools">
+              <div className="mx-auto grid w-full max-w-2xl min-w-0 gap-1" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }} role="toolbar" aria-label="Design tools">
                 {DESIGN_TOOLS.map(label => <button key={label} type="button" onClick={() => chooseDesignTool(label)} aria-pressed={designControl === label.toLowerCase()} className={"h-8 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border px-0.5 text-[clamp(9px,2.65vw,12px)] font-semibold " + (designControl === label.toLowerCase() ? "border-rose-500 bg-rose-700 text-white" : "border-stone-700 bg-stone-900 text-white")}>{label}</button>)}
               </div>
             </div>}

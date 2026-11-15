@@ -59,7 +59,7 @@ export function createCelebrationLayer(container: HTMLElement): CelebrationLayer
       if (destroyed) return;
       stop(); // A page turn stops the prior celebration; nothing loops.
       if (!effect || !CELEBRATIONS.some((item) => item.id === effect) ||
-          doc.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+          doc.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
       root.classList.add("fb-celebration--" + effect);
       const count = effect === "confetti" ? 34 : effect === "sparkles" ? 18 : 14;
       const colors = ["#ec4899", "#f59e0b", "#0ea5e9", "#22c55e", "#a855f7"];

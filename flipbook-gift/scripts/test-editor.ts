@@ -229,7 +229,6 @@ ok("a full-page photo hides the background colour", bgHidden(LAYOUT_LIST.find((l
     const opts = pageBgOptions(page, lay, tpl.palette);
     ok(`all page backgrounds visible on ${lay.id} (${tpl.id})`, opts.length === PAGE_BG_CHOICES.length);
   }
-  console.log("  layouts with no readable chip per template:", none, "of", TEMPLATE_LIST.length * LAYOUT_LIST.length);
 }
 
 

@@ -349,9 +349,9 @@ export function bgProblem(page: PageData, layout: Layout, palette: Palette, bg: 
   return null;
 }
 
-/** The palette backgrounds that keep all text readable on this page. The current choice is never removed. */
-export function pageBgOptions(page: PageData, layout: Layout, palette: Palette): [ColorRef, string][] {
-  return PAGE_BG_CHOICES.filter(([k]) => k === page.bg || bgProblem(page, layout, palette, k) === null);
+/** Always show the complete colour palette. Readability is reported separately so no option disappears. */
+export function pageBgOptions(_page: PageData, _layout: Layout, _palette: Palette): [ColorRef, string][] {
+  return PAGE_BG_CHOICES;
 }
 
 // ---------- Add, duplicate and delete components (task 10.4a) ----------

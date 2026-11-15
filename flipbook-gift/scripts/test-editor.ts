@@ -218,7 +218,9 @@ ok("contrast: unreadable colours count as fine", contrast("rgba(0,0,0,.5)", "#ff
   ok("empty text is not checked, but the page number always is", bgProblem({ layout: "letter", slots: {} }, lay, pal, "dark") === "the page number");
   ok("a text colour the creator picked is respected", bgProblem({ ...pg0, styles: { title: { color: "paper" }, body: { color: "paper" }, folio: { color: "paper" } } }, lay, pal, "dark") === null);
 }
-ok("only the palette keys are offered as backgrounds", PAGE_BG_CHOICES.map(([k]) => k).join() === "paper,soft,dark,accent,accent2");
+ok("theme and paper colours are offered as backgrounds", PAGE_BG_CHOICES.some(([k, name]) => k === "#F5E8CE" && name === "Vintage Cream") && PAGE_BG_CHOICES.some(([k]) => k === "paper"));
+ok("vintage cream preserves readable dark text", bgProblem({ layout: "letter", slots: { title: "Hello", body: "A note" } }, LAYOUTS.letter, TEMPLATE_LIST[0].palette, "#F5E8CE") === null);
+ok("literal page background is retained", setPageBg({ layout: "letter", slots: {} }, "#F5E8CE").bg === "#F5E8CE");
 ok("a full-page photo hides the background colour", bgHidden(LAYOUT_LIST.find((l) => l.id === "photo-full")!) && !bgHidden(LAYOUT_LIST.find((l) => l.id === "letter")!));
 {
   // Every offered chip, on every layout and template, leaves the page readable (the property the chips promise).

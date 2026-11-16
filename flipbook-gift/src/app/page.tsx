@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { loadDraft, loadLastTemplateId } from "../lib/draft";
 import LiveBook from "../components/LiveBook";
 import TemplateScene, { type SceneConfig } from "../components/TemplateScene";
 import { TEMPLATE_LIST } from "../templates";
@@ -55,6 +56,11 @@ const CARDS: Record<string, { title: string; script?: boolean; scene: SceneConfi
 
 export default function Home() {
   const [selected, setSelected] = useState("love-story");
+  const [resumeTemplate, setResumeTemplate] = useState<string | null>(null);
+  useEffect(() => {
+    const last = loadLastTemplateId();
+    if (last && loadDraft(last)) { setResumeTemplate(last); setSelected(last); }
+  }, []);
   const active = TEMPLATE_LIST.find((template) => template.id === selected) ?? TEMPLATE_LIST[0];
   const createHref = `/create?t=${active.id}`;
 
@@ -70,8 +76,9 @@ export default function Home() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span className="hidden text-[13px] text-[#77706a] md:block">Digital gifts that open like a letter.</span>
+          {resumeTemplate && <Link href={`/create?t=${resumeTemplate}`} className="rounded-full border border-[#ff6900] px-3 py-2.5 text-[12px] font-bold text-[#ff6900] hover:bg-orange-50 sm:px-5 sm:py-3 sm:text-[14px]">Continue editing</Link>}
           <Link
             href={createHref}
             className="rounded-full bg-[#ff6900] px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(255,105,0,.2)] transition hover:-translate-y-0.5 hover:bg-[#f25e00] sm:px-7 sm:py-3 sm:text-[15px]"

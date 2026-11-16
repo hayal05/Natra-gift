@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { draftPalette, loadDraft, newDraft, saveDraft, type Draft } from "../lib/draft";
+import { draftPalette, loadDraft, loadDraftStep, newDraft, saveDraft, saveDraftStep, type Draft } from "../lib/draft";
 import { TEMPLATES, fill } from "../templates";
 import { publishGift } from "../lib/publish";
 import NamesStep, { Shell } from "./NamesStep";
@@ -44,13 +44,15 @@ export default function CreateScreen() {
   const [editorCommand, setEditorCommand] = useState<{ id: number; action: EditorAction } | null>(null);
   const commandId = useRef(0);
 
-  // Decide which draft to show: ?t=<id> that differs from the saved draft starts a fresh one (names carry over); otherwise resume.
+  // Resume the selected template's own draft without overwriting edits from other templates.
   useEffect(() => {
-    const saved = loadDraft();
-    if (wanted && TEMPLATES[wanted]) setDraft(saved?.templateId === wanted ? saved : newDraft(wanted, saved ?? undefined));
-    else if (wanted) setUnknown(true);
-    else if (saved) setDraft(saved);
-    else setUnknown(true);
+    const saved = wanted && TEMPLATES[wanted] ? loadDraft(wanted) : !wanted ? loadDraft() : null;
+    const next = saved ?? (wanted && TEMPLATES[wanted] ? newDraft(wanted) : null);
+    if (next) {
+      setDraft(next);
+      setStep(saved ? loadDraftStep(next.templateId) : "names");
+      setUnknown(false);
+    } else { setDraft(null); setUnknown(true); }
   }, [wanted]);
 
   useEffect(() => { if (draft) setSaveFailed(!saveDraft(draft)); }, [draft]);
@@ -135,8 +137,8 @@ export default function CreateScreen() {
       <main className="fixed inset-0 flex h-[100dvh] flex-col overflow-hidden bg-[#f7f5f2] text-stone-900"
         style={{ ["--hdr-h" as string]: "56px", ["--nav-h" as string]: "calc(76px + env(safe-area-inset-bottom, 0px))", ["--tool-panel-h" as string]: "min(32dvh, 260px)", ["--subnav-h" as string]: "clamp(38px, 5.5dvh, 44px)" }}>
         <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-stone-200 bg-white/95 px-3 backdrop-blur">
-          <button type="button" onClick={() => setStep("names")} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full text-xl text-stone-700 hover:bg-stone-100">←</button>
-          <div className="min-w-0 text-center"><p className="truncate text-sm font-bold">{t.name}</p><p className="text-[11px] text-stone-400">Auto-saved</p></div>
+          <button type="button" onClick={() => { saveDraftStep(draft.templateId, "names"); setStep("names"); }} aria-label="Back" className="grid h-10 w-10 place-items-center rounded-full text-xl text-stone-700 hover:bg-stone-100">←</button>
+          <div className="min-w-0 text-center"><p className="truncate text-sm font-bold">{t.name}</p><p className={"text-[11px] " + (saveFailed ? "text-red-700" : "text-stone-400")}>{saveFailed ? "Not saved — storage full or blocked" : "Auto-saved on this device"}</p></div>
           <div className="flex items-center gap-1">
             <button type="button" onClick={() => setView(view === "edit" ? "preview" : "edit")} className="rounded-full px-3 py-2 text-xs font-bold text-stone-600 hover:bg-stone-100">{view === "edit" ? "Preview" : "Edit"}</button>
             <button type="button" onClick={() => setSending(true)} className="rounded-full bg-rose-700 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-rose-800">Send</button>
@@ -204,5 +206,5 @@ export default function CreateScreen() {
     );
   }
 
-  return <NamesStep template={t} draft={draft} suggested={suggested} saveFailed={saveFailed} set={set} onContinue={() => setStep("pages")} />;
+  return <NamesStep template={t} draft={draft} suggested={suggested} saveFailed={saveFailed} set={set} onContinue={() => { saveDraftStep(draft.templateId, "pages"); setStep("pages"); }} />;
 }

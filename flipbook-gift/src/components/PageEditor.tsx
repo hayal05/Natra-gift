@@ -249,7 +249,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       const now = pagesRef.current;
       const i = now.indexOf(pending.original);
       // Never replace an unrelated slot if the page was changed or deleted during the upload.
-      if (i < 0 || !(pending.slotId in now[i].slots) && !now[i].extras?.some((slot) => slot.id === pending.slotId)) {
+      if (i < 0 || !LAYOUTS[now[i].layout]?.slots.some((slot) => slot.id === pending.slotId && slot.kind === "photo") && !now[i].extras?.some((slot) => slot.id === pending.slotId && slot.kind === "photo")) {
         setPhotoError("That page changed while the photo was loading. Please select the photo again.");
         return;
       }

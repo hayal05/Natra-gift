@@ -12,6 +12,7 @@ import { createRecorder, type Recorder } from "../audio/recorder";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "./icons";
 import VoiceNotePill from "./VoiceNotePill";
+import PhotoCropDialog from "./PhotoCropDialog";
 import { CELEBRATIONS } from "./pageCelebration";
 import FontPicker from "./FontPicker";
 import { LAYOUTS, LAYOUT_LIST, bookStyle, fillPages, type Template } from "../templates";
@@ -65,6 +66,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   const picks = useRef<Record<string, HTMLCanvasElement | null>>({});
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState<{ label: string; pct: number | null } | null>(null);
+  const [pendingCrop, setPendingCrop] = useState<{ file: File; slotId: string; original: PageData; target: number; aspect: number } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmSlotDelete, setConfirmSlotDelete] = useState(false);
   const [slotNote, setSlotNote] = useState<string | null>(null);
@@ -217,34 +219,46 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   useEffect(() => () => dropRef.current(), []); // unmount
   useEffect(() => { setConfirmDelete(false); }, [index, pages.length, activeTool]); // a pending question never follows the creator to another page
 
-  // Choose a photo (3.5g, 3.8). The file is shrunk in the browser first (and uploaded when uploads are on), so a broken file
-  // shows a message and the old photo stays. While it works the page can still be edited; the result goes to the page it was chosen for.
-  const choosePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Choose the target photo first, then show a non-destructive crop dialog before encoding or uploading.
+  const choosePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // so picking the same file again still fires
-    if (!file || !photoSlot || photoBusy) return;
+    e.target.value = "";
+    if (!file || !photoSlot || photoBusy || pendingCrop) return;
     const problem = photoFileProblem(file);
     if (problem) { setPhotoError(problem); return; }
-    const id = photoSlot.id, original = pagesRef.current[at], target = at;
+    const rect = photoSlotRect(photoSlot, photo, W, H);
+    const border = (photo.frame ?? photoSlot.frame ?? "none") === "border";
+    const pad = border ? Math.min(rect.w, rect.h) * 0.045 : 0;
+    const bottom = border ? (photoSlot.matBottom ?? 0) * rect.h : 0;
+    const aspect = Math.max(0.2, Math.min(5, (rect.w - 2 * pad) / Math.max(1, rect.h - 2 * pad - bottom)));
     setPhotoError(null);
-    setPhotoBusy({ label: "Preparing your photo…", pct: null });
+    setPendingCrop({ file, slotId: photoSlot.id, original: pagesRef.current[at], target: at, aspect });
+  };
+  const acceptCrop = async (cropped: Blob) => {
+    const pending = pendingCrop;
+    if (!pending || photoBusy) return;
+    setPendingCrop(null);
+    setPhotoBusy({ label: "Preparing cropped photo…", pct: null });
     try {
-      const { blob } = await resizePhoto(file);
+      const { blob } = await resizePhoto(cropped);
       let src: string;
       if (UPLOADS_ENABLED) {
-        setPhotoBusy({ label: "Uploading…", pct: 0 });
-        src = await uploadPhoto(blob, (f) => setPhotoBusy({ label: "Uploading…", pct: Math.round(f * 100) }));
+        setPhotoBusy({ label: "Uploading cropped photo…", pct: 0 });
+        src = await uploadPhoto(blob, (f) => setPhotoBusy({ label: "Uploading cropped photo…", pct: Math.round(f * 100) }));
       } else src = await blobToDataUri(blob);
       const now = pagesRef.current;
-      let i = now.indexOf(original); // the page may have moved while the photo was working
-      if (i < 0 && now[target]?.layout === original.layout) i = target;
-      if (i < 0) { setPhotoError("That page changed while the photo was loading, so it was not added. Please choose it again."); return; }
-      onChange(now.map((p, k) => (k === i ? replacePhoto(p, id, src) : p)));
+      const i = now.indexOf(pending.original);
+      // Never replace an unrelated slot if the page was changed or deleted during the upload.
+      if (i < 0 || !LAYOUTS[now[i].layout]?.slots.some((slot) => slot.id === pending.slotId && slot.kind === "photo") && !now[i].extras?.some((slot) => slot.id === pending.slotId && slot.kind === "photo")) {
+        setPhotoError("That page changed while the photo was loading. Please select the photo again.");
+        return;
+      }
+      onChange(now.map((p, k) => k === i ? replacePhoto(p, pending.slotId, src) : p));
     } catch (err) {
-      const m = err instanceof Error ? err.message : "";
-      setPhotoError(UPLOADS_ENABLED && ["sign", "network", "upload"].includes(m)
-        ? "The photo could not be uploaded. Check your connection and try again."
-        : "That file does not look like a photo this page can show. Please try another.");
+      const message = err instanceof Error ? err.message : "";
+      setPhotoError(UPLOADS_ENABLED && ["sign", "network", "upload"].includes(message)
+        ? "The cropped photo could not be uploaded. Check your connection and try again."
+        : "The cropped photo could not be prepared. Please choose it again.");
     } finally { setPhotoBusy(null); }
   };
 
@@ -761,6 +775,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
             </div>
           </section>
         )}
+        {pendingCrop && <PhotoCropDialog file={pendingCrop.file} aspect={pendingCrop.aspect} onCancel={() => setPendingCrop(null)} onConfirm={(blob) => void acceptCrop(blob)} />}
       </div>
     </div>
   );

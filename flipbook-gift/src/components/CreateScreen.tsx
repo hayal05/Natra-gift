@@ -95,7 +95,7 @@ export default function CreateScreen() {
     setActiveTool("Style");
   };
   const choosePhotoTool = (tool: typeof PHOTO_TOOLS[number]) => {
-    if (tool === "Add photo") { runEditorAction("add-photo"); setPhotoControl(null); setActiveTool(null); return; }
+    if (tool === "Add photo") { runEditorAction("add-photo"); setPhotoControl("replace"); setActiveTool("Edit"); return; }
     setPhotoControl(tool.toLowerCase() as "replace" | "fit" | "frame" | "filter" | "zoom");
     setActiveTool("Edit");
   };

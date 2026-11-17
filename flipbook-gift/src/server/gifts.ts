@@ -3,7 +3,7 @@
 // The creator keeps a secret EDIT token (only its hash is stored); the recipient link uses a separate PRIVATE token.
 import { createHash, randomBytes } from "node:crypto";
 import type { Draft } from "../lib/draft";
-import { MAX_EXTRAS, editableSlots, textLimit } from "../lib/editor";
+import { MAX_EXTRAS, PAGE_BG_CHOICES, editableSlots, textLimit } from "../lib/editor";
 import type { EditableSlot } from "../lib/editor";
 import { pageSlots } from "../lib/pages/render";
 import { isFontId } from "../lib/pages/fontlist";
@@ -135,7 +135,7 @@ function checkPage(p: unknown, opts: CheckOptions): { ok: true; page: PageData }
       page.hidden = ids;
     }
   }
-  if (p.bg !== undefined) { if (!oneOf(p.bg, PALETTE_KEYS)) return bad("A page colour is not valid."); page.bg = p.bg as PageData["bg"]; }
+  if (p.bg !== undefined) { if (!PAGE_BG_CHOICES.some(([value]) => value === p.bg)) return bad("A page colour is not valid."); page.bg = p.bg as PageData["bg"]; }
   if (p.celebration !== undefined) {
     if (!oneOf(p.celebration, ["confetti", "hearts", "sparkles", "balloons"])) return bad("A page celebration is not valid.");
     page.celebration = p.celebration as PageData["celebration"];

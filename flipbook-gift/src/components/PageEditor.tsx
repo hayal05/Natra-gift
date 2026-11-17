@@ -489,7 +489,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     const r = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - r.left) / r.width) * W, py = ((e.clientY - r.top) / r.height) * H;
     const hit = hitAt(px, py);
-    if (photoSlot) {
+    if (photoSlot && hit?.kind !== "text") {
       const pr = photoSlotRect(photoSlot, photo, W, H), hs = Math.max(16, Math.min(28, Math.min(pr.w, pr.h) * 0.12));
       if (px >= pr.x + pr.w - hs && px <= pr.x + pr.w + hs && py >= pr.y + pr.h - hs && py <= pr.y + pr.h + hs) { resize.current = { x: e.clientX, y: e.clientY, start: photo, moved: false }; setSlotId(photoSlot.id); e.currentTarget.setPointerCapture(e.pointerId); return; }
     }
@@ -721,6 +721,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
                   <div className="space-y-2">
                     {textControl && <div className="space-y-3">
                       {!textSlot ? <p className="rounded-lg bg-stone-50 p-3 text-xs text-stone-600">Select a text component directly on the page to adjust its {textControl}.</p> : <>
+                        <button type="button" onClick={() => setEditingText(true)} className="min-h-10 rounded-lg border border-rose-300 bg-rose-50 px-3 text-xs font-bold text-rose-800">Edit selected text</button>
                         {textControl === "font" && <Group title="Font family"><FontPicker family={style.family} role={cur.font ?? "body"} fonts={book.fonts} onChange={(c)=>c.family?setStyle({family:c.family}):setStyle({family:undefined,font:c.font===textSlot.font?undefined:c.font})}/></Group>}
                         {textControl === "size" && <Group title="Text size"><Row label="Size">{(["S","M","L"] as SizeStep[]).map(z=><button key={z} type="button" onClick={()=>setStyle({size:z==="M"?undefined:z,scale:undefined})} className={chip(style.scale===undefined&&cur.size===z)}>{z}</button>)}<input type="range" aria-label="Text size" min={TEXT_SCALE_MIN} max={3} step={0.05} value={Math.min(3,sizeFactor(style))} onChange={e=>{const g=textGeom(); if(g) scaleText(g.scale,g.w,g.left,Number(e.target.value)/g.scale)}} className="h-11 min-w-[90px] flex-1 accent-rose-700"/><span className="text-xs">{Math.round(sizeFactor(style)*100)}%</span></Row></Group>}
                         {textControl === "align" && <Group title="Text alignment"><Row label="Align">{([["left","Align left","align-left"],["center","Align center","align-center"],["right","Align right","align-right"],["justify","Justify","align-justify"]] as [Align,string,IconName][]).map(([a,label,icon])=><button key={a} type="button" onClick={()=>setStyle({align:a===(textSlot.align??"left")?undefined:a})} aria-pressed={cur.align===a} aria-label={label} className={chip(cur.align===a)+" grid w-11 place-items-center px-0"}><Icon name={icon} size={18}/></button>)}</Row></Group>}

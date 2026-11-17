@@ -398,7 +398,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   // Panning is always computed from where the drag began, so fast moves between renders never lose distance.
   const drag = useRef<{ x: number; y: number; start: PhotoContent; moved: boolean } | null>(null);
   const resize = useRef<{ x: number; y: number; start: PhotoContent; moved: boolean } | null>(null);
-  const textDrag = useRef<{ x: number; y: number; start: TextStyle; moved: boolean; wasSelected: boolean } | null>(null);
+  const textDrag = useRef<{ id: string; pointerId: number; x: number; y: number; start: TextStyle; moved: boolean; wasSelected: boolean } | null>(null);
   // CapCut-style gestures on a selected text: two fingers pinch to scale; corner handle scales; side handle sets the width.
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinch = useRef<{ dist: number; scale: number; w: number; left: number } | null>(null);
@@ -451,9 +451,29 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     const o = photoOverflow(photoSlotRect(photoSlot, photo, W, H), imgSize, photo);
     return o.x > 0 || o.y > 0;
   })();
-  const inEditor = (e: React.PointerEvent) => (e.target as HTMLElement).tagName === "TEXTAREA";
+  const inEditor = (e: React.PointerEvent) => (e.target as HTMLElement).closest("textarea") !== null;
+  // Text fields can overlap a photo or extend beyond their layout slot after editing. Prefer their rendered text bounds.
+  const hitAt = (px: number, py: number) => {
+    const texts = slots.filter((item): item is TextSlotDef => item.kind === "text");
+    const ordered = [
+      ...texts.filter((item) => item.id === slotId),
+      ...texts.filter((item) => item.id !== slotId).reverse(),
+    ];
+    for (const item of ordered) {
+      const raw = page.slots[item.id];
+      const rect = textArea(item, pages[at]?.styles?.[item.id], typeof raw === "string" ? raw : "");
+      if (px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h) return item;
+    }
+    return editableAt(layout, pages[at], W, H, px, py, pages[at]?.styles);
+  };
+  const clearPointer = (id: number) => {
+    pointers.current.delete(id);
+    if (textDrag.current?.pointerId === id) textDrag.current = null;
+    if (pointers.current.size === 0) { pinch.current = null; suppressTap.current = false; }
+  };
   const down = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (inEditor(e)) return; // the text editor handles its own touches (caret placement, selection, handles)
+    if (inEditor(e)) return; // leave native caret and text selection alone
+    if (e.button !== undefined && e.button !== 0) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 2 && textSlot && !editingText) {
       // Second finger on a selected text: pinch to scale. The first finger's drag/tap is cancelled.
@@ -466,17 +486,16 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     drag.current = null;
     resize.current = null;
     textDrag.current = null;
-    if (e.button !== undefined && e.button !== 0) return;
     const r = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - r.left) / r.width) * W, py = ((e.clientY - r.top) / r.height) * H;
-    const hit = editableAt(layout, pages[at], W, H, px, py, pages[at]?.styles);
+    const hit = hitAt(px, py);
     if (photoSlot) {
       const pr = photoSlotRect(photoSlot, photo, W, H), hs = Math.max(16, Math.min(28, Math.min(pr.w, pr.h) * 0.12));
-      if (px >= pr.x + pr.w - hs && py >= pr.y + pr.h - hs) { resize.current = { x: e.clientX, y: e.clientY, start: photo, moved: false }; setSlotId(photoSlot.id); e.currentTarget.setPointerCapture(e.pointerId); return; }
+      if (px >= pr.x + pr.w - hs && px <= pr.x + pr.w + hs && py >= pr.y + pr.h - hs && py <= pr.y + pr.h + hs) { resize.current = { x: e.clientX, y: e.clientY, start: photo, moved: false }; setSlotId(photoSlot.id); e.currentTarget.setPointerCapture(e.pointerId); return; }
     }
     if (hit?.kind === "text") {
       const start = pages[at]?.styles?.[hit.id] ?? {};
-      textDrag.current = { x: e.clientX, y: e.clientY, start, moved: false, wasSelected: hit.id === slotId };
+      textDrag.current = { id: hit.id, pointerId: e.pointerId, x: e.clientX, y: e.clientY, start, moved: false, wasSelected: hit.id === slotId };
       setSlotId(hit.id);
       e.currentTarget.setPointerCapture(e.pointerId);
       return;
@@ -507,12 +526,12 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       return;
     }
     const td = textDrag.current;
-    if (td && textSlot) {
+    if (td && td.pointerId === e.pointerId) {
       const cx = e.clientX - td.x, cy = e.clientY - td.y;
       if (!td.moved && Math.hypot(cx, cy) < 6) return;
       td.moved = true;
       const rect = e.currentTarget.getBoundingClientRect();
-      setTextPositionFromStart(td.start, cx / rect.width, cy / rect.height);
+      onChange(pages.map((p, i) => i === at ? setTextPosition(p, td.id, (td.start.x ?? 0) + cx / rect.width, (td.start.y ?? 0) + cy / rect.height) : p));
       return;
     }
     const d = drag.current;
@@ -525,7 +544,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     setPhotoProps({ x: Math.max(0, Math.min(1 - sw, sx + dx)), y: Math.max(0, Math.min(1 - sh, sy + dy)) });
   };
   const tap = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (inEditor(e)) return;
+    if (inEditor(e)) { clearPointer(e.pointerId); return; }
     pointers.current.delete(e.pointerId);
     if (pinch.current && pointers.current.size < 2) pinch.current = null;
     if (suppressTap.current) { // a pinch or multi-finger touch never counts as a tap; wait until every finger is up
@@ -533,8 +552,8 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
       textDrag.current = null; drag.current = null; resize.current = null;
       return;
     }
-    const wasSelectedText = textDrag.current?.wasSelected;
-    const wasTextDrag = textDrag.current?.moved;
+    const wasSelectedText = textDrag.current?.pointerId === e.pointerId && textDrag.current.wasSelected;
+    const wasTextDrag = textDrag.current?.pointerId === e.pointerId && textDrag.current.moved;
     const wasPhotoDrag = drag.current?.moved;
     const wasResize = resize.current?.moved;
     textDrag.current = null;
@@ -542,7 +561,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
     resize.current = null;
     if (wasTextDrag || wasPhotoDrag || wasResize) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const hit = editableAt(layout, pages[at], W, H, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H, pages[at]?.styles);
+    const hit = hitAt(((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H);
     if (hit?.kind === "text") {
       // CapCut flow: the first tap selects (frame + handles); tapping the already-selected text opens the keyboard.
       setSlotId(hit.id);
@@ -575,7 +594,7 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
   return (
     <div style={{ ["--panel-reserve" as string]: activeTool ? (pageControl === "layout" ? "min(230px, 34dvh)" : pageControl === "navigate" ? "min(170px, 28dvh)" : "min(180px, 30dvh)") : "0px" }}>
       <div className="mx-auto w-full max-w-[360px]">
-        <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; textDrag.current = null; pinch.current = null; pointers.current.delete(e.pointerId); if (pointers.current.size === 0) suppressTap.current = false; }}
+        <div ref={pageBox} className="relative mx-auto w-fit max-w-full select-none rounded-lg shadow-lg ring-1 ring-black/5" onPointerDown={down} onPointerMove={move} onPointerUp={tap} onPointerCancel={(e) => { drag.current = null; resize.current = null; clearPointer(e.pointerId); }} onLostPointerCapture={(e) => { if (pointers.current.has(e.pointerId)) { drag.current = null; resize.current = null; clearPointer(e.pointerId); } }}
           style={{ touchAction: canPan || !!textSlot || !!photoSlot ? "none" : "manipulation", cursor: canPan || !!textSlot || !!photoSlot ? "grab" : undefined }}>
           <canvas ref={main} width={W * DPR} height={H * DPR} className="mx-auto block h-auto w-auto max-w-full rounded-lg" style={{ maxHeight: "min(480px, calc(100dvh - var(--hdr-h, 56px) - 4px - var(--nav-h, 76px) - var(--panel-reserve, 0px) - 8px))" }} role="img" aria-label={`Page ${at + 1} of ${filled.length}`} />
           {!ready && <p className="absolute inset-0 grid place-items-center bg-stone-100 text-sm text-stone-500" role="status">Loading the page…</p>}
@@ -653,6 +672,9 @@ export default function PageEditor({ template, pages, to, from, fontPair, palett
               ref={textInput}
               value={typed}
               onChange={(e) => setText(e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onPointerCancel={(e) => e.stopPropagation()}
               onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setEditingText(false); textInput.current?.blur(); } }}
               maxLength={textLimit(textSlot)}
               aria-label="Edit text on page"

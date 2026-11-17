@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { checkDraft, createGift, hashToken, loadForEdit, loadForRecipient, memoryStore, newToken, updateGift } from "../src/server/gifts";
 import { newDraft } from "../src/lib/draft";
-import { MAX_EXTRAS, addSlot, setSlotText, deletePage, deleteSlot, duplicatePage, duplicateSlot, editableSlots, movePage, setPageBg, setPhoto, setTextStyle, swapLayout } from "../src/lib/editor";
+import { MAX_EXTRAS, PAGE_BG_CHOICES, addSlot, setSlotText, deletePage, deleteSlot, duplicatePage, duplicateSlot, editableSlots, movePage, setPageBg, setPhoto, setTextStyle, swapLayout } from "../src/lib/editor";
 import { LAYOUTS, TEMPLATE_LIST } from "../src/templates";
 
 const site = "https://gift.test";
@@ -51,7 +51,19 @@ const pid = (d: any): string => LAYOUTS[d.pages[1].layout].slots.find((s: any) =
 for (const b2 of [{ zoom: 4 }, { zoom: 0.5 }, { zoom: NaN }, { panX: 2 }, { panY: "0" }, { fit: "stretch" }, { filter: "x" }, { frame: "x" }]) assert(!chk((d) => d.pages[1].slots[pid(d)] = { src: "sample:1", ...b2 }).ok, JSON.stringify(b2));
 ok("photo settings out of range refused");
 assert(!chk((d) => d.pages[1].slots[tid(d)] = 5).ok); assert(!chk((d) => d.pages[1].slots[tid(d)] = "x".repeat(900)).ok); assert(!chk((d) => d.pages[1].slots[pid(d)] = "text").ok); ok("wrong kind or oversized text refused");
-assert(!chk((d) => d.pages[1].bg = "#ff0000").ok); assert(!chk((d) => d.pages[1].bg = "url(x)").ok); assert(chk((d) => d.pages[1].bg = "dark").ok);
+// A page background chosen in the editor must always survive sanitization and publishing.
+for (const [choice, name] of PAGE_BG_CHOICES) {
+  const d = draft();
+  d.pages[1].bg = choice;
+  const checked = checkDraft(d, opt);
+  assert(checked.ok, name + ": " + JSON.stringify(checked));
+  assert.equal(checked.draft.pages[1].bg, choice, name + " is preserved in the published payload");
+}
+ok("all editor page backgrounds are accepted and preserved for publishing");
+assert(!chk((d) => d.pages[1].bg = "#ff0000").ok);
+assert(!chk((d) => d.pages[1].bg = "url(x)").ok);
+assert(!chk((d) => d.pages[1].bg = "not-a-color").ok);
+assert(chk((d) => d.pages[1].bg = "dark").ok);
 assert(!chk((d) => d.pages[1].styles = { [tid(d)]: { color: "red" } }).ok); assert(!chk((d) => d.pages[1].styles = { [tid(d)]: { size: "XL" } }).ok); assert(!chk((d) => d.pages[1].styles = [1]).ok); assert(chk((d) => d.pages[1].styles = { [tid(d)]: { size: "S", color: "ink" } }).ok); ok("page colour and text styles must be presets");
 const x: any = draft(); x.extra = "<script>"; x.pages[1].extra = 1; x.to = "Ma\u0000ya\u0007"; x.invitation = "Hi\u001b there\nline 2";
 const cx = checkDraft(x, opt); assert(cx.ok); assert(!("extra" in cx.draft) && !("extra" in cx.draft.pages[1]) && cx.draft.to === "Maya" && cx.draft.invitation === "Hi there\nline 2"); ok("unknown fields dropped, control characters stripped, newline kept");

@@ -15,4 +15,7 @@ export async function readJson(req: Request): Promise<unknown> {
 /** The edit token travels in a header, never in a URL that could end up in logs. */
 export const editToken = (req: Request) => req.headers.get("authorization")?.replace(/^Bearer /, "") ?? null;
 
-export const siteUrl = (req: Request) => (process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin).replace(/\/$/, "");
+/** Build recipient/edit links on the host that served the publish request.
+ * Never use the old NEXT_PUBLIC_SITE_URL setting: it may still point to a retired custom domain.
+ * Request.url is normalized by Next.js for the active deployment. */
+export const siteUrl = (req: Request) => new URL(req.url).origin;
